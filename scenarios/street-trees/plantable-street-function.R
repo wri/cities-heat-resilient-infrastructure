@@ -1,5 +1,5 @@
-generate_plantable_street <- function(aoi, lulc_rast, road_vectors, lanes, city, save_files = FALSE) {
-
+generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, save_files = FALSE) {
+  
   
   # Roads -------------------------------------------------------------------
   
@@ -64,8 +64,7 @@ generate_plantable_street <- function(aoi, lulc_rast, road_vectors, lanes, city,
   ped_roads_raster <- rasterize(ped_roads, lulc_rast, field = 1, background = 0)
   
   if (save_files){
-    writeRaster(ped_roads_raster, here("data", city, "scenarios", "street-trees", "ped-roads-raster.tif"), filetype = "COG",
-                gdal = c("TILED=YES", "COMPRESS=LZW", "BIGTIFF=IF_SAFER", "COPY_SRC_OVERVIEWS=YES", "BLOCKXSIZE=512", "BLOCKYSIZE=512"))
+    writeRaster(ped_roads_raster, here("data", city, "scenarios", "street-trees", "ped-roads-raster.tif"))
   }
   
   
@@ -132,13 +131,20 @@ generate_plantable_street <- function(aoi, lulc_rast, road_vectors, lanes, city,
   # Street plantable area
   plantable_street <- plantable_lulc * ped_road_adjacent
   
+  # Remove areas of existing tree cover
+  plantable_street <- plantable_street * (existing_trees < 1)
+  
+  # Pedstrian area (not building, road, water)
+  ped_area <- ped_road_adjacent * abs((floor(lulc_rast / 100) %in% c(3, 5, 6)) - 1)
+  
   # Save raster as Cloud-Optimized GeoTIFF (COG)
   if (save_files){
-    writeRaster(plantable_street, here("data", city, "scenarios", "street-trees", "plantable-street.tif"), filetype = "COG",
-                gdal = c("TILED=YES", "COMPRESS=LZW", "BIGTIFF=IF_SAFER", "COPY_SRC_OVERVIEWS=YES", "BLOCKXSIZE=512", "BLOCKYSIZE=512"))
+    writeRaster(plantable_street, here("data", city, "scenarios", "street-trees", "plantable-street.tif"), overwrite = TRUE)
+    writeRaster(ped_area, here("data", city, "scenarios", "street-trees", "ped_area.tif"))
   }
   
-  return(plantable_street)
+  return(list(plantable_street = plantable_street,
+              ped_area = ped_area))
   
 }
 

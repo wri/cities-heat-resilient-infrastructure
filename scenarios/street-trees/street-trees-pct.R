@@ -1,46 +1,14 @@
+# Setup ---------------------------------------------------------------------
+
 # Load necessary libraries
 library(terra)
 library(sf)
 library(lidR)
-library(rgee)
 library(tidyverse)
 library(here)
 
-ee_Initialize("elizabeth.wesley@wri.org", drive = TRUE, gcs = TRUE)
-# ee_Authenticate("elizabeth.wesley@wri.org") 
-
-# Specify path to save files
-city <- "BRA-Rio_de_Janeiro"
-scenario_path <- here("data", city, "scenarios", "street-trees")
-
-# AOI ---------------------------------------------------------------------
 
 
-# Specify AOI
-aoi <- st_read("https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson") %>% 
-  st_transform(4326)
-
-city_centroid <- aoi %>% 
-  st_centroid() %>% 
-  st_coordinates()
-
-utm_epsg <- gfcanalysis::utm_zone(y = city_centroid[2], x = city_centroid[1], proj4string = TRUE) %>% 
-  str_sub(12) %>% 
-  as.numeric()
-
-utm_ee <- paste0("EPSG:", utm_epsg)
-
-rm(city_centroid)
-
-# Transform aoi to UTM
-aoi <- aoi %>% 
-  st_transform(utm_epsg) 
-
-bbox <- aoi %>% 
-  st_bbox() %>% 
-  st_as_sfc()
-
-bb_ee <- sf_as_ee(bbox)
 
 
 # LULC --------------------------------------------------------------------

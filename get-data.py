@@ -14,7 +14,7 @@ bbox = GeoExtent(aoi.total_bounds, aoi.crs.srs).as_utm_bbox()
 
 
 ## save aoi with UTM crs
-aoi.to_crs(bbox.crs).to_file(f"./data/{city}/{city}-aoi.geojson")
+aoi.to_crs(bbox.crs).to_file(f"./data/{city}/aoi.geojson")
 
 
 ## Setup Earth Engine
@@ -28,9 +28,9 @@ from city_metrix.layers import TreeCanopyHeight
 city_TreeCanopyHeight = TreeCanopyHeight().get_data(bbox)
 
 ## Write raster to tif file
-city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/{city}_TreeCanopyHeight.tif")
 
 
+city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/TreeCanopyHeight.tif")
 
 # Get OpenUrban
 from importlib import reload
@@ -66,8 +66,8 @@ if output_resolution != DEFAULT_LULC_RESOLUTION:
 from city_metrix.layers.layer_tools import standardize_y_dimension_direction
 was_reversed, lulc_to_solweig_class = standardize_y_dimension_direction(lulc_to_solweig_class)
 
-# Save data to file
-lulc_to_solweig_class.rio.to_raster(raster_path=f"./data/{city}/{city}_OpenUrban.tif")
+## Save data to file
+lulc_to_solweig_class.rio.to_raster(raster_path=f"./data/{city}/OpenUrban.tif")
 ######################
 # Get roads
 ######################

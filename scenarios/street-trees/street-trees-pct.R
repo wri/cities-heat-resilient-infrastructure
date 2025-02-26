@@ -27,7 +27,7 @@ tree_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
 
 # Plantable area  -------------------------------------------------------
 
-source(here("scripts", "scenarios", "street-trees", "plantable-street-function.R"))
+source(here("scenarios", "street-trees", "plantable-street-function.R"))
 
 plantable_street <- generate_plantable_street(aoi = aoi, 
                                               lulc_rast = lulc, 

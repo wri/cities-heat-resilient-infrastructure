@@ -15,7 +15,7 @@ load(here(scenario_path, "tree-vars.RData"))
 
 
 # load tree functions
-source(here("scripts", "scenarios", "street-trees", "tree-generating-functions.R"))
+source(here("scenarios", "street-trees", "tree-generating-functions.R"))
 
 # Prepare the new tree cover raster and tree points
 

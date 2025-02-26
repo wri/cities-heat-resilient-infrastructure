@@ -7,41 +7,27 @@ library(lidR)
 library(tidyverse)
 library(here)
 
+city = "BRA-Rio_de_janeiro"
 
+inputs_path <- here("data", city)
+scenario_path <- here("data", city, "scenarios", "street-trees")
 
+# Create scenario_path
+if (!dir.exists(scenario_path)) {
+  dir.create(scenario_path, recursive = TRUE)
+}
 
-
-# LULC --------------------------------------------------------------------
-
-lulc <-ee$ImageCollection('projects/wri-datalab/cities/OpenUrban/OpenUrban_LULC')$
-  filterBounds(bb_ee)
-
-tiles <- lulc$aggregate_array("grid_cell")$getInfo()
-
-lulc <- lulc$
-  max()$int()$
-  reproject(crs = utm_ee, scale = 1) %>% 
-  ee_as_rast(region = bb_ee, scale = 1)
-
-writeRaster(lulc, here(scenario_path, "rasters", "lulc.tif"),
-            filetype = "COG",
-            gdal = c("TILED=YES", "COMPRESS=LZW", "BIGTIFF=IF_SAFER", "COPY_SRC_OVERVIEWS=YES", "BLOCKXSIZE=512", "BLOCKYSIZE=512"))
+# Inputs
+aoi <- st_read(here(inputs_path, "aoi.geojson"))
+lulc <- rast(here(inputs_path, "open-urban.tif"))
+road_vectors <- st_read(here(inputs_path, "roads.geojson"))
+lanes <- read_csv(here(inputs_path, "lanes.csv"))
+tree_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
 
 
 # Plantable area  -------------------------------------------------------
 
 source(here("scripts", "scenarios", "street-trees", "plantable-street-function.R"))
-
-# road_paths <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city,
-#                       "/vector-data/roads/roads_", tiles, ".geojson")
-
-road_paths <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", "BRA-Rio_de_janeiro",
-                     "/vector-data/roads/roads_", tiles, ".geojson")
-
-road_vectors <- road_paths %>%
-  map_dfr(st_read)
-
-lanes <- read_csv("https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/vector-data/roads/average_lanes.csv")
 
 plantable_street <- generate_plantable_street(aoi = aoi, 
                                               lulc_rast = lulc, 
@@ -52,21 +38,6 @@ plantable_street <- generate_plantable_street(aoi = aoi,
 
 rm(road_vectors, lanes)
 
-# Trees -------------------------------------------------------------------
-
-# load tree functions
-source(here("scripts", "scenarios", "street-trees", "tree-generating-functions.R"))
-
-tree_height <- ee$ImageCollection("projects/meta-forest-monitoring-okw37/assets/CanopyHeight")$
-  filterBounds(bb_ee)$
-  mosaic() %>% 
-  ee_as_rast(scale = 1, crs = utm_ee, region = bb_ee)
-
-writeRaster(tree_height, here("data", city, "scenarios", "street-trees", "existing-tree-canopy.tif"),
-            filetype = "COG",
-            gdal = c("TILED=YES", "COMPRESS=LZW", "BIGTIFF=IF_SAFER", "COPY_SRC_OVERVIEWS=YES", "BLOCKXSIZE=512", "BLOCKYSIZE=512"))
-
-tree_height <- rast(here("data", city, "scenarios", "street-trees", "existing-tree-canopy.tif"))
 
 names(tree_height) <- "height"
 tree_height[tree_height < 1] <- 0

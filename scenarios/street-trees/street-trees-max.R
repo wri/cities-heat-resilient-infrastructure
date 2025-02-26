@@ -1,44 +1,17 @@
 # Specify city and scenario  
-city <- "ZAF-Cape_Town"
+city = "BRA-Rio_de_janeiro"
 scenario <- "street-trees"
 
 # Paths
-inputs_path <- here("data", city, "scenarios", "data")
+inputs_path <- here("data", city)
 scenario_path <- here("data", city, "scenarios", scenario)
 
 # Inputs
-lulc <- rast(here(inputs_path, "lulc.tif"))
+lulc <- rast(here(inputs_path, "open-urban.tif"))
 plantable_area <- rast(here(scenario_path, "plantable-street.tif"))
-tree_height <- rast(here(scenario_path, "existing-tree-canopy.tif"))
+tree_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
 crowns <- rast(here(scenario_path, "existing-tree-crowns.tif"))
 load(here(scenario_path, "tree-vars.RData"))
-
-# AOI ---------------------------------------------------------------------
-
-
-# Specify AOI
-aoi <- st_read("https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_town/processed/citycentre_roi.geojson") %>% 
-  st_transform(4326)
-
-city_centroid <- aoi %>% 
-  st_centroid() %>% 
-  st_coordinates()
-
-utm_epsg <- gfcanalysis::utm_zone(y = city_centroid[2], x = city_centroid[1], proj4string = TRUE) %>% 
-  str_sub(12) %>% 
-  as.numeric()
-
-utm_ee <- paste0("EPSG:", utm_epsg)
-
-rm(city_centroid)
-
-# Transform aoi to UTM
-aoi <- aoi %>% 
-  st_transform(utm_epsg) 
-
-bbox <- aoi %>% 
-  st_bbox() %>% 
-  st_as_sfc()
 
 
 # load tree functions

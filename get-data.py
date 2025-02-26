@@ -68,4 +68,41 @@ was_reversed, lulc_to_solweig_class = standardize_y_dimension_direction(lulc_to_
 
 # Save data to file
 lulc_to_solweig_class.rio.to_raster(raster_path=f"./data/{city}/{city}_OpenUrban.tif")
+######################
+# Get roads
+######################
+lulc_collection = ee.ImageCollection('projects/wri-datalab/cities/OpenUrban/OpenUrban_LULC') \
+    .filterBounds(bbox.to_ee_rectangle()['ee_geometry'])
 
+tiles = lulc_collection.aggregate_array("grid_cell").getInfo()
+
+import geopandas as gpd
+import pandas as pd
+
+road_paths = [
+    f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/{city}/vector-data/roads/roads_{tile}.geojson"
+    for tile in tiles
+]
+
+road_vectors = pd.concat([gpd.read_file(url) for url in road_paths], ignore_index=True)
+
+# Save to json file
+road_vectors.to_file(f"./data/{city}/roads.geojson", driver='GeoJSON')
+
+
+
+######################
+# Get lanes
+######################
+lanes = pd.read_csv("https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/vector-data/roads/average_lanes.csv")
+
+# Save to csv file
+lanes.to_csv(f"./data/{city}/lanes.csv", index=False)
+
+
+
+######################
+# Create scenario folder
+######################
+import os
+os.makedirs(f"./data/{city}/scenarios", exist_ok=True)

@@ -19,6 +19,7 @@ class OpenUrban(Layer):
             print("No OpenUrban Data Available")
         else:
             ulu = ee.ImageCollection(dataset
+                                     .reproject(crs = utm_ee, scale = 1)
                                      .filterBounds(ee_rectangle['ee_geometry'])
                                      .select(self.band)
                                      .max()

@@ -24,6 +24,9 @@ road_vectors <- st_read(here(inputs_path, "roads.geojson"))
 lanes <- read_csv(here(inputs_path, "lanes.csv"))
 tree_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
 
+# UTM
+source(here("utils", "utm.R"))
+utm <- get_aoi_utm(aoi)
 
 # Plantable area  -------------------------------------------------------
 
@@ -34,6 +37,7 @@ plantable_street <- generate_plantable_street(aoi = aoi,
                                               road_vectors = road_vectors, 
                                               lanes = lanes,
                                               city = city,
+                                              utm = utm,
                                               save_files = TRUE)
 
 rm(road_vectors, lanes)
@@ -84,7 +88,7 @@ save(ttops, crown_vectors, tree_structure,
 # this will get covered with the updated rasters
 updated_tree_cover <- tree_height
 # trees will get added here, both existing and new
-updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm_epsg)
+updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm$epsg)
 
 aoi_grid <- aoi %>% 
   st_make_grid(cellsize = c(1000, 1000), square = TRUE, what = "polygons") %>% 

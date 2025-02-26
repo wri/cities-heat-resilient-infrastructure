@@ -1,5 +1,4 @@
-generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, save_files = FALSE) {
-  
+generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, utm, save_files = FALSE) {
   
   # Roads -------------------------------------------------------------------
   
@@ -10,7 +9,7 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   
   # Load roads and filter to bbox of AOI
   road_vectors <- road_vectors %>% 
-    st_transform(utm_epsg) %>% 
+    st_transform(utm$epsg) %>% 
     filter(sapply(geometry, function(geom) st_intersects(geom, st_as_sfc(st_bbox(aoi)), sparse = FALSE))) 
   
   ped_roads_list <- c("tertiary",

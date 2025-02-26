@@ -35,6 +35,7 @@ source(here("scenarios", "street-trees", "plantable-street-function.R"))
 
 plantable_street <- generate_plantable_street(aoi = aoi, 
                                               lulc_rast = lulc, 
+                                              existing_trees = tree_height,
                                               road_vectors = road_vectors, 
                                               lanes = lanes,
                                               city = city,
@@ -97,12 +98,16 @@ aoi_grid <- aoi %>%
   st_filter(aoi) %>% 
   mutate(ID = row_number())
 
+
+source(here("scenarios", "street-trees", "tree-generating-functions.R"))
+
 aoi_grid <- calc_pct_grid_cover(aoi_grid = aoi_grid,
                                 existing_tree_cover = tree_height,
                                 plantable_area = plantable_street)
 
 
 # Achievable potential ----------------------------------------------------
+
 
 # 90th percentile value
 pct_value <- 0.9

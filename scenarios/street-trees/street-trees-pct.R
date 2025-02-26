@@ -24,6 +24,7 @@ road_vectors <- st_read(here(inputs_path, "roads.geojson"))
 lanes <- read_csv(here(inputs_path, "lanes.csv"))
 tree_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
 
+#TODO: Get utm_epsg from OpenUrban
 # UTM
 source(here("utils", "utm.R"))
 utm <- get_aoi_utm(aoi)

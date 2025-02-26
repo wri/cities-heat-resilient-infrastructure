@@ -19,7 +19,7 @@ for(pkg in packages) {
   library(pkg, character.only = TRUE)
 }
 
-
+# Python setup
 library(reticulate)
 conda_create(envname = "chri", python_version = "3.10", pip= TRUE, packages = "git+https://github.com/wri/cities-cif@main")
 

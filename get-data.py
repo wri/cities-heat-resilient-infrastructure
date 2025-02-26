@@ -1,4 +1,7 @@
+######################
 # Setup
+######################
+
 ## Inputs
 city = "BRA-Rio_de_janeiro"
 aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
@@ -22,17 +25,21 @@ import ee
 ee.Authenticate()
 ee.Initialize(project='wri-earthengine')
 
+#TDOD: Get UTM from OpenUrban and resample others
+#TODO: add projection to all downloads
 
+######################
 # Get the tree canopy height
+######################
 from city_metrix.layers import TreeCanopyHeight
 city_TreeCanopyHeight = TreeCanopyHeight().get_data(bbox)
 
 ## Write raster to tif file
-
-
 city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/TreeCanopyHeight.tif")
 
+######################
 # Get OpenUrban
+######################
 from importlib import reload
 import open_urban
 importlib.reload(open_urban)
@@ -40,11 +47,11 @@ importlib.reload(open_urban)
 from open_urban import OpenUrban, reclass_map
 lulc = OpenUrban().get_data(bbox)
 
-# Reclassify
+## Reclassify
 from xrspatial.classify import reclassify
 lulc_to_solweig_class = reclassify(lulc, bins=list(reclass_map.keys()), new_values=list(reclass_map.values()), name='lulc')
 
-# Remove zeros
+## Remove zeros
 def count_occurrences(data, value):
     return data.where(data == value).count().item()
   
@@ -58,16 +65,18 @@ if count > 0:
 else:
     print(f'There were no occurrences of the value {remove_value} found in data.')
 
-# TODO Can we specify resolution through GEE and avoid below?
+## TODO Can we specify resolution through GEE and avoid below?
 if output_resolution != DEFAULT_LULC_RESOLUTION:
     lulc_to_solweig_class = _resample_categorical_raster(lulc_to_solweig_class, output_resolution)
 
-# reverse y direction, if y values increase in NS direction from LL corner
+## reverse y direction, if y values increase in NS direction from LL corner
 from city_metrix.layers.layer_tools import standardize_y_dimension_direction
 was_reversed, lulc_to_solweig_class = standardize_y_dimension_direction(lulc_to_solweig_class)
 
 ## Save data to file
 lulc_to_solweig_class.rio.to_raster(raster_path=f"./data/{city}/OpenUrban.tif")
+
+
 ######################
 # Get roads
 ######################

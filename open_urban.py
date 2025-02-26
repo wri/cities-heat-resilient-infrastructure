@@ -6,7 +6,7 @@ class OpenUrban(Layer):
     def __init__(self, band='b1', **kwargs):
         super().__init__(**kwargs)
         self.band = band
-
+    # TODO: Reproject https://github.com/wri/cities-heat-resilient-infrastructure/blob/main/scenarios/street-trees/street-trees-pct.R#L55C3-L55C12
     def get_data(self, bbox: GeoExtent, spatial_resolution:int=None,
                  resampling_method:str=None):
         dataset = ee.ImageCollection("projects/wri-datalab/cities/OpenUrban/OpenUrban_LULC")

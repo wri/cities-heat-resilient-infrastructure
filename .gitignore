@@ -1,0 +1,11 @@
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Python
+__pycache__
+
+# Files
+/data

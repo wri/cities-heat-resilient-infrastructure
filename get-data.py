@@ -47,34 +47,8 @@ city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/tree-canopy-heig
 ######################
 import open_urban
 
-from open_urban import OpenUrban, reclass_map
+from open_urban import OpenUrban
 lulc = OpenUrban().get_data(bbox)
-
-## Reclassify
-from xrspatial.classify import reclassify
-lulc_to_solweig_class = reclassify(lulc, bins=list(reclass_map.keys()), new_values=list(reclass_map.values()), name='lulc')
-
-## Remove zeros
-def count_occurrences(data, value):
-    return data.where(data == value).count().item()
-  
-remove_value = 0
-count = count_occurrences(lulc_to_solweig_class, remove_value)
-if count > 0:
-    print(f'Found {count} occurrences of the value {remove_value}. Removing...')
-    lulc_to_solweig_class = lulc_to_solweig_class.where(lulc_to_solweig_class != remove_value, drop=True)
-    count = _count_occurrences(lulc_to_solweig_class, remove_value)
-    print(f'There are {count} occurrences of the value {remove_value} after removing.')
-else:
-    print(f'There were no occurrences of the value {remove_value} found in data.')
-
-## TODO Can we specify resolution through GEE and avoid below?
-if output_resolution != DEFAULT_LULC_RESOLUTION:
-    lulc_to_solweig_class = _resample_categorical_raster(lulc_to_solweig_class, output_resolution)
-
-## reverse y direction, if y values increase in NS direction from LL corner
-from city_metrix.layers.layer_tools import standardize_y_dimension_direction
-was_reversed, lulc_to_solweig_class = standardize_y_dimension_direction(lulc_to_solweig_class)
 
 ## Save data to file
 lulc.rio.to_raster(raster_path=f"./data/{city}/open-urban.tif")

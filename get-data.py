@@ -6,10 +6,15 @@
 city = "BRA-Rio_de_janeiro"
 aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
 
+# Create city folder
+import os
+path = f"./data/{city}"
+if not os.path.isdir(path):
+   os.makedirs(path)
+
 ## Get the area of interest
 import geopandas as gpd
 aoi = gpd.read_file(aoi_file)
-
 
 ## Create bounding box
 from city_metrix.layers.layer_geometry import GeoExtent
@@ -22,10 +27,10 @@ aoi.to_crs(bbox.crs).to_file(f"./data/{city}/aoi.geojson")
 
 ## Setup Earth Engine
 import ee
-ee.Authenticate()
+ee.Authenticate(auth_mode="notebook")
 ee.Initialize(project='wri-earthengine')
 
-#TDOD: Get UTM from OpenUrban and resample others
+#TODD: Get UTM from OpenUrban and resample others
 #TODO: add projection to all downloads
 
 ######################
@@ -35,14 +40,12 @@ from city_metrix.layers import TreeCanopyHeight
 city_TreeCanopyHeight = TreeCanopyHeight().get_data(bbox)
 
 ## Write raster to tif file
-city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/TreeCanopyHeight.tif")
+city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/tree-canopy-height.tif")
 
 ######################
 # Get OpenUrban
 ######################
-from importlib import reload
 import open_urban
-importlib.reload(open_urban)
 
 from open_urban import OpenUrban, reclass_map
 lulc = OpenUrban().get_data(bbox)
@@ -74,7 +77,7 @@ from city_metrix.layers.layer_tools import standardize_y_dimension_direction
 was_reversed, lulc_to_solweig_class = standardize_y_dimension_direction(lulc_to_solweig_class)
 
 ## Save data to file
-lulc_to_solweig_class.rio.to_raster(raster_path=f"./data/{city}/OpenUrban.tif")
+lulc.rio.to_raster(raster_path=f"./data/{city}/open-urban.tif")
 
 
 ######################
@@ -106,7 +109,7 @@ road_vectors.to_file(f"./data/{city}/roads.geojson", driver='GeoJSON')
 lanes = pd.read_csv("https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/vector-data/roads/average_lanes.csv")
 
 # Save to csv file
-lanes.to_csv(f"./data/{city}/lanes.csv", index=False)
+lanes.to_csv(f"./data/{city}/average-lanes.csv", index=False)
 
 
 

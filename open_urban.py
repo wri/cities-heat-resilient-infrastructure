@@ -2,6 +2,7 @@ import ee
 from city_metrix.layers import layer, Layer
 from city_metrix.layers.layer_geometry import GeoExtent
 
+
 class OpenUrban(Layer):
     def __init__(self, band='b1', **kwargs):
         super().__init__(**kwargs)
@@ -18,20 +19,20 @@ class OpenUrban(Layer):
         if dataset.filterBounds(ee_rectangle['ee_geometry']).size().getInfo() == 0:
             print("No OpenUrban Data Available")
         else:
-            ulu = ee.ImageCollection(dataset
-                                     .reproject(crs = utm_ee, scale = 1)
+            open_urban = ee.ImageCollection(dataset
                                      .filterBounds(ee_rectangle['ee_geometry'])
                                      .select(self.band)
                                      .max()
                                      .reduce(ee.Reducer.firstNonNull())
+                                     #.reproject(crs = utm_ee, scale = 1)
                                      .rename('lulc')
                                      )
 
             data = layer.get_image_collection(
-                ulu,
+                open_urban,
                 ee_rectangle,
                 1,
-                "urban land use"
+                "Open Urban"
             ).lulc
 
         return data

@@ -1,8 +1,14 @@
 # Cities Heat Resilient Infrastructure
 
 ## Setup
-Run setup.R to install requirements
+1. Open project folder in RStudio
+2. Run setup.R to install requirements
 
 ## Usage
 ### Get data
-Run `get-data.py`
+This will get the data needed for all scenarios.
+1. Run `use_condaenv("chri", required = TRUE)` in R.
+2. Open `get-data.py`.
+3. Update `city` and and `aoi_file` variables. 
+4. Run through line by line.
+

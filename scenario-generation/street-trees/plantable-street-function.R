@@ -17,8 +17,8 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
                       "residential",
                       "living_street")
   
-  
   road_vectors <- road_vectors %>% 
+    select(highway, lanes) %>% 
     left_join(lanes, by = "highway") %>% 
     mutate(lanes = coalesce(lanes, avg.lanes))
   
@@ -27,8 +27,7 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   
   if (save_files){
     
-    st_write(road_vectors, here("data", city, "scenarios", "street-trees", "roads_lines.geojson"))
-    st_write(ped_road_vectors, here("data", city, "scenarios", "street-trees", "ped_roads_lines.geojson"))
+    st_write(ped_road_vectors, here(scenario_path, "ped_roads.geojson"))
     
   }
   
@@ -49,22 +48,22 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
               endCapStyle = "FLAT",
               joinStyle = "MITRE") 
   
-  if (save_files){
-    st_write(road_buff, here("data", city, "scenarios", "street-trees", "road_areas.geojson"))
-  }
+  # if (save_files){
+  #   st_write(road_buff, here("data", city, "scenarios", "street-trees", "road_areas.geojson"))
+  # }
   
   ped_roads <- road_buff %>% 
     filter(highway %in% ped_roads_list)  
   
-  if (save_files){
-    st_write(ped_roads, here("data", city, "scenarios", "street-trees", "ped_roads_areas.geojson"))
-  }
+  # if (save_files){
+  #   st_write(ped_roads, here(scenario_path, "ped_roads_areas.geojson"))
+  # }
   
   ped_roads_raster <- rasterize(ped_roads, lulc_rast, field = 1, background = 0)
   
-  if (save_files){
-    writeRaster(ped_roads_raster, here("data", city, "scenarios", "street-trees", "ped-roads-raster.tif"))
-  }
+  # if (save_files){
+  #   writeRaster(ped_roads_raster, here("data", city, "scenarios", "street-trees", "ped-roads-raster.tif"))
+  # }
   
   
   # Plantable area ----------------------------------------------------------
@@ -138,8 +137,8 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   
   # Save raster as Cloud-Optimized GeoTIFF (COG)
   if (save_files){
-    writeRaster(plantable_street, here("data", city, "scenarios", "street-trees", "plantable-street.tif"), overwrite = TRUE)
-    writeRaster(ped_area, here("data", city, "scenarios", "street-trees", "ped_area.tif"))
+    writeRaster(plantable_street, here(scenario_path, "plantable-street.tif"), overwrite = TRUE)
+    writeRaster(ped_area, here(scenario_path, "pedestrian-area.tif"))
   }
   
   return(list(plantable_street = plantable_street,

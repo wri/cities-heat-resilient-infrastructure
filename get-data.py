@@ -6,6 +6,11 @@
 city = "BRA-Rio_de_janeiro"
 aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
 
+## Create city data folder
+import os
+os.makedirs(f"./data/{city}", exist_ok=True)
+
+
 ## Get the area of interest
 import geopandas as gpd
 aoi = gpd.read_file(aoi_file)
@@ -22,7 +27,7 @@ aoi.to_crs(bbox.crs).to_file(f"./data/{city}/aoi.geojson")
 
 ## Setup Earth Engine
 import ee
-ee.Authenticate()
+ee.Authenticate(auth_mode='notebook')
 ee.Initialize(project='wri-earthengine')
 
 #TDOD: Get UTM from OpenUrban and resample others
@@ -40,8 +45,6 @@ city_TreeCanopyHeight.rio.to_raster(raster_path=f"./data/{city}/TreeCanopyHeight
 ######################
 # Get OpenUrban
 ######################
-from importlib import reload
-import open_urban
 importlib.reload(open_urban)
 
 from open_urban import OpenUrban, reclass_map
@@ -65,9 +68,6 @@ if count > 0:
 else:
     print(f'There were no occurrences of the value {remove_value} found in data.')
 
-## TODO Can we specify resolution through GEE and avoid below?
-if output_resolution != DEFAULT_LULC_RESOLUTION:
-    lulc_to_solweig_class = _resample_categorical_raster(lulc_to_solweig_class, output_resolution)
 
 ## reverse y direction, if y values increase in NS direction from LL corner
 from city_metrix.layers.layer_tools import standardize_y_dimension_direction

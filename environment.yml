@@ -1,0 +1,10 @@
+name: chri
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - gdal=3.10.0
+  - numpy=2.1
+  - pip
+  - pip:
+      - git+https://github.com/wri/cities-cif@main

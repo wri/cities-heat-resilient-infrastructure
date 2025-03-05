@@ -21,9 +21,10 @@ for(pkg in packages) {
 
 # Python setup
 library(reticulate)
-conda_create(envname = "chri", python_version = "3.10", pip= TRUE, packages = "git+https://github.com/wri/cities-cif@main")
-
+#conda_create(envname = "chri", python_version = "3.10", pip= TRUE, packages = "git+https://github.com/wri/cities-cif@main")
 # TODO: remove once CIF includes this
-conda_install(envname = "chri", packages = c("gdal=3.10.0", "numpy=2.1"))
+#conda_install(envname = "chri", packages = c("gdal=3.10.0", "numpy=2.1"))
+
+conda_create(envname = "chri", environment = "environment.yml")
 
 use_condaenv("chri", required = TRUE)

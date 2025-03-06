@@ -12,3 +12,5 @@ This will get the data needed for all scenarios.
 3. Update `city` and and `aoi_file` variables. 
 4. Run through line by line.
 
+### Run Scenarios
+Look in the `scenario-generation` folder for the scenario you want and follow the readme there

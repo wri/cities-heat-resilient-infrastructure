@@ -7,10 +7,10 @@ library(lidR)
 library(tidyverse)
 library(here)
 
-city = "ZAF-Cape_Town"
+city = "BRA-Rio_de_janeiro"
 
-inputs_path <- here(city, "data")
-scenario_path <- here(city, "scenarios", "street-trees")
+inputs_path <- here("data", city)
+scenario_path <- here(inputs_path, "scenarios", "street-trees")
 
 # Create scenario_path
 if (!dir.exists(scenario_path)) {
@@ -20,27 +20,29 @@ if (!dir.exists(scenario_path)) {
 # Inputs
 aoi <- st_read(here(inputs_path, "aoi.geojson"))
 lulc <- rast(here(inputs_path, "open-urban.tif"))
-canopy_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
+canopy_height_existing <- rast(here(inputs_path, "tree-canopy-height.tif"))
+
 plantable_area <- rast(here(scenario_path, "plantable-street.tif"))
 crowns <- rast(here(scenario_path, "existing-tree-crowns.tif"))
 load(here(scenario_path, "tree-vars.RData"))
 
 # OpenUrban should be in the right projection, get UTM from lulc
 # UTM
+source(here("utils", "utm.R"))
+utm <- get_aoi_utm(aoi)
 
-utm <- st_crs(lulc)
 
 # load tree functions
-source(here("scenarios", "street-trees", "tree-generating-functions.R"))
+source(here("scenario-generation", "street-trees", "tree-generating-functions.R"))
 
-names(canopy_height) <- "height"
-tree_height <- canopy_height
+names(canopy_height_existing) <- "height"
+tree_height <- canopy_height_existing
 tree_height[tree_height < 3] <- 0
 
 # this will get covered with the updated rasters
 updated_tree_cover <- tree_height
 # trees will get added here, both existing and new
-updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm_epsg)
+updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm$epsg)
 
 aoi_grid <- aoi %>% 
   st_make_grid(cellsize = c(1000, 1000), square = TRUE, what = "polygons") %>% 

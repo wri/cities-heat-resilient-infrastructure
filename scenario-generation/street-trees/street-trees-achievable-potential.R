@@ -7,10 +7,10 @@ library(lidR)
 library(tidyverse)
 library(here)
 
-city = "ZAF-Cape_Town"
+city = "BRA-Rio_de_janeiro"
 
-inputs_path <- here(city, "data")
-scenario_path <- here(city, "scenarios", "street-trees")
+inputs_path <- here("data", city)
+scenario_path <- here(inputs_path, "scenarios", "street-trees")
 
 # Create scenario_path
 if (!dir.exists(scenario_path)) {
@@ -21,39 +21,19 @@ if (!dir.exists(scenario_path)) {
 aoi <- st_read(here(inputs_path, "aoi.geojson"))
 lulc <- rast(here(inputs_path, "open-urban.tif"))
 road_vectors <- st_read(here(inputs_path, "roads.geojson"))
-lanes <- read_csv(here(inputs_path, "average_lanes.csv"))
-canopy_height <- rast(here(inputs_path, "existing-tree-canopy.tif"))
+lanes <- read_csv(here(inputs_path, "average-lanes.csv"))
+canopy_height_existing <- rast(here(inputs_path, "tree-canopy-height.tif"))
 
 # OpenUrban should be in the right projection, get UTM from lulc
 # UTM
 
 utm <- st_crs(lulc)
 
-# Plantable area  -------------------------------------------------------
-
-source(here("scenario-generation", "street-trees", "plantable-street-function.R"))
-
-plantable_street <- generate_plantable_street(aoi = aoi, 
-                                              lulc_rast = lulc, 
-                                              existing_trees = tree_height,
-                                              road_vectors = road_vectors, 
-                                              lanes = lanes,
-                                              city = city,
-                                              utm = utm,
-                                              save_files = TRUE)
-
-ped_area <- plantable_street$ped_area
-plantable_street <- plantable_street$plantable_street
-
-rm(road_vectors, lanes)
 
 
 # Process trees -----------------------------------------------------------
-
-
-
-names(canopy_height) <- "height"
-tree_height <- canopy_height
+names(canopy_height_existing) <- "height"
+tree_height <- canopy_height_existing
 tree_height[tree_height < 3] <- 0
 
 # Get tree height and area for local maxima
@@ -90,7 +70,26 @@ tree_structure <- tibble(
 save(ttops, crown_vectors, tree_structure, 
      file = here(scenario_path, "tree-vars.RData"))
 
-# Prepare the new tree cover raster and tree points
+# Plantable area  -------------------------------------------------------
+
+source(here("scenario-generation", "street-trees", "plantable-street-function.R"))
+
+plantable_street <- generate_plantable_street(aoi = aoi, 
+                                              lulc_rast = lulc, 
+                                              existing_trees = tree_height,
+                                              road_vectors = road_vectors, 
+                                              lanes = lanes,
+                                              city = city,
+                                              utm = utm,
+                                              save_files = TRUE)
+
+ped_area <- plantable_street$ped_area
+plantable_street <- plantable_street$plantable_street
+
+rm(road_vectors, lanes)
+
+
+# Evaluate baseline conditions -------
 
 # this will get covered with the updated rasters
 updated_tree_cover <- tree_height
@@ -187,7 +186,7 @@ aoi_grid <- aoi_grid %>%
 st_write(aoi_grid, here(scenario_path, "aoi_street-tree-grid.geojson"))
 
 # Add back in the original vegetation canopy to include areas with height <= 1
-updated_tree_cover <- max(updated_tree_cover, tree_height, na.rm = TRUE)
+updated_tree_cover <- max(updated_tree_cover, canopy_height_existing, na.rm = TRUE)
 
 
 # Save the new tree cover raster

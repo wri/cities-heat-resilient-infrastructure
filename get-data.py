@@ -3,8 +3,8 @@
 ######################
 
 ## Inputs
-city = "BRA-Rio_de_janeiro"
-aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
+city = "ZAF-Cape_Town"
+aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_town/processed/area_of_interest.geojson"
 
 # Create city folder
 import os
@@ -14,7 +14,7 @@ if not os.path.isdir(path):
 
 ## Get the area of interest
 import geopandas as gpd
-aoi = gpd.read_file(aoi_file)
+aoi = gpd.read_file(aoi_file).to_crs(4326)
 
 ## Create bounding box
 from city_metrix.layers.layer_geometry import GeoExtent
@@ -66,7 +66,7 @@ import geopandas as gpd
 import pandas as pd
 
 road_paths = [
-    f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/{city}/vector-data/roads/roads_{tile}.geojson"
+    f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/roads/roads_{tile}.geojson"
     for tile in tiles
 ]
 

@@ -28,8 +28,7 @@ load(here(scenario_path, "tree-vars.RData"))
 
 # OpenUrban should be in the right projection, get UTM from lulc
 # UTM
-source(here("utils", "utm.R"))
-utm <- get_aoi_utm(aoi)
+utm <- st_crs(lulc)
 
 
 # load tree functions
@@ -114,6 +113,15 @@ for (i in aoi_grid$ID) {
   
 }
 
+# Save the AOI grid
+aoi_grid <- aoi_grid %>% 
+  mutate(final_prop_cover = final_tree_cover_area / plantable_area,
+         final_increase = final_prop_cover - prop_covered)
+
+st_write(aoi_grid, here(scenario_path, "technical-potential-aoi-grid.geojson"))
+
+# Add back in the original vegetation canopy to include areas with height <= 1
+updated_tree_cover <- max(updated_tree_cover, canopy_height_existing, na.rm = TRUE)
 
 # Save the new tree cover raster
 writeRaster(updated_tree_cover, 
@@ -132,8 +140,4 @@ writeRaster(tree_diff_raster,
             here(scenario_path, "new-street-trees-technical-potential.tif"), 
             overwrite = TRUE)
 
-aoi_grid <- aoi_grid %>% 
-  mutate(final_prop_cover = final_tree_cover_area / plantable_area,
-         final_increase = final_prop_cover - prop_covered)
 
-st_write(aoi_grid, here(scenario_path, "technical-potential-aoi-grid.geojson"))

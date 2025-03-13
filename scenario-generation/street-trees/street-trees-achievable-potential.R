@@ -198,7 +198,7 @@ writeRaster(updated_tree_cover,
 st_write(updated_tree_points, here(scenario_path, paste0("all-street-trees-" , pct_value * 100, "pctl-achievable", ".geojson")))
 
 # Create a logical raster where TRUE indicates cells that differ between A and B
-diff_mask <- tree_height != updated_tree_cover
+diff_mask <- canopy_height_existing != updated_tree_cover
 # Use the mask to create a raster that keeps values from B where they differ from A
 tree_diff_raster <- mask(updated_tree_cover, diff_mask, maskvalue = FALSE)
 

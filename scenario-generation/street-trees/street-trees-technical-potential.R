@@ -7,7 +7,7 @@ library(lidR)
 library(tidyverse)
 library(here)
 
-city = "BRA-Rio_de_janeiro"
+city = "ZAF-Cape_Town"
 
 inputs_path <- here("data", city)
 scenario_path <- here(inputs_path, "scenarios", "street-trees")
@@ -23,6 +23,7 @@ lulc <- rast(here(inputs_path, "open-urban.tif"))
 canopy_height_existing <- rast(here(inputs_path, "tree-canopy-height.tif"))
 
 plantable_area <- rast(here(scenario_path, "plantable-street.tif"))
+ped_area <- rast(here(scenario_path, "pedestrian-area.tif"))
 crowns <- rast(here(scenario_path, "existing-tree-crowns.tif"))
 load(here(scenario_path, "tree-vars.RData"))
 
@@ -132,7 +133,7 @@ writeRaster(updated_tree_cover,
 st_write(updated_tree_points, here(scenario_path, paste0("all-street-trees-technical-potential", ".geojson")))
 
 # Create a logical raster where TRUE indicates cells that differ between A and B
-diff_mask <- tree_height != updated_tree_cover
+diff_mask <- canopy_height_existing != updated_tree_cover
 # Use the mask to create a raster that keeps values from B where they differ from A
 tree_diff_raster <- mask(updated_tree_cover, diff_mask, maskvalue = FALSE)
 

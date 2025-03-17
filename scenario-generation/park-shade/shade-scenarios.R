@@ -108,6 +108,8 @@ park_suitable_area_vector <- park_vectors %>%
 
 # Small parks -------------------------------------------------------------
 
+# https://srpshade.caddetails.com/products/square-hip-shades-4430/80366
+
 source(here("scripts", "shade-generating-functions.R"))
 
 # Pocket parks—1 acre (~ 0.4 hectares, 4046.86 m^2) or less

@@ -7,10 +7,12 @@ library(lidR)
 library(tidyverse)
 library(here)
 
-city = "BRA-Rio_de_janeiro"
+city = "ZAF-Cape_Town"
 
 inputs_path <- here("data", city)
 scenario_path <- here(inputs_path, "scenarios", "street-trees")
+aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city,
+                   "/scenarios/street-trees/")
 
 # Create scenario_path
 if (!dir.exists(scenario_path)) {
@@ -22,53 +24,36 @@ aoi <- st_read(here(inputs_path, "aoi.geojson"))
 lulc <- rast(here(inputs_path, "open-urban.tif"))
 road_vectors <- st_read(here(inputs_path, "roads.geojson"))
 lanes <- read_csv(here(inputs_path, "average-lanes.csv"))
-canopy_height_existing <- rast(here(inputs_path, "tree-canopy-height.tif"))
+canopy_height_existing <- rast(here(inputs_path, "tree-canopy-height.tif")) 
+names(canopy_height_existing) <- "height"
 
-# OpenUrban should be in the right projection, get UTM from lulc
-# UTM
+
+# Get UTM from OpenUrban
 
 utm <- st_crs(lulc)
 
-
-
-# Process trees -----------------------------------------------------------
-names(canopy_height_existing) <- "height"
+# Create a tree height raster of vegetation canopy over 3 meters
 tree_height <- canopy_height_existing
 tree_height[tree_height < 3] <- 0
 
-# Get tree height and area for local maxima
-# locate trees
-ttops <- locate_trees(tree_height, lmf(3)) 
+# Process tree canopy to individual trees ---------------------------------
 
-# segment crowns
-crowns <- dalponte2016(tree_height, ttops)()
-names(crowns) <- "treeID"
+# If the tree data already exists, use it, otherwise create it
+if (file.exists(here(scenario_path, "tree-vars.RData"))) {
+  
+  load(here(scenario_path, "tree-vars.RData"))
+  
+} else {
+  
+  source(here("scenario-generation", "street-trees", "canopy-to-trees-function.R"))
+  
+  process_trees(tree_raster = tree_height, 
+                save_files = TRUE)
+  
+  load(here(scenario_path, "tree-vars.RData"))
+  
+}
 
-writeRaster(crowns, here(scenario_path, "existing-tree-crowns.tif"))
-
-# crown vectors
-crown_vectors <- crowns %>% 
-  as.polygons() %>% 
-  st_as_sf() %>% 
-  left_join(st_drop_geometry(ttops), by = "treeID") %>% 
-  rename(height = Z) 
-
-ttops <- ttops %>% 
-  rename(height = Z) %>% 
-  st_zm(drop = TRUE, what = "ZM")
-
-# Probabilities for tree height classes
-tree_structure <- tibble(
-  tree_classes = c("small", "medium", "large"),
-  tree_heights = c(ceiling(quantile(crown_vectors$height, 0.25)),
-                    ceiling(quantile(crown_vectors$height, 0.50)),
-                    ceiling(quantile(crown_vectors$height, 0.75))),
-  weights = c(0.25, 0.50, 0.25)
-)
-
-# Save tree data
-save(ttops, crown_vectors, tree_structure, 
-     file = here(scenario_path, "tree-vars.RData"))
 
 # Plantable area  -------------------------------------------------------
 
@@ -115,6 +100,7 @@ aoi_grid <- calc_pct_grid_cover(aoi_grid = aoi_grid,
 
 # 90th percentile value
 pct_value <- 0.9
+ped_area_tree_dist <- read_csv(paste0(aws_path, "street-tree-pct-1km-grid.csv"))
 achievable_tree_cover <- quantile(aoi_grid$prop_covered, pct_value, names = FALSE, na.rm = TRUE)
 
 # Generate new trees

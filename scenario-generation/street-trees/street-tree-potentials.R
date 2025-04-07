@@ -1,7 +1,13 @@
-###################
-# Choose your city!
-###################
-city <- "ZAF-Cape_Town"
+####################################################
+# Choose your city & specify the scenario parameters
+####################################################
+city <- "MEX-Monterrey"
+
+scenario <- "achievable"
+scenario_name <- "achievable-05pctl"
+percentile <- 0.05
+target_coverage <- NULL
+min_tree_dist <- 5
 
 
 # Setup ---------------------------------------------------------------------
@@ -34,20 +40,11 @@ names(canopy_height_existing) <- "height"
 
 source(here("scenario-generation", "street-trees", "street-trees-scenario-function.R")) 
 
-#################################
-# Choose a name for your scenario 
-#################################
-scenario_name <- "technical-100m"
-
-##########################################
-# Specify the parameters for your scenario
-##########################################
-
-street_trees_scenario_function(scenario = "technical",
+street_trees_scenario_function(scenario = scenario,
                                scenario_name = scenario_name,
-                               percentile = NULL, 
-                               target_coverage = NULL,
-                               min_tree_dist = 100,
+                               percentile = percentile, 
+                               target_coverage = target_coverage,
+                               min_tree_dist = min_tree_dist,
                                aoi, lulc, road_vectors, lanes, canopy_height_existing)
 
 

@@ -4,8 +4,8 @@
 city <- "MEX-Monterrey"
 
 scenario <- "achievable"
-scenario_name <- "achievable-05pctl"
-percentile <- 0.05
+scenario_name <- "achievable-75pctl"
+percentile <- 0.75
 target_coverage <- NULL
 min_tree_dist <- 5
 
@@ -50,13 +50,5 @@ street_trees_scenario_function(scenario = scenario,
 
 
 
-# Calculate metrics -------------------------------------------------------
 
-met <- read_delim(here("data", city, "scenarios", "met_20jan2022.txt"))
-
-source(here("scenario-generation", "street-trees", "street-tree-metrics-function.R"))
-
-calc_street_tree_metrics(city = city,
-                         scenario_path = scenario_path,
-                         met_data = met)
 

@@ -68,7 +68,8 @@ move_polygon_to_cover_point <- function(polygon, point) {
   return(new_polygon)
 }
 
-generate_trees <- function(plantable_area, ped_area, existing_tree_cover, existing_tree_points, 
+generate_trees <- function(plantable_area, ped_area, existing_tree_cover, 
+                           existing_tree_points, tree_structure, tree_height,
                            target_coverage, min_dist, crown_vectors, crown_raster) {
   
   # Indicate that trees already exist

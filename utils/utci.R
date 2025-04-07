@@ -261,15 +261,12 @@ utci_calc <- function(Ta, ehPa, va, Tmrt) {
 # mrt_files <- mrt_files[!str_detect(mrt_files, "average")]
 
 # for (file in mrt_files) {
-create_utci <- function(mrt_file_path, met_file_path){
+create_utci <- function(mrt_rast, timestamp, met_data){
   # get the MRT raster
-  mrt_data <- rast(mrt_file_path)
+  # mrt_data <- rast(mrt_rast)
   
   # get the timestamp
-  time <- as.numeric(str_extract(mrt_file_path, "(?<=_)[0-9]{2}(?=00D)"))
-  
-  # Load meteorology data
-  met_data <- read_delim(met_file_path)
+  time <- as.numeric(str_extract(timestamp, "(?<=_)[0-9]{2}(?=00D)"))
   
   # extract met data for the timestamp
   Ta <- met_data %>% 
@@ -291,10 +288,10 @@ create_utci <- function(mrt_file_path, met_file_path){
   vpd <- vpd / 100
   
   # Make sure all the input values are valid
-  check_inputs(Ta, va, vpd, mrt_data)
+  check_inputs(Ta, va, vpd, mrt_rast)
   
   # Calculate UTCI
-  utci_values <- utci_calc(Ta, vpd, va, mrt_data)
+  utci_values <- utci_calc(Ta, vpd, va, mrt_rast)
   
   return(utci_values)
   # output_filename <- str_replace(mrt_file_path, "Tmrt", "UTCI")

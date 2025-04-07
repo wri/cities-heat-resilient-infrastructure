@@ -1,4 +1,4 @@
-generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, utm, save_files = FALSE) {
+generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, utm, save_files = TRUE) {
   
   # Roads -------------------------------------------------------------------
   
@@ -26,7 +26,7 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
     filter(highway %in% ped_roads_list)
   
   if (save_files){
-    file = here(scenario_path, "ped_roads.geojson")
+    file = here(infrastructure_path, "ped_roads.geojson")
     if (file.exists(file)) {
       file.remove(file)
     }
@@ -140,8 +140,8 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   
   # Save raster as Cloud-Optimized GeoTIFF (COG)
   if (save_files){
-    writeRaster(plantable_street, here(scenario_path, "plantable-street.tif"), overwrite = TRUE)
-    writeRaster(ped_area, here(scenario_path, "pedestrian-area.tif"), overwrite=TRUE)
+    writeRaster(plantable_street, here(infrastructure_path, "plantable-street.tif"), overwrite = TRUE)
+    writeRaster(ped_area, here(infrastructure_path, "pedestrian-area.tif"), overwrite=TRUE)
   }
   
   return(list(plantable_street = plantable_street,

@@ -21,7 +21,7 @@ See the main project readme
     -   To run a program scenario, choose the target percent of cover for pedestrian areas:
 
         -   scenario = "program", percentile = NULL, target_coverage = 0.5
-5.  Select the code in lines 1-60 and run. The output data will be saved in a folder
+5.  Select the code in lines 1-48 and run. The output data will be saved in a folder
 named for the scenario; the new tree height raster is named "scenario-tree-canopy-height.tif".
 
 ## Metrics

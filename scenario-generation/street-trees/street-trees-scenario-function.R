@@ -174,7 +174,10 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
     mutate(final_prop_cover = final_tree_cover_area / plantable_area,
            final_increase = final_prop_cover - prop_covered)
   
-  st_write(aoi_grid, here(output_path, "aoi_street-tree-grid.geojson"))
+  st_write(aoi_grid, 
+           dsn = here(scenario_path, "aoi_street-tree-grid.geojson"),
+           append = FALSE,
+           delete_dsn = TRUE)
   
   # Add back in the original vegetation canopy to include areas with height <= 1
   updated_tree_cover <- max(updated_tree_cover, canopy_height_existing, na.rm = TRUE)
@@ -182,11 +185,14 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   # Save the new tree cover raster
   writeRaster(updated_tree_cover, 
-              here(output_path, "scenario-tree-canopy-height.tif"),
+              here(scenario_path, "scenario-tree-canopy-height.tif"),
               overwrite = TRUE)
   
   # Save the new tree points
-  st_write(updated_tree_points, "scenario-tree-points.geojson")
+  st_write(updated_tree_points, 
+           dsn = here(scenario_path, "scenario-tree-points.geojson"),
+           append = FALSE,
+           delete_dsn = TRUE)
   
   # Create a logical raster where TRUE indicates cells that differ between A and B
   diff_mask <- canopy_height_existing != updated_tree_cover
@@ -194,7 +200,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   tree_diff_raster <- mask(updated_tree_cover, diff_mask, maskvalue = FALSE)
   
   writeRaster(tree_diff_raster, 
-              here(output_path, "scenario-new-trees.tif"),
+              here(scenario_path, "scenario-new-trees.tif"),
               overwrite = TRUE)
   
 }

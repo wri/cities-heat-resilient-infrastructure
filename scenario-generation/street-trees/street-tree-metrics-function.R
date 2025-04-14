@@ -4,7 +4,6 @@ calc_street_tree_metrics <- function(city, scenario_path, met_data){
   
   library(terra)
   library(tidyverse)
-  library(terra)
   library(here)
   
   # Load UTCI function
@@ -25,6 +24,13 @@ calc_street_tree_metrics <- function(city, scenario_path, met_data){
   Tmrt_files <- list.files(scenario_path, pattern = "Tmrt")
   shadow_files <- list.files(scenario_path, pattern = "Shadow")
   
+  # Load updated trees
+  tree_rast <- rast(here(scenario_path, "scenario-tree-canopy-height.tif"))
+  
+  # Load AOI and clip layers
+  aoi <- st_read(here("data", city, "aoi.geojson"))
+  tree_rast <- mask(tree_rast, aoi)
+  
   for (time in timestamps) {
     
     # Compute UTCI if the file doesn't already exist
@@ -41,11 +47,12 @@ calc_street_tree_metrics <- function(city, scenario_path, met_data){
       
     }
     
-    # Load rasters
+    # Load shade raster and mask to AOI
     shade_rast <- rast(here(scenario_path, shadow_files[str_detect(shadow_files, time)])) < 1
+    shade_rast <- mask(shade_rast, aoi)
     
-    # Load updated trees
-    tree_rast <- rast(here(scenario_path, "scenario-tree-canopy-height.tif"))
+    # Mask UTCI to AOI
+    utci_rast <- mask(utci_rast, aoi)
     
     # Compute metrics
     tree_pct <- sum(values(mask(tree_rast, ped_area_rast, maskvalues = 0) %>% subst(NA, 0)) != 0) / pedestrian_area

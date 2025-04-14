@@ -4,13 +4,12 @@
 1. Open project folder in RStudio
 2. Run setup.R to install requirements
 
-## Usage
-### Get data
-This will get the data needed for all scenarios.
-1. Run `library(reticulate)` and  `use_condaenv("chri", required = TRUE)` in R.
-2. Open `get-data.py`.
-3. Update `city` and and `aoi_file` variables. 
-4. Run through line by line.
+## Street tree scenarios
+1. Open tree-scenario-full-implementation.R
+2. Specify city following the format XXX-My_City where XXX is the 3-digit 
+country code and My_City is the city name with words capitalized and separated
+by an underscore.
+3. Specify variables defining the scenario and CTCM run.
+4. Specify the met file (lines 27-32).
+5. Run the code.
 
-### Run Scenarios
-Look in the `scenario-generation` folder for the scenario you want and follow the readme there

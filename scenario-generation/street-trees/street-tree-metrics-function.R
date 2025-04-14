@@ -66,5 +66,6 @@ calc_street_tree_metrics <- function(city, scenario_path, met_data){
   write_csv(results, here(scenario_path, "metrics.csv"))
   
 }
+
   
   

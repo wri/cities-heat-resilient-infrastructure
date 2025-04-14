@@ -153,13 +153,12 @@ run_CTCM <- function(city, ctcm_run, version, description, author, utc_offset, m
   # Write YAML with custom handler
   write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
   
-  # Run CTCM check bat script
-  # setwd(run_setup_folder)
-  # shell.exec(file.path(run_setup_folder, "a_run_CTCM_pre_check.bat"))
-  
   # Run CTCM bat script
-  setwd(run_setup_folder)
-  system(file.path(run_setup_folder, "b_run_CTCM_processing.bat"), wait = TRUE)
+  library(withr)
+  
+  with_dir(run_setup_folder, {
+    system(file.path(run_setup_folder, "b_run_CTCM_processing.bat"), wait = TRUE)
+  })
   
   # Then continue with the rest of your R script
   message("CTCM processing complete. Copying ouput files to scenario folders...")

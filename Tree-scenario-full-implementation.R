@@ -17,7 +17,7 @@ min_tree_dist <- 5
 ###############
 # CTCM metadata
 ###############
-ctcm_run <- "test"
+ctcm_run <- "test-3"
 version <- 1
 description <- "Street tree scenarios"
 author <- "elizabeth.wesley@wri.org"
@@ -28,7 +28,6 @@ utc_offset <- -6
 # cities-heat-resilient-infrastructure/data/city/scenarios/met_file_name.txt
 # and reference the file name here
 
-# met_file <- "None"
 met_file <- "met_era5_hottest_days.txt"
 
 # List the names of all the scenario folders you want to run CTCM for

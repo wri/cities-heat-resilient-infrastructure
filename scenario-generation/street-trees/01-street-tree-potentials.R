@@ -49,6 +49,17 @@ create_scenario <- function(city, scenario, scenario_name, percentile = NULL,
                                  min_tree_dist = min_tree_dist,
                                  aoi, lulc, road_vectors, lanes, canopy_height_existing)
   
+  params <- tibble(
+    city = city,
+    scenario = scenario, 
+    scenario_name = scenario_name, 
+    percentile = percentile, 
+    target_coverage = target_coverage, 
+    min_tree_dist = min_tree_dist
+  )
+  
+  write_csv(params, here(infrastructure_path, scenario_name, "scenario-params.csv"))
+  
 }
 
 

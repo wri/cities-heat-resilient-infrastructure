@@ -1,9 +1,11 @@
-library(terra)
-library(tidyverse)
-library(terra)
-library(here)
+
 
 calc_street_tree_metrics <- function(city, scenario_path, met_data){
+  
+  library(terra)
+  library(tidyverse)
+  library(terra)
+  library(here)
   
   # Load UTCI function
   source(here("utils", "utci.R"))
@@ -63,7 +65,7 @@ calc_street_tree_metrics <- function(city, scenario_path, met_data){
     }
   
   # Save results
-  write_csv(results, here(scenario_path, "metrics.csv"))
+  write_csv(results, here(scenario_path, "scenario-metrics.csv"))
   
 }
 

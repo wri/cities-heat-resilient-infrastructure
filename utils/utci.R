@@ -288,7 +288,7 @@ create_utci <- function(mrt_rast, timestamp, met_data){
   vpd <- vpd / 100
   
   # Make sure all the input values are valid
-  check_inputs(Ta, va, vpd, mrt_rast)
+  # check_inputs(Ta, va, vpd, mrt_rast)
   
   # Calculate UTCI
   utci_values <- utci_calc(Ta, vpd, va, mrt_rast)

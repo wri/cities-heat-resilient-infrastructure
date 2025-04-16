@@ -1,5 +1,4 @@
 
-
 calc_street_tree_metrics <- function(city, scenario_path, met_data){
   
   library(terra)

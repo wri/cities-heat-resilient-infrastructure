@@ -7,7 +7,7 @@
 
 # Calculate metrics -------------------------------------------------------
 
-calc_metrics <- function(city, scenarios, infrastructure){
+calc_metrics <- function(city, scenarios, infrastructure, aoi_name){
   
   results <- tibble()
   
@@ -28,10 +28,13 @@ calc_metrics <- function(city, scenarios, infrastructure){
     
   }
   
+  results_long <- results %>% 
+    mutate(aoi = aoi_name) %>% 
+    relocate(aoi, .after = 4) %>% 
+    pivot_longer(cols = !c(1:5))
+  
   # Save results
   write_csv(results, here("data", city, "scenarios", infrastructure, "scenario-metrics.csv"))
   
 }
 
-
-x <- calc_metrics(city, scenarios = c("baseline", "sandbox"), "park-shade")

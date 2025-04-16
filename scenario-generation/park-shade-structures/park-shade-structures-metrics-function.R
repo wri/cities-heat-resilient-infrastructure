@@ -33,24 +33,24 @@ calc_street_park_shade_metrics <- function(city, scenario, infrastructure, met_d
   # Load AOI 
   aoi <- st_read(here("data", city, "aoi.geojson"))
   
-  for (time in timestamps) {
+  for (t in timestamps) {
     
     # Compute UTCI if the file doesn't already exist
-    if (any(str_detect(utci_files, time))) {
+    if (any(str_detect(utci_files, t))) {
       
-      utci_rast <- rast(here(scenario_path, utci_files[str_detect(utci_files, time)]))  # Load existing UTCI raster
+      utci_rast <- rast(here(scenario_path, utci_files[str_detect(utci_files, t)]))  # Load existing UTCI raster
       
     } else {
       
-      Tmrt <- rast(here(scenario_path, Tmrt_files[str_detect(Tmrt_files, time)]))
-      utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = time, met_data = met_data)
+      Tmrt <- rast(here(scenario_path, Tmrt_files[str_detect(Tmrt_files, t)]))
+      utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = t, met_data = met_data)
       
-      writeRaster(utci_rast, here(scenario_path, paste0("UTCI_", time, ".tif")))
+      writeRaster(utci_rast, here(scenario_path, paste0("UTCI_", t, ".tif")))
       
     }
     
     # Load shade raster and mask to AOI
-    shade_rast <- rast(here(scenario_path, shadow_files[str_detect(shadow_files, time)])) < 1
+    shade_rast <- rast(here(scenario_path, shadow_files[str_detect(shadow_files, t)])) < 1
     shade_rast <- mask(shade_rast, aoi)
     
     # Mask UTCI to AOI
@@ -68,17 +68,18 @@ calc_street_park_shade_metrics <- function(city, scenario, infrastructure, met_d
     max_distance <- max(values(distance_to_shade), na.rm = TRUE)
     
     # utci in parks
-    utci_avg <- mean(values(mask(crop(utci_rast, parks), parks)), na.rm = TRUE)
+    utci_mean_parks <- mean(values(mask(crop(utci_rast, parks), parks)), na.rm = TRUE)
     
     # Store results
     metrics <- tibble(
-      scenario = scenario,
-      infrastructure = infrastructure,
-      time = str_remove(time, "D"),
-      utci_avg = utci_avg,
-      shade_pct = shade_pct,
-      shade_mean_dist = average_distance,
-      shade_max_dist = max_distance
+      cities = city,
+      date = str_extract(t, ".*(?=_[^_]+$)"),
+      time = str_extract(t, "(?<=_)[^_D]+(?=D$)"),
+      scenarios = paste(str_replace(infrastructure, "-", "_"), scenario, time, sep = "_"),
+      utci_mean_parks = utci_mean_parks,
+      shade_pct_parks = shade_pct,
+      shade_mean_dist_parks = average_distance,
+      shade_max_dist_parks = max_distance
     )
     
     results <- bind_rows(results, metrics)

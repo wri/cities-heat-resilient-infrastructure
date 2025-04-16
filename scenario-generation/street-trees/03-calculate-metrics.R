@@ -7,23 +7,31 @@
 
 # Calculate metrics -------------------------------------------------------
 
-calc_metrics <- function(city, scenarios){
+calc_metrics <- function(city, scenarios, infrastructure){
+  
+  results <- tibble()
   
   for (scenario in scenarios){
     
-    scenario_path <- here("data", city, "scenarios", "street-trees", scenario)
-    met <- list.files(here("data", city, "scenarios"), pattern = "met", full.names = TRUE) %>%
+    met_data <- list.files(here("data", city, "scenarios"), pattern = "met", full.names = TRUE) %>%
       first() %>% 
       read_delim()
     
-    source(here("scenario-generation", "street-trees", "street-tree-metrics-function.R"))
+    source(here("scenario-generation", infrastructure, paste0(infrastructure, "-metrics-function.R")))
     
-    calc_street_tree_metrics(city = city,
-                             scenario_path = scenario_path,
-                             met_data = met)
+    scenario_results <- calc_street_park_shade_metrics(city = city,
+                                                       scenario = scenario,
+                                                       infrastructure = infrastructure,
+                                                       met_data = met_data)
+    
+    results <- bind_rows(results, scenario_results)
     
   }
+  
+  # Save results
+  write_csv(results, here("data", city, "scenarios", infrastructure, "scenario-metrics.csv"))
   
 }
 
 
+x <- calc_metrics(city, scenarios = c("baseline", "sandbox"), "park-shade")

@@ -6,7 +6,7 @@
 # city = "MEX-Monterrey"
 # aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/scenarios/street-trees/monterrey-test-aoi.geojson"
 
-def get_data(city, aoi_file, output_base="."):
+def get_data(city, aoi_file, output_base=".", year):
   # Create city folder
   import os
   city_dir = os.path.join(output_base, "data", city)
@@ -88,6 +88,55 @@ def get_data(city, aoi_file, output_base="."):
   
   # Save to csv file
   lanes.to_csv(os.path.join(city_dir, "average-lanes.csv"), index=False)
+  
+  
+  
+  # Get buildings
+  ######################
+  build_paths = [
+      f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/buildings/buildings_{tile}.geojson"
+      for tile in tiles
+  ]
+  
+  build_vectors = pd.concat([gpd.read_file(url) for url in build_paths], ignore_index=True)
+  
+  # Save to json file
+  build_vectors.to_file(os.path.join(city_dir, "buildings.geojson"), driver='GeoJSON')
+  
+  ######################
+  # Get albedo
+  ######################
+  centroid_lat = aoi.geometry.unary_union.centroid.y
+
+  if centroid_lat < 0:
+      # Southern Hemisphere
+      summer_start = f"{year}-12-01"
+      summer_end = f"{int(year) + 1}-02-28"
+  else:
+      # Northern Hemisphere
+      summer_start = f"{year}-06-01"
+      summer_end = f"{int(year) + 1}-08-31"
+    
+  from city_metrix.layers import Albedo
+  city_Albedo = Albedo(start_date=summer_start, end_date=summer_end).get_data(bbox)
+  
+  ## Write raster to tif file
+  city_Albedo.rio.to_raster(raster_path=os.path.join(city_dir, "albedo.tif"))
+  
+  
+  # Get parks
+  ######################
+  openspace_paths = [
+      f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/openspace/openspace_{tile}.geojson"
+      for tile in tiles
+  ]
+  
+  openspace_vectors = pd.concat([gpd.read_file(url) for url in openspace_paths], ignore_index=True)
+  
+  # Save to json file
+  openspace_vectors.to_file(os.path.join(city_dir, "openspaces.geojson"), driver='GeoJSON')
+  
+  
   
   
   

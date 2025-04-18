@@ -1,5 +1,5 @@
 street_trees_scenario_function <- function(scenario, percentile = NULL, target_coverage = NULL, min_tree_dist, aoi, lulc, 
-                                           road_vectors, lanes, canopy_height_existing, scenario_name) {
+                                           road_vectors, lanes, canopy_height_existing, scenario_name, infrastructure_path) {
   
   scenario_path <- here(infrastructure_path, scenario_name)
   

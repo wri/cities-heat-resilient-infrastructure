@@ -47,6 +47,7 @@ create_scenario <- function(city, scenario, scenario_name, percentile = NULL,
                                  percentile = percentile, 
                                  target_coverage = target_coverage,
                                  min_tree_dist = min_tree_dist,
+                                 infrastructure_path = infrastructure_path,
                                  aoi, lulc, road_vectors, lanes, canopy_height_existing)
   
   params <- tibble(

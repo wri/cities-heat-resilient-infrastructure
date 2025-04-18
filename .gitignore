@@ -8,7 +8,7 @@
 __pycache__
 
 # Ignore everything in data folder...
-/data/MEX-Monterrey/scenarios/street-trees/achievable-90pctl/scenario-tree-points.geojson
+/data/MEX-Monterrey/
 
 # ...except the MEX-Monterrey folder
 #!/data/MEX-Monterrey

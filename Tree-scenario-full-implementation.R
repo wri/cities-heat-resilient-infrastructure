@@ -1,8 +1,8 @@
 ###################
 # Define city & AOI
 ###################
-city <- "MEX-Monterrey"
-aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/scenarios/street-trees/monterrey-test-aoi.geojson"
+city <- "ZAF-Cape_Town"
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
 aoi_name <- "business_district" # Name for the AOI
 
 year <- "2024"
@@ -58,7 +58,7 @@ source_python(here("get-data.py"))
 # Add the Python script folder to sys.path
 script_dir <- here()  
 py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
-get_data(city, aoi_file, script_dir, year)
+get_data(city, aoi_file, year, script_dir)
 
 
 # Generate scenario -------------------------------------------------------

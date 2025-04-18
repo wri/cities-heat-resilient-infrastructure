@@ -3,10 +3,12 @@
 ######################
 
 ## Inputs
-# city = "MEX-Monterrey"
-# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/scenarios/street-trees/monterrey-test-aoi.geojson"
+city = "ZAF-Cape_Town"
+aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+year = "2024"
 
-def get_data(city, aoi_file, output_base=".", year):
+
+def get_data(city, aoi_file, year, output_base="."):
   # Create city folder
   import os
   city_dir = os.path.join(output_base, "data", city)
@@ -106,7 +108,7 @@ def get_data(city, aoi_file, output_base=".", year):
   ######################
   # Get albedo
   ######################
-  centroid_lat = aoi.geometry.unary_union.centroid.y
+  centroid_lat = aoi.geometry.union_all().centroid.y
 
   if centroid_lat < 0:
       # Southern Hemisphere
@@ -116,6 +118,7 @@ def get_data(city, aoi_file, output_base=".", year):
       # Northern Hemisphere
       summer_start = f"{year}-06-01"
       summer_end = f"{int(year) + 1}-08-31"
+
     
   from city_metrix.layers import Albedo
   city_Albedo = Albedo(start_date=summer_start, end_date=summer_end).get_data(bbox)

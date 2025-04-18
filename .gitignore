@@ -3,8 +3,13 @@
 .Rhistory
 .RData
 .Ruserdata
+
 # Python
 __pycache__
-# Files
-/data
-ZAF-Cape_Town
+
+# Ignore everything in data folder...
+/data/MEX-Monterrey/scenarios/street-trees/achievable-90pctl/scenario-tree-points.geojson
+
+# ...except the MEX-Monterrey folder
+#!/data/MEX-Monterrey
+#!/data/MEX-Monterrey/**

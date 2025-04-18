@@ -1,0 +1,16 @@
+Unnamed: 0,highway,avg.lanes
+1,busway,1
+2,living_street,2
+3,motorway,3
+4,motorway_link,2
+5,primary,3
+6,primary_link,2
+7,residential,2
+8,secondary,3
+9,secondary_link,2
+10,service,2
+11,tertiary,3
+12,tertiary_link,2
+13,trunk,4
+14,trunk_link,2
+15,unclassified,2

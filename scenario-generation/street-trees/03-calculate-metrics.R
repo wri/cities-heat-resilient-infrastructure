@@ -17,12 +17,12 @@ calc_metrics <- function(city, scenarios, infrastructure, aoi_name){
       first() %>% 
       read_delim()
     
-    source(here("scenario-generation", infrastructure, paste0(infrastructure, "-metrics-function.R")))
+    metrics <- source(here("scenario-generation", infrastructure, paste0(infrastructure, "-metrics-function.R")))
     
-    scenario_results <- calc_street_park_shade_metrics(city = city,
-                                                       scenario = scenario,
-                                                       infrastructure = infrastructure,
-                                                       met_data = met_data)
+    scenario_results <- metrics$value(city = city,
+                                      scenario = scenario,
+                                      infrastructure = infrastructure,
+                                      met_data = met_data)
     
     results <- bind_rows(results, scenario_results)
     
@@ -34,7 +34,8 @@ calc_metrics <- function(city, scenarios, infrastructure, aoi_name){
     pivot_longer(cols = !c(1:5))
   
   # Save results
-  write_csv(results, here("data", city, "scenarios", infrastructure, "scenario-metrics.csv"))
+  write_csv(results_long, here("data", city, "scenarios", infrastructure, "scenario-metrics.csv"))
   
 }
+
 

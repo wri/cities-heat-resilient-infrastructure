@@ -25,6 +25,8 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   ped_road_vectors <- road_vectors %>% 
     filter(highway %in% ped_roads_list)
   
+  infrastructure_path <- here("data", city, "scenarios", "street-trees")
+  
   if (save_files){
     file = here(infrastructure_path, "ped_roads.geojson")
     if (file.exists(file)) {

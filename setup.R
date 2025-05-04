@@ -8,7 +8,10 @@ packages <- c(
   "here",
   "rgee",
   "gfcanalysis",
-  "geojsonio"
+  "geojsonio",
+  "withr",
+  "R.utils",
+  "yaml"
   )
 
 # Install any packages that aren't already installed

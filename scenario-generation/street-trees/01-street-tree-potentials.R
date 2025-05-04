@@ -9,8 +9,8 @@
 # target_coverage <- NULL
 # min_tree_dist <- 5
 
-create_scenario <- function(city, scenario, scenario_name, percentile = NULL, 
-                            target_coverage = NULL, min_tree_dist){
+street_tree_scenario <- function(city, scenario, scenario_name, percentile = NULL, 
+                                 target_coverage = NULL, min_tree_dist){
   
   # Setup ---------------------------------------------------------------------
   

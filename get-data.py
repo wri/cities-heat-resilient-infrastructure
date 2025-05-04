@@ -3,9 +3,9 @@
 ######################
 
 ## Inputs
-city = "ZAF-Cape_Town"
-aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
-year = "2024"
+# city = "ZAF-Cape_Town"
+# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+# year = "2024"
 
 
 def get_data(city, aoi_file, year, output_base="."):
@@ -25,7 +25,7 @@ def get_data(city, aoi_file, year, output_base="."):
   ## Create bounding box
   from city_metrix.layers.layer_geometry import GeoExtent
   bbox = GeoExtent(aoi.total_bounds, aoi.crs.srs).as_utm_bbox()
-  
+  bbox.to_file(os.path.join(city_dir, "bbox.geojson"))
   
   ## save aoi with UTM crs
   aoi.to_crs(bbox.crs).to_file(os.path.join(city_dir, "aoi.geojson"))
@@ -39,14 +39,14 @@ def get_data(city, aoi_file, year, output_base="."):
   #TODD: Get UTM from OpenUrban and resample others
   #TODO: add projection to all downloads
   
-  ######################
-  # Get the tree canopy height
-  ######################
-  from city_metrix.layers import TreeCanopyHeight
-  city_TreeCanopyHeight = TreeCanopyHeight().get_data(bbox)
-  
-  ## Write raster to tif file
-  city_TreeCanopyHeight.rio.to_raster(raster_path=os.path.join(city_dir, "tree-canopy-height.tif"))
+  # ######################
+  # # Get the tree canopy height
+  # ######################
+  # from city_metrix.layers import TreeCanopyHeight
+  # city_TreeCanopyHeight = TreeCanopyHeight().get_data(bbox)
+  # 
+  # ## Write raster to tif file
+  # city_TreeCanopyHeight.rio.to_raster(raster_path=os.path.join(city_dir, "tree-canopy-height.tif"))
   
   ######################
   # Get OpenUrban

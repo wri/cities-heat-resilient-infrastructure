@@ -66,8 +66,8 @@ get_data(city, aoi_file, year, script_dir)
 # Run this for as many scenarios as you want.
 
 source(here("scenario-generation", "street-trees", "01-street-tree-potentials.R"))
-create_scenario(city, scenario, scenario_name, percentile, 
-                target_coverage, min_tree_dist)
+street_tree_scenario(city, scenario, scenario_name, percentile, 
+                     target_coverage, min_tree_dist)
 
 
 # Run CTCM ----------------------------------------------------------------

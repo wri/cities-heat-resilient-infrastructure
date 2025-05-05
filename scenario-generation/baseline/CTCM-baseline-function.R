@@ -1,0 +1,123 @@
+run_CTCM_baseline <- function(city, ctcm_run, version, description, author, utc_offset){
+  
+  library(R.utils)
+  library(here)
+  library(tidyverse)
+  library(terra)
+  library(sf)
+  library(yaml)
+  library(withr)
+  
+  
+  # Setup CTCM data ---------------------------------------------------------
+  
+  
+  ctcm_setup_path <- file.path("C:", "CTCM_data_setup")
+  template <- file.path("C:", "CTCM_data_setup", "ZZZ_template_city")
+  
+  # Create setup folder for new run
+  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-", ctcm_run))
+  
+  copyDirectory(template, run_setup_folder)
+  
+  # Path to tile folder
+  tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
+  
+  # get bounding coordinates
+  bbox <- st_read(here("data", city, "bbox.geojson")) %>% 
+    st_transform(crs = 4326) %>%
+    st_bbox() %>%
+    round(digits = 13)
+  
+  
+  
+  # Update the yaml file ----------------------------------------------------
+  
+  
+  # Modify yaml file
+  yaml_path <- file.path(run_setup_folder, ".config_method_parameters.yml")
+  baseline_yaml <- read_yaml(yaml_path)
+  
+  # run metadata
+  baseline_yaml[[1]]$short_title <- ctcm_run
+  baseline_yaml[[1]]$version <- version
+  baseline_yaml[[1]]$description <- description
+  baseline_yaml[[1]]$author <- author
+  
+  # bounds
+  baseline_yaml[[2]]$utc_offset <- utc_offset
+  baseline_yaml[[2]]$min_lon <- bbox["xmin"]
+  baseline_yaml[[2]]$min_lat <- bbox["ymin"]
+  baseline_yaml[[2]]$max_lon <- bbox["xmax"]
+  baseline_yaml[[2]]$max_lat <- bbox["ymax"]
+  
+  baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]
+  
+  # filenames
+  baseline_yaml[[4]]$dem_tif_filename <- "None"
+  baseline_yaml[[4]]$dsm_tif_filename <- "None"
+  baseline_yaml[[4]]$lulc_tif_filename <- "None"
+  baseline_yaml[[4]]$tree_canopy_tif_filename <- "None"
+  
+  # Set sampling_local_hours as a verbatim string
+  baseline_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
+  class(baseline_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
+  
+  # Define custom handler to write without quotes
+  verbatim_handler <- function(x) {
+    x  # return string directly with no quotes
+  }
+  
+  # Write YAML with custom handler
+  write_yaml(baseline_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
+  
+  # Run CTCM bat script
+  with_dir(run_setup_folder, {
+    system(file.path(run_setup_folder, "b_run_CTCM_processing.bat"), wait = TRUE)
+  })
+  
+  # Then continue with the rest of your R script
+  message("CTCM processing complete. Copying ouput files to scenario folders...")
+  
+  
+  # After CTCM runs... ------------------------------------------------------
+  
+  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-", ctcm_run))
+  
+  city_folder <- here("data", city)
+  baseline_folder <- here(city_folder, "scenarios", "baseline")
+  
+  if(!dir.exists(baseline_folder)){
+    dir.create(baseline_folder)
+  }
+  
+  # Copy baseline layers to city data folder
+  baseline_layers <- list.files(here(ctcm_output_path, "primary_data", "raster_files", "tile_001"),
+                                full.names = TRUE)
+  
+  file.copy(from = baseline_layers, to = city_folder)
+  
+  # Copy processed data to baseline folder
+  processed_data <- list.files(here(ctcm_output_path, "processed_data", "tile_001"),
+                               full.names = TRUE)
+  
+  file.copy(from = processed_data, baseline_folder)
+    
+  # Copy CTCM output to scenario folder
+  output_data <- list.files(here(ctcm_output_path, "tcm_results_umep", "met_era5_hottest_days"), 
+                            full.names = TRUE) %>%
+    keep(~ str_detect(.x, "Shadow|Tmrt") &
+           !str_detect(.x, "Tmrt_average"))
+    
+  # Copy met file
+  met_file <- list.files(here(ctcm_output_path, "primary_data", "met_files"))
+  file.copy(met_file, baseline_folder)
+    
+}
+  
+  
+  
+  
+  
+  
+

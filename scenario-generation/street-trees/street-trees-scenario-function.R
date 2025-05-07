@@ -30,7 +30,8 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
     source(here("scenario-generation", "street-trees", "canopy-to-trees-function.R"))
     
     process_trees(tree_raster = tree_height, 
-                  save_files = TRUE)
+                  save_files = TRUE,
+                  infrastructure_path = infrastructure_path)
     
     load(here(infrastructure_path, "tree-vars.RData"))
     crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))

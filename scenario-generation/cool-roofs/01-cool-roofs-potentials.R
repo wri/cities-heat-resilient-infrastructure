@@ -1,9 +1,9 @@
-city <- "ZAF-Cape_Town"
-infrastructure <- "cool-roofs"
-scenario <- "program"
-scenario_name <- "large-buildings"
-area_threshold = 2000
-cool_roof_albedo = 0.62
+# city <- "ZAF-Cape_Town"
+# infrastructure <- "cool-roofs"
+# scenario <- "program"
+# scenario_name <- "large-buildings"
+# area_threshold = 2000
+# cool_roof_albedo = 0.62
 
 cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
                                area_threshold, cool_roof_albedo){
@@ -19,10 +19,11 @@ cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
   
   inputs_path <- here("data", city)
   infrastructure_path <- here(inputs_path, "scenarios", "cool-roofs")
+  scenario_path <- here(infrastructure_path, scenario_name)
   
   # Create scenario_path
-  if (!dir.exists(infrastructure_path)) {
-    dir.create(infrastructure_path, recursive = TRUE)
+  if (!dir.exists(scenario_path)) {
+    dir.create(scenario_path, recursive = TRUE)
   }
   
   # Load input data
@@ -64,6 +65,15 @@ cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
   dT_12 <- albedo_delta * 6
   dT_15 <- 0.935315 * dT_12
   dT_18 <- 0.646853 * dT_12
+  
+  air_temp_reductions <- tribble(
+    ~ time, ~ reduction,
+    "1200D", dT_12,
+    "1500D", dT_15,
+    "1800D", dT_18
+  )
+  
+  write_csv(air_temp_reductions, here(infrastructure_path, scenario_name, "air_temp_reductions.csv"))
   
 }
 

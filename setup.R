@@ -11,7 +11,8 @@ packages <- c(
   "geojsonio",
   "withr",
   "R.utils",
-  "yaml"
+  "yaml",
+  "exactextractr"
   )
 
 # Install any packages that aren't already installed
@@ -24,7 +25,21 @@ for(pkg in packages) {
 
 # Python setup
 library(reticulate)
-conda_create(envname = "chri", python_version = "3.10", pip= TRUE, packages = "git+https://github.com/wri/cities-cif@main")
+
+# I had to install miniconda
+
+# Step 1: Create the environment with pip and Git installed
+conda_create(envname = "chri", python_version = "3.10", packages = c("pip", "git"))
+
+# Step 2: Use the environment
+use_condaenv("chri", required = TRUE)
+py_config()
+
+# Step 3: Install the GitHub package using pip
+py_install("git+https://github.com/wri/cities-cif@main", method = "pip", pip = TRUE)
+
+
+#conda_create(envname = "chri", python_version = "3.10", pip= TRUE, packages = "git+https://github.com/wri/cities-cif@main")
 
 # TODO: remove once CIF includes this
-conda_install(envname = "chri", packages = c("gdal=3.10.0", "numpy=2.1"))
+#conda_install(envname = "chri", packages = c("gdal=3.10.0", "numpy=2.1"))

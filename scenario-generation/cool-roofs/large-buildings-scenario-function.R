@@ -1,6 +1,5 @@
 large_buildings_scenario_function <- function(scenario_name, infrastructure_path,
-                                              area_threshold = 2000,
-                                              cool_roof_albedo = 0.62,
+                                              area_threshold, cool_roof_albedo,
                                               aoi, lulc, albedo, build_vectors){
   # Create directory
   dir.create(here(infrastructure_path, scenario_name), showWarnings = FALSE)
@@ -15,12 +14,16 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   # Load building polygons and filter to bbox of AOI
   build_vectors <- build_vectors %>% 
     st_transform(st_crs(lulc)) %>% 
-    filter(sapply(geometry, function(geom) st_intersects(geom, aoi, sparse = FALSE))) %>% 
+    st_filter(aoi) %>% 
     mutate(area_sqm = as.numeric(units::set_units(st_area(geometry), "m^2")))
   
   # Filter to area threshold
   large_roofs <- build_vectors %>% 
     filter(area_sqm >= area_threshold)
+  
+  if (nrow(large_roofs) == 0) {
+    stop("No large buildings found in the AOI.")
+  }
   
   # Calculate mean albedo of roofs
   mean_albedo <- exactextractr::exact_extract(albedo, large_roofs, 'mean')

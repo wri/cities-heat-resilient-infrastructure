@@ -1,4 +1,4 @@
-run_CTCM_baseline <- function(city, ctcm_run, version, description, author, utc_offset){
+run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset){
   
   library(R.utils)
   library(here)
@@ -24,11 +24,18 @@ run_CTCM_baseline <- function(city, ctcm_run, version, description, author, utc_
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
   
   # get bounding coordinates
-  bbox <- st_read(here("data", city, "bbox.geojson")) %>% 
-    st_transform(crs = 4326) %>%
-    st_bbox() %>%
-    round(digits = 13)
+  aoi <- st_read(aoi_file) %>% 
+    st_transform(4326)
   
+  bbox <- aoi %>% 
+    st_bbox() 
+  
+  # bbox_df <- data.frame(
+  #   name = names(bbox),
+  #   value = as.numeric(bbox)
+  # )
+  # 
+  # write_csv(bbox_df, here("data", city, "coords.csv"))
   
   
   # Update the yaml file ----------------------------------------------------
@@ -40,8 +47,8 @@ run_CTCM_baseline <- function(city, ctcm_run, version, description, author, utc_
   
   # run metadata
   baseline_yaml[[1]]$short_title <- ctcm_run
-  baseline_yaml[[1]]$version <- version
-  baseline_yaml[[1]]$description <- description
+  # baseline_yaml[[1]]$version <- version
+  # baseline_yaml[[1]]$description <- description
   baseline_yaml[[1]]$author <- author
   
   # bounds
@@ -52,6 +59,7 @@ run_CTCM_baseline <- function(city, ctcm_run, version, description, author, utc_
   baseline_yaml[[2]]$max_lat <- bbox["ymax"]
   
   baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]
+  # baseline_yaml[[3]]$MetFiles <- "None"
   
   # filenames
   baseline_yaml[[4]]$dem_tif_filename <- "None"
@@ -88,29 +96,32 @@ run_CTCM_baseline <- function(city, ctcm_run, version, description, author, utc_
   baseline_folder <- here(city_folder, "scenarios", "baseline")
   
   if(!dir.exists(baseline_folder)){
-    dir.create(baseline_folder)
+    dir.create(baseline_folder, recursive = TRUE)
   }
   
   # Copy baseline layers to city data folder
-  baseline_layers <- list.files(here(ctcm_output_path, "primary_data", "raster_files", "tile_001"),
-                                full.names = TRUE)
+  baseline_layers <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "raster_files", "tile_001")),
+                                full.names = TRUE, recursive = TRUE)
   
   file.copy(from = baseline_layers, to = city_folder)
   
   # Copy processed data to baseline folder
-  processed_data <- list.files(here(ctcm_output_path, "processed_data", "tile_001"),
+  processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_001")),
                                full.names = TRUE)
   
-  file.copy(from = processed_data, baseline_folder)
+  file.copy(from = processed_data, to = baseline_folder)
     
   # Copy CTCM output to scenario folder
-  output_data <- list.files(here(ctcm_output_path, "tcm_results_umep", "met_era5_hottest_days"), 
+  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results_umep", "met_era5_hottest_days", "tile_001")),
                             full.names = TRUE) %>%
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))
+  
+  file.copy(from = output_data, to = baseline_folder)
     
   # Copy met file
-  met_file <- list.files(here(ctcm_output_path, "primary_data", "met_files"))
+  met_file <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "met_files")),
+                         full.names = TRUE)
   file.copy(met_file, baseline_folder)
     
 }

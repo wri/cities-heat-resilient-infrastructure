@@ -1,9 +1,8 @@
 import ee
-from city_metrix.layers import layer, Layer
-from city_metrix.layers.layer_geometry import GeoExtent
+#from city_metrix.metrix_model import Layer
+from city_metrix.metrix_model import Layer, GeoExtent, get_image_collection
 
-
-class OpenUrban(Layer):
+class OpenUrban():
     def __init__(self, band='b1', **kwargs):
         super().__init__(**kwargs)
         self.band = band
@@ -28,80 +27,12 @@ class OpenUrban(Layer):
                                      .rename('lulc')
                                      )
 
-            data = layer.get_image_collection(
+            data = get_image_collection(
                 open_urban,
                 ee_rectangle,
                 1,
                 "Open Urban"
-            ).lulc
+            )
 
         return data
 
-# Define reclassification
-from enum import Enum
-
-# From https://gfw.atlassian.net/wiki/spaces/CIT/pages/872349733/Surface+characteristics+by+LULC#Major-update-to-LULC-codes
-class OpenUrbanClass(Enum):
-    GREEN_SPACE_OTHER = 110.0
-    BUILT_UP_OTHER = 120.0
-    BARREN = 130.0
-    PUBLIC_OPEN_SPACE = 200.0
-    WATER = 300.0
-    PARKING = 400.0
-    ROADS = 500.0
-    BUILDINGS_UNCLASSIFIED = 600.0
-    BUILDINGS_UNCLASSIFIED_LOW_SLOPE = 601.0
-    BUILDINGS_UNCLASSIFIED_HIGH_SLOPE = 602.0
-    BUILDINGS_RESIDENTIAL = 610.0
-    BUILDINGS_RESIDENTIAL_LOW_SLOPE = 611.0
-    BUILDINGS_RESIDENTIAL_HIGH_SLOPE = 612.0
-    BUILDINGS_NON_RESIDENTIAL = 620.0
-    BUILDINGS_NON_RESIDENTIAL_LOW_SLOPE = 621.0
-    BUILDINGS_NON_RESIDENTIAL_HIGH_SLOPE = 622.0
-
-# Note, it seems these have to be in the same order as the OpenUrbanClass
-reclass_map = {
-    OpenUrbanClass.GREEN_SPACE_OTHER.value: 5.0,
-    OpenUrbanClass.BUILT_UP_OTHER.value: 1.0,
-    OpenUrbanClass.BARREN.value: 6.0,
-    OpenUrbanClass.PUBLIC_OPEN_SPACE.value: 5.0,
-    OpenUrbanClass.WATER.value: 7.0,
-    OpenUrbanClass.PARKING.value: 1.0,
-    OpenUrbanClass.ROADS.value: 1.0,
-    OpenUrbanClass.BUILDINGS_UNCLASSIFIED.value: 2.0,
-    OpenUrbanClass.BUILDINGS_UNCLASSIFIED_LOW_SLOPE.value: 2.0,
-    OpenUrbanClass.BUILDINGS_UNCLASSIFIED_HIGH_SLOPE.value: 2.0,
-    OpenUrbanClass.BUILDINGS_RESIDENTIAL.value: 2.0,
-    OpenUrbanClass.BUILDINGS_RESIDENTIAL_LOW_SLOPE.value: 2.0,
-    OpenUrbanClass.BUILDINGS_RESIDENTIAL_HIGH_SLOPE.value: 2.0,
-    OpenUrbanClass.BUILDINGS_NON_RESIDENTIAL.value: 2.0,
-    OpenUrbanClass.BUILDINGS_NON_RESIDENTIAL_LOW_SLOPE.value: 2.0,
-    OpenUrbanClass.BUILDINGS_NON_RESIDENTIAL_HIGH_SLOPE.value: 2.0,
-    }
-
-# TODO: Implement on scenario outputs
-## Reclassify
-#from xrspatial.classify import reclassify
-#lulc_to_solweig_class = reclassify(lulc, bins=list(reclass_map.keys()), new_values=list(reclass_map.values()), name='lulc')
-
-## Remove zeros
-#def count_occurrences(data, value):
-#    return data.where(data == value).count().item()
-  
-#remove_value = 0
-#count = count_occurrences(lulc_to_solweig_class, remove_value)
-# if count > 0:
-#     print(f'Found {count} occurrences of the value {remove_value}. Removing...')
-#     lulc_to_solweig_class = lulc_to_solweig_class.where(lulc_to_solweig_class != remove_value, drop=True)
-#     count = _count_occurrences(lulc_to_solweig_class, remove_value)
-#     print(f'There are {count} occurrences of the value {remove_value} after removing.')
-# else:
-#     print(f'There were no occurrences of the value {remove_value} found in data.')
-# 
-# ## TODO Can we specify resolution through GEE and avoid below?
-# if output_resolution != DEFAULT_LULC_RESOLUTION:
-#     lulc_to_solweig_class = _resample_categorical_raster(lulc_to_solweig_class, output_resolution)
-
-## reverse y direction, if y values increase in NS direction from LL corner
-#from city_metrix.layers.layer_tools import standardize_y_dimension_direction
-#was_reversed, lulc_to_solweig_class = standardize_y_dimension_direction(lulc_to_solweig_class)

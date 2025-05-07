@@ -1,6 +1,6 @@
 # Process trees -----------------------------------------------------------
 
-process_trees <- function(tree_raster, save_files = TRUE){
+process_trees <- function(tree_raster, save_files = TRUE, infrastructure_path){
   
   tree_height <- tree_raster
   

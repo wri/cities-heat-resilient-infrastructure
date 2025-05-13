@@ -80,7 +80,8 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   aoi_grid <- aoi %>% 
     st_make_grid(cellsize = c(1000, 1000), square = TRUE, what = "polygons") %>% 
     st_sf() %>% 
-    st_filter(aoi) %>% 
+    # st_filter(aoi) %>% 
+    st_intersection(aoi) %>% 
     mutate(ID = row_number())
   
   # Calculate the existing percent cover of trees in pedestrian areas for each gridcell
@@ -92,8 +93,8 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   
   # Achievable potential ----------------------------------------------------
-  
-  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city, "/scenarios/street-trees/street-tree-pct-1km-grid.csv")
+  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
+  # aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city, "/scenarios/street-trees/street-tree-pct-1km-grid.csv")
     
   # Get percentile value
   ped_area_tree_dist <- read_csv(aws_path)

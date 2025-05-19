@@ -4,18 +4,17 @@ library(here)
 # Define parameters -------------------------------------------------------
 
 # City parameters
-city <- "ZAF-Cape_Town" # City name
-
+city <- "BRA-Rio_de_Janeiro"
+  
 # AOI parameters
 # URL for file in S3
-aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
-aoi_name <- "test-aoi" # Name for AOI
-
-
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
+aoi_name <- "low-emission-zone"
+  
 # CTCM metadata
 
 author <- "elizabeth.wesley@wri.org" # User email
-utc_offset <- 2 # UTC offset for the city
+utc_offset <- -3 # UTC offset for the city
 
 # Data specifications
 
@@ -45,13 +44,12 @@ script_dir <- here()
 py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
 get_data(city, aoi_file, year, script_dir)
 
-# Shift open urban to match grid of cif data
-open_urban <- rast(here("data", city, "open-urban-temp.tif"))
-cif_lulc <- rast(here("data", city, "cif_lulc.tif"))
-
-ext(open_urban) <- ext(cif_lulc)
-writeRaster(open_urban, here("data", city, "open-urban.tif"))
-file.remove(here("data", city, "open-urban-temp.tif"))
+# open_urban <- rast(here("data", city, "open-urban.tif"))
+# cif_lulc <- rast(here("data", city, "cif_lulc.tif"))
+# 
+# ext(open_urban) <- ext(cif_lulc)
+# writeRaster(open_urban, here("data", city, "open-urban.tif"))
+# file.remove(here("data", city, "open-urban-temp.tif"))
 
 # Generate scenarios ------------------------------------------------------
 

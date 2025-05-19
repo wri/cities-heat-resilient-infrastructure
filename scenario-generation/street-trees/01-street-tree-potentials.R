@@ -15,11 +15,12 @@ street_tree_scenario <- function(city, scenario, scenario_name, percentile = NUL
   # Setup ---------------------------------------------------------------------
   
   # Load necessary libraries
-  library(terra)
+  
   library(sf)
   library(lidR)
   library(tidyverse)
   library(here)
+  library(terra)
   
   inputs_path <- here("data", city)
   infrastructure_path <- here(inputs_path, "scenarios", "street-trees")
@@ -37,7 +38,7 @@ street_tree_scenario <- function(city, scenario, scenario_name, percentile = NUL
   canopy_height_existing <- rast(here(inputs_path, "cif_tree_canopy.tif")) 
   names(canopy_height_existing) <- "height"
   
-  ext(lulc) <- ext(canopy_height_existing)
+  # ext(lulc) <- ext(canopy_height_existing)
   
   
   # Generate scenarios ------------------------------------------------------

@@ -33,7 +33,7 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
   # target_area <- as.numeric(st_area(park) * coverage_threshold)
   
   # Create an empty list to store valid points and squares
-  squares <- st_sf(geometry = st_sfc(), crs = utm_epsg)
+  squares <- st_sf(geometry = st_sfc(), crs = st_crs(park))
   total_square_area <- 0
   park_pixel_pts2 <- park_pixel_pts
   restart_counter <- 0  # Initialize a counter for restarts
@@ -74,7 +74,7 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
         # Reset park_pixel_pts2 to start over and try again
         print("No more points available. Restarting...")
         
-        squares <- st_sf(geometry = st_sfc(), crs = utm_epsg)
+        squares <- st_sf(geometry = st_sfc(), crs = st_crs(park))
         total_square_area <- 0
         park_pixel_pts2 <- park_pixel_pts
         
@@ -107,6 +107,10 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
     st_as_sf() %>% 
     mutate(id = row_number(), include = lengths(st_within(geometry, park)) > 0) %>% 
     filter(include == TRUE)
+  
+  if (nrow(park_pixel_pts) == 0) {
+    return(st_sf(geometry = st_sfc(), crs = st_crs(park)))
+  }
   
   # Identify contiguous shade areas and filter by minimum shade area threshold
   shade_areas <- (1 - park_raster_mask) %>% 
@@ -143,7 +147,10 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
   while (nrow(shade_areas) == 0 || min_shade_dist > max_dist_to_shade) {
     # Identify the most distant areas from shade
     max_dist_rast <- shade_dist > quantile(values(shade_dist), 0.95, na.rm = TRUE)
-    shade_pt <- subst(max_dist_rast, 0, NA) %>% as.points(na.rm = TRUE) %>% st_as_sf() %>% sample_n(1)
+    shade_pt <- subst(max_dist_rast, 0, NA) %>% 
+      as.points(na.rm = TRUE) %>% 
+      st_as_sf() %>% 
+      sample_n(1)
     
     # Create a square shade structure around the selected point
     shade_square <- shade_pt %>% 

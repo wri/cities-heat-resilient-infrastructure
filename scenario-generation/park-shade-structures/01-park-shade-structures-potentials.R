@@ -2,9 +2,10 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
                                 min_shade_area, max_dist_to_shade){
   
   
-  library(terra)
+  
   library(sf)
   library(tidyverse)
+  library(terra)
   library(exactextractr)
   
   inputs_path <- here("data", city)
@@ -77,7 +78,8 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
     stop("No parks found in the AOI.")
   }
   
-  st_write(open_spaces, here(infrastructure_path, "open-spaces-no-pitch.geojson"))
+  st_write(park_suitable_area_vector, here(infrastructure_path, "suitable-spaces.geojson"),
+           append = FALSE, delete_dsn = TRUE)
   
   ## zonal statistics per park shaded/unshaded ####
   open_spaces <- open_spaces %>% 
@@ -93,9 +95,9 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
     st_sf()
   
   # Parks with sport fields erased
-  park_suitable_area_vector <- park_vectors %>% 
+  park_suitable_area_vector <- open_spaces %>% 
     # Erase sports fields
-    st_difference(open_spaces) %>% 
+    st_difference(pitch_vectors) %>% 
     mutate(area_sqm_suitable = as.numeric(units::set_units(st_area(geometry), "m^2")))
   
   # NEED TO CALCULATE THE AREA SUITABLE FOR SHADE STRUCTURES

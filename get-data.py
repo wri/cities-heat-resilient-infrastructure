@@ -26,23 +26,36 @@ def get_data(city, aoi_file, year, output_base="."):
   
   ## Create bounding box
   from city_metrix.metrix_model import GeoExtent
-  # from city_metrix.metrix_tools import reproject_units, get_utm_zone_from_latlon_point
-  # from shapely import Point
-  from src.worker_manager.tools import construct_polygon_from_bounds
-  from src.workers.open_urban import OpenUrban
-  # from src.workers.worker_tools import save_tiff_file
-  
-  # Read the CSV file directly into a Series
-  # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
-  
-  # Create GeoDataFrame from bbox.polygon
   import rioxarray
   
   raster = rioxarray.open_rasterio(os.path.join(city_dir, "cif_lulc.tif"), masked=True)
   bounds = raster.rio.bounds()
   crs = raster.rio.crs.to_string()
+
+  bbox = GeoExtent(bbox=bounds, crs=crs)
   
-  # bbox = GeoExtent(bbox=bounds, crs=crs)
+  # from city_metrix.layers import OpenUrban
+  from open_urban import OpenUrban
+
+  lulc = OpenUrban().get_data(bbox)
+  
+  # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
+  
+  ## Write raster to tif file
+  lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
+  # from city_metrix.metrix_tools import reproject_units, get_utm_zone_from_latlon_point
+  # from shapely import Point
+  # from src.worker_manager.tools import construct_polygon_from_bounds
+  # from src.workers.open_urban import OpenUrban
+  # # from src.workers.worker_tools import save_tiff_file
+  # 
+  # # Read the CSV file directly into a Series
+  # # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
+  # 
+  # # Create GeoDataFrame from bbox.polygon
+  # import rioxarray
+  # 
+  
   # 
   # # Convert to dictionary and extract bounding box
   # bbox_dict = dict(zip(coords['name'], coords['value']))
@@ -58,15 +71,15 @@ def get_data(city, aoi_file, year, output_base="."):
   # 
   # reproj_bbox = reproject_units(in_minx, in_miny, in_maxx, in_maxy, 'EPSG:4326', utm_crs)
   
-  bbox_poly = construct_polygon_from_bounds(bounds[0], bounds[1], bounds[2], bounds[3])
-  tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
-  tile_gpd.to_file(os.path.join(city_dir, "test.geojson"))
-  
-  bbox = GeoExtent(tile_gpd.total_bounds, crs)
-  lulc = OpenUrban().get_data(bbox)
-  
-  # save_tiff_file(lulc, '.', 'test_open_urban.tif')
-  lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban-temp.tif"))
+  # bbox_poly = construct_polygon_from_bounds(bounds[0], bounds[1], bounds[2], bounds[3])
+  # tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
+  # tile_gpd.to_file(os.path.join(city_dir, "test.geojson"))
+  # 
+  # bbox = GeoExtent(tile_gpd.total_bounds, crs)
+  # lulc = OpenUrban().get_data(bbox)
+  # 
+  # # save_tiff_file(lulc, '.', 'test_open_urban.tif')
+  # lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban-temp.tif"))
   # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
   # 
   # # Convert to dictionary and extract bounding box

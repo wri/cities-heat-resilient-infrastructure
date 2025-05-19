@@ -1,9 +1,10 @@
 # Load necessary libraries
-library(terra)
+
 library(sf)
 library(lidR)
 library(tidyverse)
 library(here)
+library(terra)
 
 calc_pct_grid_cover <- function(aoi_grid, existing_tree_cover, ped_area){
   

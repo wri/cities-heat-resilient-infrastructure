@@ -8,7 +8,7 @@
 __pycache__
 
 # Ignore everything in data folder...
-/data
+/data/**
 
 # ...except the MEX-Monterrey folder
 #!/data/MEX-Monterrey

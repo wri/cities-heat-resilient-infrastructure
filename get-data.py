@@ -4,11 +4,11 @@
 
 ## Inputs
 # city = "ZAF-Cape_Town"
-# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
 # year = "2024"
+# buffer = 100
 
-
-def get_data(city, aoi_file, year, output_base="."):
+def get_data(city, aoi_file, buffer, year, output_base="."):
   # Create city folder
   import os
   city_dir = os.path.join(output_base, "data", city)
@@ -26,13 +26,40 @@ def get_data(city, aoi_file, year, output_base="."):
   
   ## Create bounding box
   from city_metrix.metrix_model import GeoExtent
+  from city_metrix.metrix_tools import reproject_units
   import rioxarray
+  from shapely.geometry import Polygon
+  
+  # Read the CSV file directly into a Series
+  coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
+  
+  # Convert to dictionary and extract bounding box
+  bbox_dict = dict(zip(coords['name'], coords['value']))
+  bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
+  in_minx = bbox_tuple[0]
+  in_miny = bbox_tuple[1]
+  in_maxx = bbox_tuple[2]
+  in_maxy = bbox_tuple[3]
   
   raster = rioxarray.open_rasterio(os.path.join(city_dir, "cif_lulc.tif"), masked=True)
-  bounds = raster.rio.bounds()
+  # bounds = raster.rio.bounds()
   crs = raster.rio.crs.to_string()
+  
+  reproj_bbox = reproject_units(in_minx, in_miny, in_maxx, in_maxy, 'EPSG:4326', crs)
+  reproj_bbox = reproject_units(in_miny, in_minx, in_maxy, in_maxx, 'EPSG:4326', crs)
+  miny, minx, maxy, maxx = reproj_bbox
+  
+  buffered_minx = reproj_bbox[1] - buffer
+  buffered_miny = reproj_bbox[0] - buffer
+  buffered_maxx = reproj_bbox[3] + buffer
+  buffered_maxy = reproj_bbox[2] + buffer
+  
+  bbox = [(buffered_minx, buffered_miny), (buffered_minx, buffered_maxy), (buffered_maxx, buffered_maxy), (buffered_maxx, buffered_miny)]
+  bbox_poly = Polygon(bbox)
+    
+  tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
 
-  bbox = GeoExtent(bbox=bounds, crs=crs)
+  bbox = GeoExtent(bbox=tile_gpd, crs=crs)
   
   # from city_metrix.layers import OpenUrban
   from open_urban import OpenUrban
@@ -49,21 +76,14 @@ def get_data(city, aoi_file, year, output_base="."):
   # from src.workers.open_urban import OpenUrban
   # # from src.workers.worker_tools import save_tiff_file
   # 
-  # # Read the CSV file directly into a Series
-  # # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
+  
   # 
   # # Create GeoDataFrame from bbox.polygon
   # import rioxarray
   # 
   
   # 
-  # # Convert to dictionary and extract bounding box
-  # bbox_dict = dict(zip(coords['name'], coords['value']))
-  # bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
-  # in_minx = bbox_tuple[0]
-  # in_miny = bbox_tuple[1]
-  # in_maxx = bbox_tuple[2]
-  # in_maxy = bbox_tuple[3]
+  
   # 
   # midx = (in_minx + in_maxx) / 2
   # midy = (in_miny + in_maxy) / 2

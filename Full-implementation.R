@@ -1,5 +1,10 @@
 library(here)
 
+########## IGNORE ########## 
+# city <- "ZAF-Cape_Town"
+# aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
+# aoi_name <- "test"
+########## ########## #####
 
 # Define parameters -------------------------------------------------------
 
@@ -14,9 +19,10 @@ aoi_name <- "low-emission-zone"
 # CTCM metadata
 
 author <- "elizabeth.wesley@wri.org" # User email
-utc_offset <- -3 # UTC offset for the city
+utc_offset <- 2 # UTC offset for the city
 
-# Data specifications
+# AOI buffer
+buffer <- 100
 
 # Year for albedo data
 year <- "2024"
@@ -29,7 +35,7 @@ dir.create(here("data", city))
 # Run baseline ------------------------------------------------------------
 
 source(here("scenario-generation", "baseline", "CTCM-baseline-function.R"))
-run_CTCM_baseline(city, aoi_file, ctcm_run = "baseline", author, utc_offset)
+run_CTCM_baseline(city, aoi_file, ctcm_run = "baseline", author, utc_offset, buffer)
 
 
 # Get data ----------------------------------------------------------------
@@ -42,14 +48,8 @@ source_python(here("get-data.py"))
 # Add the Python script folder to sys.path
 script_dir <- here()  
 py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
-get_data(city, aoi_file, year, script_dir)
+get_data(city, aoi_file, buffer, year, script_dir)
 
-# open_urban <- rast(here("data", city, "open-urban.tif"))
-# cif_lulc <- rast(here("data", city, "cif_lulc.tif"))
-# 
-# ext(open_urban) <- ext(cif_lulc)
-# writeRaster(open_urban, here("data", city, "open-urban.tif"))
-# file.remove(here("data", city, "open-urban-temp.tif"))
 
 # Generate scenarios ------------------------------------------------------
 
@@ -63,11 +63,11 @@ source(here("scenario-generation", "cool-roofs", "01-cool-roofs-potentials.R"))
 cool_roof_scenario(city, scenario = "program", scenario_name = "large-buildings", 
                    infrastructure = "cool-roofs", area_threshold = 2000, cool_roof_albedo = 0.62)
 
-# park shade program (25% small parks, 100m max distance to shade large parks)
-source(here("scenario-generation", "park-shade-structures", "01-park-shade-structures-potentials.R"))
+# park shade program (100m max distance to shade)
+source(here("scenario-generation", "park-shade-structures", "01-park-shade-structures-max-distance.R"))
 park_shade_scenario(city, scenario_name = "program-potential", 
                     structure_size = 5, shade_pct = 0.25, spacing = 5, 
-                    min_shade_area = 25, max_dist_to_shade = 50)
+                    min_shade_area = 25, max_dist_to_shade = 100)
 
 
 

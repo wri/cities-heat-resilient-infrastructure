@@ -1,4 +1,4 @@
-run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset){
+run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buffer){
   
   library(R.utils)
   library(here)
@@ -30,12 +30,12 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset){
   bbox <- aoi %>% 
     st_bbox() 
   
-  # bbox_df <- data.frame(
-  #   name = names(bbox),
-  #   value = as.numeric(bbox)
-  # )
-  # 
-  # write_csv(bbox_df, here("data", city, "coords.csv"))
+  bbox_df <- data.frame(
+    name = names(bbox),
+    value = as.numeric(bbox)
+  )
+
+  write_csv(bbox_df, here("data", city, "coords.csv"))
   
   
   # Update the yaml file ----------------------------------------------------
@@ -58,6 +58,10 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset){
   baseline_yaml[[2]]$max_lon <- bbox["xmax"]
   baseline_yaml[[2]]$max_lat <- bbox["ymax"]
   
+  # buffer
+  baseline_yaml[[2]]$tile_buffer_meters <- buffer
+  
+  # Met file
   baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]
   # baseline_yaml[[3]]$MetFiles <- "None"
   

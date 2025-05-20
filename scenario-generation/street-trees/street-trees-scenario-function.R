@@ -82,6 +82,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
     st_sf() %>% 
     # st_filter(aoi) %>%
     st_intersection(aoi) %>% 
+    select(geometry) %>% 
     mutate(ID = row_number())
   
   # Calculate the existing percent cover of trees in pedestrian areas for each gridcell
@@ -93,7 +94,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   
   # Achievable potential ----------------------------------------------------
-  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
+  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-tree-pct-grid.csv")
   # aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city, "/scenarios/street-trees/street-tree-pct-1km-grid.csv")
     
   # Get percentile value
@@ -178,7 +179,6 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   st_write(aoi_grid, 
            dsn = here(scenario_path, "aoi_street-tree-grid.geojson"),
-           append = FALSE,
            delete_dsn = TRUE)
   
   # Add back in the original vegetation canopy to include areas with height <= 1

@@ -17,7 +17,6 @@ aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janei
 aoi_name <- "low-emission-zone"
   
 # CTCM metadata
-
 author <- "elizabeth.wesley@wri.org" # User email
 utc_offset <- 2 # UTC offset for the city
 

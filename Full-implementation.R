@@ -27,6 +27,10 @@ buffer <- 100
 # Year for albedo data
 year <- "2024"
 
+city <- "ZAF-Cape_Town"
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
+aoi_name <- "test"
+
 
 # Create directory --------------------------------------------------------
 

@@ -10,14 +10,23 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
     st_as_sf()
 
   # get pixels where shade could go
-  park_pixel_pts <- park_raster_mask %>% 
-    as.points(na.rm = TRUE) %>% 
-    st_as_sf() %>% 
-    mutate(id = row_number())
   
-  park_pixel_pts <- park_pixel_pts %>% 
-    mutate(include = lengths(st_within(geometry, park)) > 0) %>% 
-    filter(include == TRUE)
+  # Buffer the park inward to exclude points where the structure will overhang
+  # the park boundary
+  inner_buffer <- st_buffer(park, dist = -structure_size / 2)
+  
+  # Safely check if buffer exists before filtering
+  if (nrow(inner_buffer) == 0 || all(st_is_empty(inner_buffer))) {
+    warning("Inner buffer is empty; no points retained.")
+    park_pixel_pts <- park_pixel_pts[0, ]
+  } else {
+    park_pixel_pts <- park_raster_mask %>%
+      as.points(na.rm = TRUE) %>%
+      st_as_sf() %>%
+      mutate(id = row_number()) %>%
+      filter(st_within(geometry, inner_buffer, sparse = FALSE)[, 1])
+  }
+  
   
   # Ensure valid area is not empty
   if (nrow(park_pixel_pts) == 0) {

@@ -9,12 +9,12 @@ library(here)
 # Define parameters -------------------------------------------------------
 
 # City parameters
-city <- "BRA-Rio_de_Janeiro"
+city <-"ZAF-Cape_Town"
   
 # AOI parameters
 # URL for file in S3
-aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
-aoi_name <- "low-emission-zone"
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+aoi_name <- "business-district"
   
 # CTCM metadata
 author <- "elizabeth.wesley@wri.org" # User email
@@ -29,7 +29,7 @@ year <- "2024"
 
 # Create directory --------------------------------------------------------
 
-dir.create(here("data", city))
+dir.create(here("data", city), showWarnings = FALSE)
 
 # Run baseline ------------------------------------------------------------
 
@@ -74,16 +74,16 @@ park_shade_scenario(city, scenario_name = "program-potential",
 
 # street trees
 source(here("scenario-generation", "street-trees", "02-run-CTCM-street-trees.R"))
-run_CTCM_street_trees(city, author, utc_offset, scenario_name = "achievable-90pctl")
+run_CTCM_street_trees(city, author, utc_offset, scenario_name = "achievable-90pctl", buffer)
 
 # Cool roofs
 source(here("scenario-generation", "cool-roofs", "02-run-CTCM-cool-roofs.R"))
-run_CTCM_cool_roofs(city, author, utc_offset, scenario_name = "large-buildings")
+run_CTCM_cool_roofs(city, author, utc_offset, scenario_name = "large-buildings", buffer)
 
 # Park shade
 source(here("scenario-generation", "park-shade-structures", "02-run-CTCM-park-shade-structures.R"))
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 3, 
-                               scenario_name = "program-potential")
+                               scenario_name = "program-potential", buffer)
 
 unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-", "program-potential")), 
        recursive = TRUE, force = TRUE)
@@ -91,10 +91,10 @@ unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-", "
        recursive = TRUE, force = TRUE)
 
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 0, 
-                               scenario_name = "program-potential")
+                               scenario_name = "program-potential", buffer)
 
 source(here("scenario-generation", "park-shade-structures", "03-shade-structure-post-processing.R"))
-shade_structure_post_processing()
+shade_structure_post_processing(city)
 
 
 # Calculate metrics -------------------------------------------------------

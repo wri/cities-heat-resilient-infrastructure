@@ -17,8 +17,9 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   
   # Create setup folder for new run
   run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-", ctcm_run))
+  unlink(run_setup_folder, recursive = TRUE)
   
-  copyDirectory(template, run_setup_folder)
+  copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
   # Path to tile folder
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
@@ -60,6 +61,9 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   
   # buffer
   baseline_yaml[[2]]$tile_buffer_meters <- buffer
+  
+  # no clipping
+  baseline_yaml[[2]]$remove_mrt_buffer_for_final_output <- "False"
   
   # Met file
   baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]

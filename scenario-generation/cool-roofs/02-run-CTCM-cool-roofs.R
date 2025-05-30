@@ -1,6 +1,6 @@
 
 
-run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name){
+run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer){
   
   
   library(R.utils)
@@ -20,7 +20,7 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name){
   
   # Create setup folder for new run
   run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-cool-roofs-", scenario_name))
-  copyDirectory(template, run_setup_folder)
+  copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
    # Copy files
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
@@ -60,11 +60,13 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name){
   write_delim(met, file.path(run_setup_folder, "primary_data", "met_files", "reduced_temps.txt"))
   
   # get bounding coordinates
-  scenario_rast <- rast(file.path(tile_folder, "cif_lulc.tif")) 
-  bbox <- as.polygons(ext(scenario_rast), crs = terra::crs(scenario_rast)) %>% 
-    st_as_sf() %>% 
+  scenario_rast <- rast(file.path(tile_folder, "cif_lulc.tif"))
+  bbox <- as.polygons(ext(scenario_rast), crs = terra::crs(scenario_rast)) %>%
+    st_as_sf() %>%
     st_transform(crs = 4326) %>%
     st_bbox()
+  # bbox <- read_csv(here("data", city, "coords.csv")) %>% 
+  #   deframe()
   
   
   
@@ -86,6 +88,9 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name){
   scenario_yaml[[2]]$min_lat <- bbox["ymin"]
   scenario_yaml[[2]]$max_lon <- bbox["xmax"]
   scenario_yaml[[2]]$max_lat <- bbox["ymax"]
+  
+  # buffer
+  scenario_yaml[[2]]$tile_buffer_meters <- buffer
   
   # Specify the met file
   scenario_yaml[[3]]$MetFiles <- scenario_yaml[[3]]$MetFiles[1]

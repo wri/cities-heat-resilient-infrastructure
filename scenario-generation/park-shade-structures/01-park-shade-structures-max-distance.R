@@ -157,8 +157,10 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   shade_structures <- shade_structures %>% 
     mutate(height = structure_height)
   
+  cif_lulc <- rast(here(inputs_path, "cif_lulc.tif"))
+  
   shade_structures_rast <- shade_structures %>% 
-    rasterize(shadow_12pm, field = "height", background = 0) 
+    rasterize(cif_lulc, field = "height", background = 0) 
   
   writeRaster(shade_structures_rast, here(scenario_path, "structures-as-trees.tif"))
   

@@ -1,5 +1,5 @@
 
-run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name){
+run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffer){
   
   library(R.utils)
   library(here)
@@ -18,7 +18,7 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name){
   
   # Create setup folder for new run
   run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-street-trees-", scenario_name))
-  copyDirectory(template, run_setup_folder)
+  copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
   # # Remove unnecessary folders/files
   # keep <- c("primary_data",
@@ -50,11 +50,13 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name){
   file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"))
   
   # get bounding coordinates
-  scenario_rast <- rast(destination_path) 
-  bbox <- as.polygons(ext(scenario_rast), crs = terra::crs(scenario_rast)) %>% 
-    st_as_sf() %>% 
+  scenario_rast <- rast(destination_path)
+  bbox <- as.polygons(ext(scenario_rast), crs = terra::crs(scenario_rast)) %>%
+    st_as_sf() %>%
     st_transform(crs = 4326) %>%
     st_bbox()
+  # bbox <- read_csv(here("data", city, "coords.csv")) %>% 
+  #   deframe()
   
   
   # Update the yaml file ----------------------------------------------------
@@ -77,6 +79,12 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name){
   scenario_yaml[[2]]$min_lat <- bbox["ymin"]
   scenario_yaml[[2]]$max_lon <- bbox["xmax"]
   scenario_yaml[[2]]$max_lat <- bbox["ymax"]
+  
+  # buffer
+  scenario_yaml[[2]]$tile_buffer_meters <- buffer
+  
+  # no clipping
+  baseline_yaml[[2]]$remove_mrt_buffer_for_final_output <- "False"
   
   scenario_yaml[[3]]$MetFiles <- scenario_yaml[[3]]$MetFiles[1]
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.txt"

@@ -4,7 +4,7 @@
 
 ## Inputs
 # city = "ZAF-Cape_Town"
-# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
+# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
 # year = "2024"
 # buffer = 100
 
@@ -36,10 +36,10 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   # Convert to dictionary and extract bounding box
   bbox_dict = dict(zip(coords['name'], coords['value']))
   bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
-  in_minx = bbox_tuple[0]
-  in_miny = bbox_tuple[1]
-  in_maxx = bbox_tuple[2]
-  in_maxy = bbox_tuple[3]
+  in_minx = -100.3264087#bbox_tuple[0]
+  in_miny = 25.6642548#bbox_tuple[1]
+  in_maxx = -100.3095349#bbox_tuple[2]
+  in_maxy = 25.6702689#bbox_tuple[3]
   
   raster = rioxarray.open_rasterio(os.path.join(city_dir, "cif_lulc.tif"), masked=True)
   # bounds = raster.rio.bounds()

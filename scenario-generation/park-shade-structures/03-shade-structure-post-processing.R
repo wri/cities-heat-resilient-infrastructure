@@ -1,4 +1,4 @@
-shade_structure_post_processing <- function(){
+shade_structure_post_processing <- function(city){
   
   library(terra)
 
@@ -15,17 +15,24 @@ shade_structure_post_processing <- function(){
   
   for (time in times) {
     # Input file paths
-    shadow_file <- list.files(t3_dir, pattern = str_c("Shadow.*", time))
-    tmrt_file <- list.files(t3_dir, pattern = str_c("Tmrt.*", time))
+    shadow_file <- list.files(t3_dir, pattern = str_c("Shadow.*", time)) %>%
+      str_subset("aux", negate = TRUE)
+    
+    tmrt_file <- list.files(t3_dir, pattern = str_c("Tmrt.*", time)) %>%
+      str_subset("aux", negate = TRUE)
     
     # Read rasters
-    struct_t3_mask <- rast(here(t3_dir, shadow_file))
+    baseline_tmrt <- rast(here(baseline_dir, tmrt_file)) 
     
-    baseline_tmrt <- rast(here(baseline_dir, tmrt_file))
-    struct_t0_tmrt <- rast(here(t0_dir, tmrt_file))
+    struct_t3_mask <- rast(here(t3_dir, shadow_file)) %>% 
+      crop(baseline_tmrt, mask = TRUE)
+   
+    struct_t0_tmrt <- rast(here(t0_dir, tmrt_file)) %>% 
+      crop(baseline_tmrt, mask = TRUE)
     
     baseline_shadow <- rast(here(baseline_dir, shadow_file))
-    struct_t0_shadow <- rast(here(t0_dir, shadow_file))
+    struct_t0_shadow <- rast(here(t0_dir, shadow_file)) %>% 
+      crop(baseline_tmrt, mask = TRUE)
     
     # Create mask: only keep areas where t3 mask is between 0 and 1
     tree_shade_mask <- struct_t3_mask >= 0 & struct_t3_mask <= 1

@@ -73,6 +73,7 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   baseline_yaml[[4]]$dem_tif_filename <- "None"
   baseline_yaml[[4]]$dsm_tif_filename <- "None"
   baseline_yaml[[4]]$lulc_tif_filename <- "None"
+  baseline_yaml[[4]]$open_urban_tif_filename <- "None"
   baseline_yaml[[4]]$tree_canopy_tif_filename <- "None"
   
   # Set sampling_local_hours as a verbatim string
@@ -131,6 +132,9 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   met_file <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "met_files")),
                          full.names = TRUE)
   file.copy(met_file, baseline_folder)
+  
+  # Rename openurban file
+  file.rename(from = here(city_folder, "cif_open_urban.tif"), to = here(city_folder, "open-urban.tif"))
     
 }
   

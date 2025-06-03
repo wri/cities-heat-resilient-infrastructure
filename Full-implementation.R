@@ -14,7 +14,7 @@ city <-"ZAF-Cape_Town"
 # AOI parameters
 # URL for file in S3
 aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
-aoi_name <- "business-district"
+aoi_name <- "business_district"
   
 # CTCM metadata
 author <- "elizabeth.wesley@wri.org" # User email
@@ -97,6 +97,19 @@ source(here("scenario-generation", "park-shade-structures", "03-shade-structure-
 shade_structure_post_processing(city)
 
 
+# Upload files to s3 -------------------------------------------------------
+source_python(here("upload-data.py"))
+
+# Add the Python script folder to sys.path
+script_dir <- here()  
+py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
+
+upload_folder_to_s3(city, aoi_name, year)
+
+
 # Calculate metrics -------------------------------------------------------
 
+# Street trees
+source(here("scenario-generation", "street-trees", "03-calculate-metrics.R"))
+calc_metrics(city, scenarios = "achievable-90pctl", infrastructure = "street-trees", aoi_name)
 

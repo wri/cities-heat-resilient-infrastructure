@@ -3,8 +3,8 @@
 ######################
 
 ## Inputs
-# city = "ZAF-Cape_Town"
-# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+# city = "BRA-Rio_de_Janeiro"
+# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
 # year = "2024"
 # buffer = 100
 
@@ -62,14 +62,14 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   bbox = GeoExtent(bbox=tile_gpd, crs=crs)
   
   # from city_metrix.layers import OpenUrban
-  from open_urban import OpenUrban
+  # from open_urban import OpenUrban
 
-  lulc = OpenUrban().get_data(bbox)
+  # lulc = OpenUrban().get_data(bbox)
   
   # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
   
   ## Write raster to tif file
-  lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
+  # lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
   # from city_metrix.metrix_tools import reproject_units, get_utm_zone_from_latlon_point
   # from shapely import Point
   # from src.worker_manager.tools import construct_polygon_from_bounds
@@ -214,8 +214,8 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
       summer_end = f"{int(year) + 1}-08-31"
 
     
-  from city_metrix.layers import Albedo
-  city_Albedo = Albedo(start_date=summer_start, end_date=summer_end).get_data(bbox)
+  from city_metrix.layers import AlbedoCloudMasked
+  city_Albedo = AlbedoCloudMasked(start_date=summer_start, end_date=summer_end).get_data(bbox)
   
   # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
   

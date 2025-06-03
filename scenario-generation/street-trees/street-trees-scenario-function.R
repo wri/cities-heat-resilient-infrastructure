@@ -94,7 +94,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   
   # Achievable potential ----------------------------------------------------
-  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-tree-pct-grid.csv")
+  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
   # aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city, "/scenarios/street-trees/street-tree-pct-1km-grid.csv")
     
   # Get percentile value

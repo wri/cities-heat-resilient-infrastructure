@@ -39,7 +39,8 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   file.copy(tree_height_path, destination_path, overwrite = TRUE)
   
   # Baselayers
-  baselayers <- file.path(here("data", city), c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif"))
+  baselayers <- file.path(here("data", city), 
+                          c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "open-urban.tif"))
   file.copy(from = baselayers, to = tile_folder)
      
   # Wall layers
@@ -84,7 +85,7 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   scenario_yaml[[2]]$tile_buffer_meters <- buffer
   
   # no clipping
-  baseline_yaml[[2]]$remove_mrt_buffer_for_final_output <- "False"
+  scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- "False"
   
   scenario_yaml[[3]]$MetFiles <- scenario_yaml[[3]]$MetFiles[1]
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.txt"
@@ -96,6 +97,7 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
   scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
   scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
+  scenario_yaml[[4]]$open_urban_tif_filename <- "open-urban.tif"
   scenario_yaml[[4]]$tree_canopy_tif_filename <- "tree_canopy.tif"
    
   # Set sampling_local_hours as a verbatim string

@@ -38,8 +38,9 @@ py_config()
 # Step 3: Install the GitHub package using pip
 py_install("git+https://github.com/wri/cities-cif@main", method = "pip", pip = TRUE)
 
+# If CIF needs to be updated:
+# Force reinstall cities-cif from GitHub to get the latest version
+# In Anaconda prompt, run as administrator:
+# conda activate chri
+# pip install --upgrade --force-reinstall git+https://github.com/wri/cities-cif@main
 
-#conda_create(envname = "chri", python_version = "3.10", pip= TRUE, packages = "git+https://github.com/wri/cities-cif@main")
-
-# TODO: remove once CIF includes this
-#conda_install(envname = "chri", packages = c("gdal=3.10.0", "numpy=2.1"))

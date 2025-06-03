@@ -9,16 +9,16 @@ library(here)
 # Define parameters -------------------------------------------------------
 
 # City parameters
-city <-"ZAF-Cape_Town"
+city <- "BRA-Rio_de_Janeiro"
   
 # AOI parameters
 # URL for file in S3
-aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
-aoi_name <- "business-district"
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
+aoi_name <- "low-emission-one"
   
 # CTCM metadata
 author <- "elizabeth.wesley@wri.org" # User email
-utc_offset <- 2 # UTC offset for the city
+utc_offset <- -3 # UTC offset for the city
 
 # AOI buffer
 buffer <- 100

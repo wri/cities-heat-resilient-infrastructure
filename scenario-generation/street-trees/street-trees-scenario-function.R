@@ -17,6 +17,9 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   tree_height <- canopy_height_existing
   tree_height[tree_height < 3] <- 0
   
+  # Save binary tree raster
+  writeRaster((tree_height > 0), here(infrastructure_path, "existing-tree-cover.tif"))
+  
   # Process tree canopy to individual trees ---------------------------------
   
   # If the tree data already exists, use it, otherwise create it
@@ -34,6 +37,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
                   infrastructure_path = infrastructure_path)
     
     load(here(infrastructure_path, "tree-vars.RData"))
+    st_write(ttops, here(infrastructure_path, "existing-trees.geojson"))
     crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
     
   }

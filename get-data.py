@@ -3,8 +3,8 @@
 ######################
 
 ## Inputs
-# city = "ZAF-Cape_Town"
-# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+# city = "BRA-Rio_de_Janeiro"
+# aoi_file = "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
 # year = "2024"
 # buffer = 100
 
@@ -30,46 +30,46 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   import rioxarray
   from shapely.geometry import Polygon
   
-  # Read the CSV file directly into a Series
-  coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
-  
-  # Convert to dictionary and extract bounding box
-  bbox_dict = dict(zip(coords['name'], coords['value']))
-  bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
-  in_minx = -100.3264087#bbox_tuple[0]
-  in_miny = 25.6642548#bbox_tuple[1]
-  in_maxx = -100.3095349#bbox_tuple[2]
-  in_maxy = 25.6702689#bbox_tuple[3]
-  
+  # # Read the CSV file directly into a Series
+  # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
+  # 
+  # # Convert to dictionary and extract bounding box
+  # bbox_dict = dict(zip(coords['name'], coords['value']))
+  # bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
+  # in_minx = -100.3264087#bbox_tuple[0]
+  # in_miny = 25.6642548#bbox_tuple[1]
+  # in_maxx = -100.3095349#bbox_tuple[2]
+  # in_maxy = 25.6702689#bbox_tuple[3]
+  # 
   raster = rioxarray.open_rasterio(os.path.join(city_dir, "cif_lulc.tif"), masked=True)
-  # bounds = raster.rio.bounds()
+  # # bounds = raster.rio.bounds()
   crs = raster.rio.crs.to_string()
-  
-  reproj_bbox = reproject_units(in_minx, in_miny, in_maxx, in_maxy, 'EPSG:4326', crs)
-  reproj_bbox = reproject_units(in_miny, in_minx, in_maxy, in_maxx, 'EPSG:4326', crs)
-  miny, minx, maxy, maxx = reproj_bbox
-  
-  buffered_minx = reproj_bbox[1] - buffer
-  buffered_miny = reproj_bbox[0] - buffer
-  buffered_maxx = reproj_bbox[3] + buffer
-  buffered_maxy = reproj_bbox[2] + buffer
-  
-  bbox = [(buffered_minx, buffered_miny), (buffered_minx, buffered_maxy), (buffered_maxx, buffered_maxy), (buffered_maxx, buffered_miny)]
-  bbox_poly = Polygon(bbox)
-    
-  tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
-
-  bbox = GeoExtent(bbox=tile_gpd, crs=crs)
+  # 
+  # reproj_bbox = reproject_units(in_minx, in_miny, in_maxx, in_maxy, 'EPSG:4326', crs)
+  # reproj_bbox = reproject_units(in_miny, in_minx, in_maxy, in_maxx, 'EPSG:4326', crs)
+  # miny, minx, maxy, maxx = reproj_bbox
+  # 
+  # buffered_minx = reproj_bbox[1] - buffer
+  # buffered_miny = reproj_bbox[0] - buffer
+  # buffered_maxx = reproj_bbox[3] + buffer
+  # buffered_maxy = reproj_bbox[2] + buffer
+  # 
+  # bbox = [(buffered_minx, buffered_miny), (buffered_minx, buffered_maxy), (buffered_maxx, buffered_maxy), (buffered_maxx, buffered_miny)]
+  # bbox_poly = Polygon(bbox)
+  #   
+  # tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
+  # 
+  # bbox = GeoExtent(bbox=tile_gpd, crs=crs)
   
   # from city_metrix.layers import OpenUrban
-  from open_urban import OpenUrban
+  # from open_urban import OpenUrban
 
-  lulc = OpenUrban().get_data(bbox)
+  # lulc = OpenUrban().get_data(bbox)
   
   # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
   
   ## Write raster to tif file
-  lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
+  # lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
   # from city_metrix.metrix_tools import reproject_units, get_utm_zone_from_latlon_point
   # from shapely import Point
   # from src.worker_manager.tools import construct_polygon_from_bounds
@@ -112,7 +112,7 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   # bbox = GeoExtent(aoi_gdf.total_bounds, aoi_gdf.crs.srs)
   # lulc = OpenUrban().get_data(bbox)
 
-  
+  bbox = GeoExtent(aoi.total_bounds, aoi.crs.srs).as_utm_bbox()
   
   
   ## save aoi with UTM crs
@@ -214,8 +214,8 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
       summer_end = f"{int(year) + 1}-08-31"
 
     
-  from city_metrix.layers import Albedo
-  city_Albedo = Albedo(start_date=summer_start, end_date=summer_end).get_data(bbox)
+  from city_metrix.layers import AlbedoCloudMasked
+  city_Albedo = AlbedoCloudMasked(start_date=summer_start, end_date=summer_end).get_data(bbox)
   
   # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
   

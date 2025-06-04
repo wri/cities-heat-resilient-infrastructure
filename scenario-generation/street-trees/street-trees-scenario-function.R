@@ -195,8 +195,8 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
               overwrite = TRUE)
   
   # Save the new tree cover raster
-  writeRaster((updated_tree_cover > 0), 
-              here(scenario_path, "scenario-tree-cover.tif"),
+  writeRaster((updated_tree_cover > 3), 
+              here("data", "scenario-tree-cover.tif"),
               overwrite = TRUE)
   
   # Save the new tree points

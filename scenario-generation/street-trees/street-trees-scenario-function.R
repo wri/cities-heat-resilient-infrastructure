@@ -200,7 +200,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
               overwrite = TRUE)
   
   # Save the new tree points
-  st_write(updated_tree_points, 
+  st_write((updated_tree_points %>% distinct(geometry)), 
            dsn = here(scenario_path, "scenario-tree-points.geojson"),
            append = FALSE,
            delete_dsn = TRUE)

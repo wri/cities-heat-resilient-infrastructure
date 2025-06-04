@@ -9,11 +9,14 @@
 
 calc_metrics <- function(city, scenarios, infrastructure, aoi_name){
   
+  library(tidyverse)
+  library(sf)
+  
   results <- tibble()
   
   for (scenario in scenarios){
     
-    met_data <- list.files(here("data", city, "scenarios"), pattern = "met", full.names = TRUE) %>%
+    met_data <- list.files(here("data", city, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
       first() %>% 
       read_delim()
     

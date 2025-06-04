@@ -44,3 +44,8 @@ py_install("git+https://github.com/wri/cities-cif@main", method = "pip", pip = T
 # conda activate chri
 # pip install --upgrade --force-reinstall git+https://github.com/wri/cities-cif@main
 
+py_install("git+https://github.com/wri/cities-cif@main",
+           method = "pip",
+           pip = TRUE,
+           pip_options = c("--force-reinstall", "--no-cache-dir", "--upgrade"))
+

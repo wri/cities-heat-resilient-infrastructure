@@ -2,28 +2,12 @@ library(here)
 library(tidyverse)
 library(terra)
 
-city <- "ZAF-Cape_Town"
-scenario_new <- rast(here("data", city, "scenarios", "street-trees", "achievable-90pctl", "scenario-new-trees.tif"))
-scenario_all <- rast(here("data", city, "scenarios", "street-trees", "achievable-90pctl", "scenario-tree-canopy-height.tif"))
-
-writeRaster((scenario_new >= 3),
-            here("data", city, "scenarios", "street-trees", "achievable-90pctl", "scenario-new-tree-cover.tif"))
-
-writeRaster((scenario_all >= 3),
-            here("data", city, "scenarios", "street-trees", "achievable-90pctl", "scenario-tree-cover.tif"))
-
-
-scenario_UTCI1500 <- rast(here("data", city, "scenarios", "street-trees", "achievable-90pctl", "UTCI_2023_1_1800D.tif"))
-base_UTCI1500 <- rast(here("data", city, "scenarios", "baseline", "UTCI_2023_1_1800D.tif"))
 
 # Load UTCI function
 source(here("utils", "utci.R"))
 
-mrt_rast <- rast(here("data", city, "scenarios", "baseline", "Tmrt_2023_1_1200D.tif"))
-timestamp <- "1200"
-met_data <- read_delim((here("data", city, "scenarios", "baseline", "met_era5_hottest_days.txt")))
-utci <- create_utci(mrt_rast, timestamp, met_data)
 
+met_data <- read_delim((here("data", city, "scenarios", "baseline", "met_era5_hottest_days.txt")))
 
 scenario_path <- here("data", city, "scenarios", "baseline")
 
@@ -33,7 +17,6 @@ timestamps <- list.files(scenario_path, pattern = "Tmrt") %>%
 
 utci_files <- list.files(scenario_path, pattern = "UTCI")
 Tmrt_files <- list.files(scenario_path, pattern = "Tmrt")
-shadow_files <- list.files(scenario_path, pattern = "Shadow")
 
 
 for (time in timestamps) {
@@ -41,7 +24,7 @@ for (time in timestamps) {
   # Compute UTCI if the file doesn't already exist
   if (any(str_detect(utci_files, time))) {
     
-    utci_rast <- rast(here(scenario_path, utci_files[str_detect(utci_files, time)]))  # Load existing UTCI raster
+    next
     
   } else {
     
@@ -53,14 +36,31 @@ for (time in timestamps) {
   }
 }
 
-
-for (time in c(1200, 1500, 1800)){
+for (time in timestamps){
   
-  base <- rast(here("data", city, "scenarios", "baseline", paste0("UTCI_2023_1_", time, "D.tif")))
-  scen <- rast(here("data", city, "scenarios", "street-trees", "achievable-90pctl", paste0("UTCI_2023_1_", time, "D.tif"))) %>% 
-    crop(base)
+  base_utci <- rast(here("data", city, "scenarios", "baseline", paste0("UTCI_", time, ".tif")))
+  scen_utci <- rast(here("data", city, "scenarios", "street-trees", "achievable-90pctl", paste0("UTCI_", time, ".tif"))) %>% 
+    crop(base_utci)
   
-  diff <- scen - base
-  writeRaster(diff, here("data", city, "scenarios", "street-trees", "achievable-90pctl", paste0("baseline_scenario_diff_UTCI_2023_1_", time, "D.tif")))
+  diff_utci <- scen_utci - base_utci
+  writeRaster(diff_utci, 
+              here("data", city, "scenarios", "street-trees", "achievable-90pctl", 
+                   paste0("baseline_scenario_diff_UTCI_", time, ".tif")),
+              overwrite = TRUE)
+  
+  base_shadow <- rast(here("data", city, "scenarios", "baseline", paste0("Shadow_", time, ".tif")))
+  scen_shadow <- rast(here("data", city, "scenarios", "street-trees", "achievable-90pctl", paste0("Shadow_", time, ".tif"))) %>% 
+    crop(base_shadow)
+  
+  diff_shadow <- scen_shadow - base_shadow
+  writeRaster(diff_shadow, 
+              here("data", city, "scenarios", "street-trees", "achievable-90pctl", 
+                   paste0("baseline_scenario_diff_Shadow_", time, ".tif")),
+              overwrite = TRUE)
   
 }
+ 
+
+
+
+

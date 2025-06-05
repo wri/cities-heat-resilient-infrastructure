@@ -25,7 +25,8 @@ calc_metrics <- function(city, scenarios, infrastructure, aoi_name){
     scenario_results <- metrics$value(city = city,
                                       scenario = scenario,
                                       infrastructure = infrastructure,
-                                      met_data = met_data)
+                                      met_data = met_data,
+                                      aoi_name = aoi_name)
     
     results <- bind_rows(results, scenario_results)
     

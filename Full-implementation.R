@@ -85,11 +85,6 @@ source(here("scenario-generation", "park-shade-structures", "02-run-CTCM-park-sh
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 3, 
                                scenario_name = "program-potential", buffer)
 
-unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-", "program-potential")), 
-       recursive = TRUE, force = TRUE)
-unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-", "program-potential")), 
-       recursive = TRUE, force = TRUE)
-
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 0, 
                                scenario_name = "program-potential", buffer)
 
@@ -110,6 +105,6 @@ upload_folder_to_s3(city, aoi_name, year)
 # Calculate metrics -------------------------------------------------------
 
 # Street trees
-source(here("scenario-generation", "street-trees", "03-calculate-metrics.R"))
-calc_metrics(city, scenarios = "achievable-90pctl", infrastructure = "street-trees", aoi_name)
+source(here("scenario-generation", "street-trees", "street-trees-metrics-function.R"))
+calc_street_tree_metrics(city, scenario = "achievable-90pctl", infrastructure = "street-trees", aoi_name)
 

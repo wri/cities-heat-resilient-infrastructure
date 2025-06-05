@@ -1,18 +1,27 @@
+# scenario <- "achievable-90pctl"
+# infrastructure <- "street-trees"
 
-calc_street_tree_metrics <- function(city, scenario, infrastructure, met_data){
+calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
   
   library(terra)
   library(tidyverse)
+  library(sf)
   library(here)
   
-  # Load UTCI function
-  source(here("utils", "utci.R"))
+  met_data <- list.files(here("data", city, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
+    first() %>% 
+    read_delim()
   
+  baseline_path <- here("data", city, "scenarios", "baseline")
   scenario_path <- here("data", city, "scenarios", infrastructure, scenario)
   
+  # Load AOI and clip layers
+  aoi <- st_read(here("data", city, "aoi.geojson"))
+  
   # Load pedestrian area raster
-  ped_area_rast <- rast(here(str_remove(scenario_path, "/[^/]+$"), "pedestrian-area.tif"))
-  pedestrian_area <- sum(values(ped_area_rast) != 0)
+  ped_area_rast <- rast(here(str_remove(scenario_path, "/[^/]+$"), "pedestrian-area.tif")) %>% 
+    mask(aoi)
+  pedestrian_area <- sum(values(ped_area_rast) != 0, na.rm = TRUE)
   
   # Initialize results list
   results <- tibble()
@@ -21,56 +30,128 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, met_data){
   timestamps <- list.files(scenario_path, pattern = "Tmrt") %>% 
     str_extract("(?<=Tmrt_).*(?=\\.tif)")
   
-  utci_files <- list.files(scenario_path, pattern = "UTCI")
-  Tmrt_files <- list.files(scenario_path, pattern = "Tmrt")
-  shadow_files <- list.files(scenario_path, pattern = "Shadow")
-  
-  # Load updated trees
-  tree_rast <- rast(here(scenario_path, "scenario-tree-canopy-height.tif"))
-  
-  # Load AOI and clip layers
-  aoi <- st_read(here("data", city, "aoi.geojson"))
-  tree_rast <- mask(tree_rast, aoi)
-  
   for (time in timestamps) {
     
+    utci_path <- here(scenario_path, paste0("UTCI_", time, ".tif"))
     # Compute UTCI if the file doesn't already exist
-    if (any(str_detect(utci_files, time))) {
+    if (file.exists(utci_path)) {
       
-      utci_rast <- rast(here(scenario_path, utci_files[str_detect(utci_files, time)]))  # Load existing UTCI raster
+      scenario_utci_rast <- rast(utci_path)  # Load existing UTCI raster
       
     } else {
       
-      Tmrt <- rast(here(scenario_path, Tmrt_files[str_detect(Tmrt_files, time)]))
-      utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = time, met_data = met_data)
+      Tmrt <- rast(here(scenario_path, paste0("Tmrt_", time, ".tif")))
+      scenario_utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = time, met_data = met_data)
       
-      writeRaster(utci_rast, here(scenario_path, paste0("UTCI_", time, ".tif")))
+      writeRaster(scenario_utci_rast, here(scenario_path, paste0("UTCI_", time, ".tif")))
       
     }
     
     # Load shade raster and mask to AOI
-    shade_rast <- rast(here(scenario_path, shadow_files[str_detect(shadow_files, time)])) < 1
-    shade_rast <- mask(shade_rast, aoi)
+    baseline_shade_rast <- rast(here(baseline_path, paste0("Shadow_", time, ".tif"))) < 1
+    baseline_shade_rast <- baseline_shade_rast %>% 
+      mask(aoi)
+    
+    scenario_shade_rast <- rast(here(scenario_path, paste0("Shadow_", time, ".tif"))) < 1
+    scenario_shade_rast <- scenario_shade_rast %>% 
+      crop(baseline_shade_rast) %>% 
+      mask(aoi)
     
     # Mask UTCI to AOI
-    utci_rast <- mask(utci_rast, aoi)
+    baseline_utci_rast <- rast(here(baseline_path, paste0("UTCI_", time, ".tif"))) %>% 
+      mask(aoi)
+    scenario_utci_rast <- scenario_utci_rast %>% 
+      crop(baseline_utci_rast) %>% 
+      mask(aoi)
+    
+    ped_area_rast <- ped_area_rast %>% 
+      crop(baseline_utci_rast)
     
     # Compute metrics
-    tree_pct <- sum(values(mask(tree_rast, ped_area_rast, maskvalues = 0) %>% subst(NA, 0)) != 0) / pedestrian_area
-    utci_avg <- mean(values(mask(utci_rast, ped_area_rast, maskvalues = 0) %>% subst(0, NA)), na.rm = TRUE)
-    shade_pct <- sum(values(mask(shade_rast, ped_area_rast, maskvalues = 0) %>% subst(NA, 0)) != 0) / pedestrian_area
+    baseline_utci_avg <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) %>% 
+                                       subst(0, NA)), na.rm = TRUE)
+    scenario_utci_avg <- mean(values(mask(scenario_utci_rast, ped_area_rast, maskvalues = 0) %>% 
+                                       subst(0, NA)), na.rm = TRUE)
+    utci_diff <- scenario_utci_avg - baseline_utci_avg
+    
+    baseline_shade_pct <- sum(values(mask(baseline_shade_rast, ped_area_rast, maskvalues = 0) 
+                                     %>% subst(NA, 0)) != 0) / pedestrian_area
+    scenario_shade_pct <- sum(values(mask(scenario_shade_rast, ped_area_rast, maskvalues = 0) 
+                                     %>% subst(NA, 0)) != 0) / pedestrian_area
+    shade_diff <- scenario_shade_pct - baseline_shade_pct
     
     # Store results
     metrics <- tibble(
-      scenario = str_extract(scenario_path, "[^/]+$"),
-      time = str_remove(time, "D"),
-      tree_pct = tree_pct,
-      utci_avg = utci_avg,
-      shade_pct = shade_pct
-    )
+      date = str_extract(time, "^[^_]+_[^_]+"),
+      time = time,
+      
+      mean_utci_baseline_pedestrian = baseline_utci_avg,
+      mean_utci_scenario_pedestrian = scenario_utci_avg,
+      mean_utci_change_pedestrian = utci_diff,
+      
+      shade_cover_baseline_pedestrian = baseline_shade_pct,
+      shade_cover_scenario_pedestrian = scenario_shade_pct,
+      shade_cover_change_pedestrian = shade_diff
+    ) %>%
+      pivot_longer(
+        cols = -c(date, time),
+        names_to = "indicators_id",
+        values_to = "value"
+      ) %>%
+      rowwise() %>% 
+      mutate(
+        timecode = str_extract(time, "\\d{4}(?=D)"),
+        metric = str_extract(indicators_id, "^[^_]+_[^_]+"),
+        metric2 = str_replace(indicators_id, metric, ""),
+        indicators_id = paste0(metric, "_", timecode, metric2)
+      ) %>%
+      select(-time, -timecode, -metric, -metric2)
+
     
     results <- bind_rows(results, metrics)
-    }
+  }
+  
+  # Load updated trees
+  baseline_tree_rast <- rast(here("data", city, "scenarios", infrastructure, "existing-tree-cover.tif")) %>% 
+    crop(baseline_utci_rast) %>% 
+    mask(aoi)
+  scenario_tree_rast <- rast(here(scenario_path, "scenario-tree-cover.tif")) %>% 
+    crop(baseline_utci_rast) %>% 
+    mask(aoi)
+  
+  # Tree pct
+  baseline_tree_pct <- sum(values(mask(baseline_tree_rast, ped_area_rast, maskvalues = 0) %>% subst(NA, 0)) != 0) / pedestrian_area
+  scenario_tree_pct <- sum(values(mask(scenario_tree_rast, ped_area_rast, maskvalues = 0) %>% subst(NA, 0)) != 0) / pedestrian_area
+  tree_cover_diff <- scenario_tree_pct - baseline_tree_pct
+  
+  # Number of trees
+  tree_points <- st_read(here(scenario_path, "scenario-tree-points.geojson"))
+  
+  baseline_tree_n <- nrow(tree_points %>% filter(type == "existing"))
+  scenario_tree_n <- nrow(tree_points)
+  new_trees <- nrow(tree_points %>% filter(type == "new"))
+  
+  tree_metrics <- 
+    tibble(
+      tree_cover_baseline_pedestrian = baseline_tree_pct,
+      tree_cover_scenario_pedestrian = scenario_tree_pct,
+      tree_cover_change_pedestrian = tree_cover_diff,
+      tree_n_baseline_pedestrian = baseline_tree_n,
+      tree_n_scenario_pedestrian = scenario_tree_n,
+      tree_n_change_pedestrian = scenario_tree_n
+    ) %>% 
+    pivot_longer(
+      cols = everything(),
+      names_to = "indicators_id",
+      values_to = "value"
+    )
+  
+  results <- bind_rows(results, tree_metrics) %>% 
+    mutate(application_id = "ccl",
+           cities_id = city,
+           areas_of_interest_id = str_replace(aoi_name, "-", "_"),
+           interventions_id = str_replace(infrastructure, "-", "_"),
+           scenarios_id = paste(interventions_id, str_replace(scenario, "-", "_"), sep = "_"))
   
   # Save results
   write_csv(results, here(scenario_path, "scenario-metrics.csv"))

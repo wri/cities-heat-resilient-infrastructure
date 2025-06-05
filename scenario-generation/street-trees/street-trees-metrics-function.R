@@ -131,6 +131,11 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
   scenario_tree_n <- nrow(tree_points)
   new_trees <- nrow(tree_points %>% filter(type == "new"))
   
+  # Achievable potential
+  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
+  ped_area_tree_dist <- read_csv(aws_path)
+  target_coverage <- quantile(ped_area_tree_dist$`pct-tree`, 0.9, names = FALSE, na.rm = TRUE)
+  
   tree_metrics <- 
     tibble(
       tree_cover_baseline_pedestrian = baseline_tree_pct,
@@ -138,7 +143,8 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
       tree_cover_change_pedestrian = tree_cover_diff,
       tree_n_baseline_pedestrian = baseline_tree_n,
       tree_n_scenario_pedestrian = scenario_tree_n,
-      tree_n_change_pedestrian = scenario_tree_n
+      tree_n_change_pedestrian = new_trees,
+      tree_cover_achievable_pedestrian = target_coverage
     ) %>% 
     pivot_longer(
       cols = everything(),

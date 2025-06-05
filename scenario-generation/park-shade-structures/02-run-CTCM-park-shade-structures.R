@@ -13,13 +13,13 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   
   # Setup CTCM data ---------------------------------------------------------
   
-  
+  scenario_ouput <- paste(scenario_name, transmissivity, sep = "-")
   
   ctcm_setup_path <- file.path("C:", "CTCM_data_setup")
   template <- file.path("C:", "CTCM_data_setup", "ZZZ_template_city")
   
   # Create setup folder for new run
-  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-park-shade-structures-", scenario_name))
+  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-park-shade-structures-", scenario_ouput))
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
    # Copy files
@@ -27,7 +27,7 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   
   # Baselayers
   baselayers <- file.path(here("data", city), 
-                          c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif"))
+                          c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "open-urban.tif"))
   file.copy(from = baselayers, to = tile_folder)
   
   # Wall layers
@@ -89,6 +89,7 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
   scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
   scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
+  scenario_yaml[[4]]$open_urban_tif_filename <- "open-urban.tif"
   scenario_yaml[[4]]$tree_canopy_tif_filename <- "structures-as-trees.tif"
   
   scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
@@ -123,7 +124,7 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   # After CTCM runs... ------------------------------------------------------
   
   # Copy CTCM output to scenario folder
-  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-", scenario_name))
+  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-", scenario_ouput))
   
   scenario_folder <- here("data", city, "scenarios", "park-shade-structures", scenario_name)
   t_folder <- here(scenario_folder, paste0("t", transmissivity))

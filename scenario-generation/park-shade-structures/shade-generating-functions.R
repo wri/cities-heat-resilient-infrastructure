@@ -76,7 +76,7 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
     } else {
       if (total_square_area < target_area) {
         # If there are 5 restarts, 
-        if (restart_counter >= 5) {
+        if (restart_counter >= 3) {
           print(paste0("Maxed out at ", nrow(squares)))
           return(squares)
         }
@@ -134,7 +134,7 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
   shade_dist <- if (nrow(shade_areas) != 0) {
     distance(subst(park_raster_mask, 0, NA), shade_areas) %>% mask(vect(park))
   } else {
-    distance(subst(extend(park_raster_mask, 10), NA, 2), target = 1)
+    distance(subst(terra::extend(park_raster_mask, c(10, 10)), NA, 2), target = 1)
   }
   
   # Compute minimum distances between shade areas

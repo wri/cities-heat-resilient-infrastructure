@@ -1,5 +1,5 @@
 park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, spacing,
-                                min_shade_area, max_dist_to_shade){
+                                min_shade_area){
   
   
   
@@ -107,38 +107,39 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   st_write(park_suitable_area_vector, here(infrastructure_path, "open-spaces-no-pitch.geojson"),
            append = FALSE, delete_dsn = TRUE)
   
-  # NEED TO CALCULATE THE AREA SUITABLE FOR SHADE STRUCTURES
-  # RECALCULATE THE MEAN OF SHADE PER UPDATED GEOMETRY
-  
   # Small parks -------------------------------------------------------------
   
   # https://srpshade.caddetails.com/products/square-hip-shades-4430/80366
   
   source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
   
-  # Maximum distance -------------------------------------------------------------
+  # Pocket parks—1 acre (~ 0.4 hectares, 4046.86 m^2) or less
+  # 25% shade
+  small_parks <- park_suitable_area_vector %>% 
+    filter(area_sqm <= 4046.86, 
+           shaded_pct < 0.25) 
   
-  shade_structures_all_parks <- st_sf(geometry = st_sfc(), crs = utm_epsg)
+  # Create empty shade structure geometry
+  shade_structures_all <- st_sf(geometry = st_sfc(), crs = utm_epsg)
   
-  if (nrow(park_suitable_area_vector) > 0) {
-    for (i in 1:nrow(park_suitable_area_vector)) {
+  if (nrow(small_parks) > 0) {
+    for (i in 1:nrow(small_parks)) {
       print(i)
-      park <- slice(park_suitable_area_vector, i)
-      shade_structures <- shade_dist_area(
+      park <- slice(small_parks, i)
+      shade_structures <- generate_squares_in_valid_area(
         park = park, 
         unshaded_raster = unshaded, 
-        min_shade_area = min_shade_area,
-        max_dist_to_shade = max_dist_to_shade,
-        structure_size = structure_size,
+        structure_size = structure_size, 
+        shade_pct = shade_pct, 
         spacing = spacing
       )
       
       if (!is.null(shade_structures)) {
-        shade_structures_all_parks <- bind_rows(shade_structures_all_parks, shade_structures)
+        shade_structures_all <- bind_rows(shade_structures, shade_structures_all)
       }
     }
   } else {
-    message("No large parks needing shade.")
+    message("No small parks needing shade.")
   }
   
   
@@ -147,7 +148,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   scenario_path <- here(infrastructure_path, scenario_name)
   dir.create(scenario_path, showWarnings = FALSE)
   
-  st_write(shade_structures, here(scenario_path, "shade-structures.geojson"))
+  st_write(shade_structures_all, here(scenario_path, "shade_structures.geojson"))
   
   
   # Create height raster ----------------------------------------------------
@@ -156,12 +157,12 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   # 8-ft height for shade structures
   structure_height <- 8 / 3.281 # convert to meters
   
-  shade_structures <- shade_structures %>% 
+  shade_structures_all <- shade_structures_all %>% 
     mutate(height = structure_height)
   
   cif_lulc <- rast(here(inputs_path, "cif_lulc.tif"))
   
-  shade_structures_rast <- shade_structures %>% 
+  shade_structures_rast <- shade_structures_all %>% 
     rasterize(cif_lulc, field = "height", background = 0) 
   
   writeRaster(shade_structures_rast, here(scenario_path, "structures-as-trees.tif"))

@@ -8,6 +8,8 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
   library(sf)
   library(here)
   
+  source(here("utils", "utci.R"))
+  
   met_data <- list.files(here("data", city, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
     first() %>% 
     read_delim()
@@ -33,6 +35,7 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
   for (time in timestamps) {
     
     utci_path <- here(scenario_path, paste0("UTCI_", time, ".tif"))
+    
     # Compute UTCI if the file doesn't already exist
     if (file.exists(utci_path)) {
       
@@ -49,19 +52,35 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
     
     # Load shade raster and mask to AOI
     baseline_shade_rast <- rast(here(baseline_path, paste0("Shadow_", time, ".tif"))) < 1
-    baseline_shade_rast <- baseline_shade_rast %>% 
-      mask(aoi)
-    
     scenario_shade_rast <- rast(here(scenario_path, paste0("Shadow_", time, ".tif"))) < 1
     scenario_shade_rast <- scenario_shade_rast %>% 
-      crop(baseline_shade_rast) %>% 
+      crop(baseline_shade_rast)
+    
+    diff_shadow <- scenario_shade_rast - baseline_shade_rast
+    writeRaster(diff_shadow, 
+                here(scenario_path, 
+                     paste0("shade_diff_", time, ".tif")),
+                overwrite = TRUE)
+    
+    baseline_shade_rast <- baseline_shade_rast %>% 
+      mask(aoi)
+    scenario_shade_rast <- scenario_shade_rast %>% 
       mask(aoi)
     
     # Mask UTCI to AOI
-    baseline_utci_rast <- rast(here(baseline_path, paste0("UTCI_", time, ".tif"))) %>% 
+    baseline_utci_rast <- rast(here(baseline_path, paste0("UTCI_", time, ".tif"))) 
+    scenario_utci_rast <- scenario_utci_rast %>% 
+      crop(baseline_utci_rast)
+    
+    diff_utci <- scenario_utci_rast - baseline_utci_rast
+    writeRaster(diff_utci, 
+                here(scenario_path, 
+                     paste0("utci_diff_", time, ".tif")),
+                overwrite = TRUE)
+    
+    baseline_utci_rast <- baseline_utci_rast %>% 
       mask(aoi)
     scenario_utci_rast <- scenario_utci_rast %>% 
-      crop(baseline_utci_rast) %>% 
       mask(aoi)
     
     ped_area_rast <- ped_area_rast %>% 

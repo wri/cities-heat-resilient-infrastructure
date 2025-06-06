@@ -14,7 +14,7 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   # Load building polygons and filter to bbox of AOI
   build_vectors <- build_vectors %>% 
     st_transform(st_crs(lulc)) %>% 
-    st_filter(aoi) %>% 
+    st_filter(aoi, .predicate = st_within) %>% 
     mutate(area_sqm = as.numeric(units::set_units(st_area(geometry), "m^2")))
   
   # Filter to area threshold
@@ -41,7 +41,8 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   large_roof_raster <- rasterize(large_roofs, lulc, field = 1, background = NA)
   
   # Update the albedo value of targeted roofs
-  updated_albedo <- mask(albedo, large_roof_raster, updatevalue = cool_roof_albedo, inverse = TRUE)
+  updated_albedo <- mask(albedo, large_roof_raster, updatevalue = cool_roof_albedo, inverse = TRUE) %>% 
+    crop(albedo)
   writeRaster(updated_albedo, here(infrastructure_path, scenario_name, "updated-albedo.tif"))
   
   # Calculate albedo delta

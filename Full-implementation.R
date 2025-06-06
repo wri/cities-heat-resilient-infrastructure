@@ -6,8 +6,8 @@ library(here)
 # City parameters
 #################
 # city <- "ZAF-Cape_Town"
-# city <- "BRA-Rio_de_Janeiro"
-city <- "MEX-Monterrey"
+city <- "BRA-Rio_de_Janeiro"
+# city <- "MEX-Monterrey"
 
 if (city == "ZAF-Cape_Town"){
   aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"

@@ -27,7 +27,8 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
   
   # Baselayers
   baselayers <- file.path(here("data", city), 
-                          c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "cif_tree_canopy.tif"))
+                          c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "cif_tree_canopy.tif",
+                            "open-urban.tif"))
   file.copy(from = baselayers, to = tile_folder)
   
   # Wall layers
@@ -100,6 +101,7 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
   scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
   scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
   scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
+  scenario_yaml[[4]]$open_urban_tif_filename <- "open-urban.tif"
   scenario_yaml[[4]]$tree_canopy_tif_filename <- "cif_tree_canopy.tif"
   
   scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs.zip"

@@ -31,11 +31,6 @@ cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
   lulc <- rast(here(inputs_path, "open-urban.tif"))
   albedo <- rast(here(inputs_path, "albedo.tif"))
   build_vectors <- st_read(here(inputs_path, "buildings.geojson"))
-  # road_vectors <- st_read(here(inputs_path, "roads.geojson"))
-  # lanes <- read_csv(here(inputs_path, "average-lanes.csv"))
-  # canopy_height_existing <- rast(here(inputs_path, "tree-canopy-height.tif")) 
-  # names(canopy_height_existing) <- "height"
-  
   
   # Generate scenarios ------------------------------------------------------
   

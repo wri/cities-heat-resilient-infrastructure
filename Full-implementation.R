@@ -81,10 +81,10 @@ cool_roof_scenario(city, scenario = "program", scenario_name = "large-buildings"
                    infrastructure = "cool-roofs", area_threshold = 2000, cool_roof_albedo = 0.62)
 
 # park shade program (100m max distance to shade)
-source(here("scenario-generation", "park-shade-structures", "01-park-shade-structures-max-distance.R"))
+source(here("scenario-generation", "park-shade-structures", "01-park-shade-structures-small-parks-min-pct.R"))
 park_shade_scenario(city, scenario_name = "program-potential", 
                     structure_size = 5, shade_pct = 0.25, spacing = 5, 
-                    min_shade_area = 25, max_dist_to_shade = 100)
+                    min_shade_area = 25)
 
 
 

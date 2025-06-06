@@ -38,9 +38,10 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"))
   
   # Resuse svf from transmissivity = 3 if it exists
-  # if (file.exists){
-  #   svf_t3 <- file.path(here("data", city, "scenarios", "park-shade-structures", scenario_name, ))
-  # }
+  svf_t3 <- file.path(here("data", city, "scenarios", "park-shade-structures", scenario_name, "t3", "ctcm_svfs.zip"))
+  if (file.exists(svf_t3) & transmissivity == 0){
+    file.copy(from = svf_t3, to = file.path(run_setup_folder, "processed_data", "tile_001"))
+  }
   
   # Copy structures as trees layer
   file.copy(from = here("data", city, "scenarios", "park-shade-structures", 
@@ -53,8 +54,6 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
     st_as_sf() %>%
     st_transform(crs = 4326) %>%
     st_bbox()
-  # bbox <- read_csv(here("data", city, "coords.csv")) %>% 
-  #   deframe()
   
   
   
@@ -99,6 +98,10 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   
   scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
   scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
+  
+  if (file.exists(svf_t3) & transmissivity == 0){
+    scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs.zip"
+  } 
   
   # Change transmissivity
   scenario_yaml[[6]]$skyview_factor$transmissivity_of_light_through_vegetation <- transmissivity

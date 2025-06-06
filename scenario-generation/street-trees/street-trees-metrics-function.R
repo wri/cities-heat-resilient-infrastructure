@@ -30,7 +30,8 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
     
   # scenario_base <- here(scenario_path, scenario)
   timestamps <- list.files(scenario_path, pattern = "Tmrt") %>% 
-    str_extract("(?<=Tmrt_).*(?=\\.tif)")
+    str_extract("(?<=Tmrt_).*(?=\\.tif)") %>% 
+    unique()
   
   for (time in timestamps) {
     

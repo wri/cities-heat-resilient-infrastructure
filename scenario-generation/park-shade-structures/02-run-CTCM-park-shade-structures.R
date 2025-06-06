@@ -37,6 +37,11 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
              recursive = TRUE, showWarnings = FALSE)
   file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"))
   
+  # Resuse svf from transmissivity = 3 if it exists
+  # if (file.exists){
+  #   svf_t3 <- file.path(here("data", city, "scenarios", "park-shade-structures", scenario_name, ))
+  # }
+  
   # Copy structures as trees layer
   file.copy(from = here("data", city, "scenarios", "park-shade-structures", 
                         scenario_name, "structures-as-trees.tif"),

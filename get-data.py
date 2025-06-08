@@ -42,24 +42,13 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   # in_maxy = 25.6702689#bbox_tuple[3]
   # 
   raster = rioxarray.open_rasterio(os.path.join(city_dir, "cif_lulc.tif"), masked=True)
-  # # bounds = raster.rio.bounds()
+  bounds = raster.rio.bounds()
   crs = raster.rio.crs.to_string()
-  # 
-  # reproj_bbox = reproject_units(in_minx, in_miny, in_maxx, in_maxy, 'EPSG:4326', crs)
-  # reproj_bbox = reproject_units(in_miny, in_minx, in_maxy, in_maxx, 'EPSG:4326', crs)
-  # miny, minx, maxy, maxx = reproj_bbox
-  # 
-  # buffered_minx = reproj_bbox[1] - buffer
-  # buffered_miny = reproj_bbox[0] - buffer
-  # buffered_maxx = reproj_bbox[3] + buffer
-  # buffered_maxy = reproj_bbox[2] + buffer
-  # 
-  # bbox = [(buffered_minx, buffered_miny), (buffered_minx, buffered_maxy), (buffered_maxx, buffered_maxy), (buffered_maxx, buffered_miny)]
-  # bbox_poly = Polygon(bbox)
-  #   
-  # tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
-  # 
-  # bbox = GeoExtent(bbox=tile_gpd, crs=crs)
+  
+  from src.worker_manager.tools import construct_polygon_from_bounds
+  bbox_poly = construct_polygon_from_bounds(bounds[0], bounds[1], bounds[2], bounds[3])
+  tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
+  bbox = GeoExtent(bbox=tile_gpd, crs=crs)
   
   # from city_metrix.layers import OpenUrban
   # from open_urban import OpenUrban
@@ -112,7 +101,7 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   # bbox = GeoExtent(aoi_gdf.total_bounds, aoi_gdf.crs.srs)
   # lulc = OpenUrban().get_data(bbox)
 
-  bbox = GeoExtent(aoi.total_bounds, aoi.crs.srs).as_utm_bbox()
+  # bbox = GeoExtent(aoi.total_bounds, aoi.crs.srs).as_utm_bbox()
   
   
   ## save aoi with UTM crs

@@ -54,7 +54,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   # Combine tree shade and building shade
   shaded <- shadow_12pm < 1
   
-  writeRaster(shaded, here(infrastructure_path, "shade_1200.tif"))
+  writeRaster(shaded, here(infrastructure_path, "shade_1200.tif"), overwrite = TRUE)
   
   # Created unshaded raster
   unshaded <- isFALSE(shaded) 

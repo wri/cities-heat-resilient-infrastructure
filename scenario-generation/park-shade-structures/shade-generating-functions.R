@@ -18,7 +18,6 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
   # Safely check if buffer exists before filtering
   if (nrow(inner_buffer) == 0 || all(st_is_empty(inner_buffer))) {
     warning("Inner buffer is empty; no points retained.")
-    park_pixel_pts <- park_pixel_pts[0, ]
   } else {
     park_pixel_pts <- park_raster_mask %>%
       as.points(na.rm = TRUE) %>%
@@ -28,8 +27,11 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
   }
   
   
-  # Ensure valid area is not empty
-  if (nrow(park_pixel_pts) == 0) {
+  # # Ensure valid area is not empty
+  # if (nrow(park_pixel_pts) == 0) {
+  #   return(NULL)
+  # }
+  if (!exists("park_pixel_pts")) {
     return(NULL)
   }
   

@@ -58,8 +58,8 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
       crop(baseline_shade_rast)
     
     diff_shadow <- scenario_shade_rast - baseline_shade_rast
-    writeRaster(diff_shadow, 
-                here(scenario_path, 
+    writeRaster(diff_shadow,
+                here(scenario_path,
                      paste0("shade_diff_", time, ".tif")),
                 overwrite = TRUE)
     
@@ -74,8 +74,8 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
       crop(baseline_utci_rast)
     
     diff_utci <- scenario_utci_rast - baseline_utci_rast
-    writeRaster(diff_utci, 
-                here(scenario_path, 
+    writeRaster(diff_utci,
+                here(scenario_path,
                      paste0("utci_diff_", time, ".tif")),
                 overwrite = TRUE)
     
@@ -109,8 +109,8 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
       mean_utci_scenario_pedestrian = scenario_utci_avg,
       mean_utci_change_pedestrian = utci_diff,
       
-      shade_cover_baseline_pedestrian = baseline_shade_pct,
-      shade_cover_scenario_pedestrian = scenario_shade_pct,
+      shade_cover_baseline_pedestrian = baseline_shade_pct * 100,
+      shade_cover_scenario_pedestrian = scenario_shade_pct * 100,
       shade_cover_change_pedestrian = shade_diff
     ) %>%
       pivot_longer(
@@ -158,13 +158,13 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
   
   tree_metrics <- 
     tibble(
-      tree_cover_baseline_pedestrian = baseline_tree_pct,
-      tree_cover_scenario_pedestrian = scenario_tree_pct,
+      tree_cover_baseline_pedestrian = baseline_tree_pct * 100,
+      tree_cover_scenario_pedestrian = scenario_tree_pct * 100,
       tree_cover_change_pedestrian = tree_cover_diff,
       tree_n_baseline_pedestrian = baseline_tree_n,
       tree_n_scenario_pedestrian = scenario_tree_n,
       tree_n_change_pedestrian = new_trees,
-      tree_cover_achievable_pedestrian = target_coverage
+      tree_cover_achievable_pedestrian = target_coverage * 100
     ) %>% 
     pivot_longer(
       cols = everything(),

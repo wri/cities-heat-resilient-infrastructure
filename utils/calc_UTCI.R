@@ -37,6 +37,16 @@ calc_UTCI <- function(city, scenario, infrastructure){
       
     }
     
+    baseline_utci_rast <- rast(here(baseline_path, paste0("UTCI_", time, ".tif"))) 
+    scenario_utci_rast <- scenario_utci_rast %>% 
+      crop(baseline_utci_rast)
+    
+    diff_utci <- scenario_utci_rast - baseline_utci_rast
+    writeRaster(diff_utci,
+                here(scenario_path,
+                     paste0("utci_diff_", time, ".tif")),
+                overwrite = TRUE)
+    
     # Load shade raster and mask to AOI
     baseline_shade_rast <- rast(here(baseline_path, paste0("Shadow_", time, ".tif"))) < 1
     scenario_shade_rast <- rast(here(scenario_path, paste0("Shadow_", time, ".tif"))) < 1
@@ -51,4 +61,4 @@ calc_UTCI <- function(city, scenario, infrastructure){
   }
 }
 
-calc_UTCI(city, scenario = "large-buildings", infrastructure = "cool-roofs")
+calc_UTCI(city = "MEX-Monterrey", scenario = "program-potential", infrastructure = "park-shade-structures")

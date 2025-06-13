@@ -188,7 +188,6 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   # Add back in the original vegetation canopy to include areas with height <= 1
   updated_tree_cover <- max(updated_tree_cover, canopy_height_existing, na.rm = TRUE)
   
-  
   # Save the new tree height raster
   writeRaster(updated_tree_cover, 
               here(scenario_path, "scenario-tree-canopy-height.tif"),
@@ -208,7 +207,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   # Create a logical raster where TRUE indicates cells that differ between A and B
   diff_mask <- canopy_height_existing != updated_tree_cover
   # Use the mask to create a raster that keeps values from B where they differ from A
-  tree_diff_raster <- mask(updated_tree_cover, diff_mask, maskvalue = FALSE)
+  tree_diff_raster <- mask(updated_tree_cover, diff_mask, maskvalue = FALSE) >= 3
   
   writeRaster(tree_diff_raster, 
               here(scenario_path, "scenario-new-trees.tif"),

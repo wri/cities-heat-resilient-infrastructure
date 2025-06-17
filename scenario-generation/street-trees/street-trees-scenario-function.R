@@ -45,29 +45,25 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   # Plantable area  -------------------------------------------------------
   
-  if (file.exists(here(infrastructure_path, "plantable-street.tif"))) {
+  
     
-    ped_area <- rast(here(infrastructure_path, "pedestrian-area.tif"))
-    plantable_street <- rast(here(infrastructure_path, "plantable-street.tif"))
-  } else {
+  source(here("scenario-generation", "street-trees", "plantable-street-function.R"))
+  
+  plantable_street <- generate_plantable_street(aoi = aoi, 
+                                                lulc_rast = lulc, 
+                                                existing_trees = tree_height,
+                                                road_vectors = road_vectors, 
+                                                lanes = lanes,
+                                                city = city,
+                                                utm = utm,
+                                                save_files = TRUE)
+  
+  ped_area <- plantable_street$ped_area
+  plantable_street <- plantable_street$plantable_street
+  
+  rm(road_vectors, lanes)
     
-    source(here("scenario-generation", "street-trees", "plantable-street-function.R"))
-    
-    plantable_street <- generate_plantable_street(aoi = aoi, 
-                                                  lulc_rast = lulc, 
-                                                  existing_trees = tree_height,
-                                                  road_vectors = road_vectors, 
-                                                  lanes = lanes,
-                                                  city = city,
-                                                  utm = utm,
-                                                  save_files = TRUE)
-    
-    ped_area <- plantable_street$ped_area
-    plantable_street <- plantable_street$plantable_street
-    
-    rm(road_vectors, lanes)
-    
-  }
+  
   
   
   # Evaluate baseline conditions --------------------------------------------

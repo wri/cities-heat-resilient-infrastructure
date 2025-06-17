@@ -23,24 +23,18 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   # Process tree canopy to individual trees ---------------------------------
   
   # If the tree data already exists, use it, otherwise create it
-  if (file.exists(here(infrastructure_path, "tree-vars.RData"))) {
     
-    load(here(infrastructure_path, "tree-vars.RData"))
-    crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
+  source(here("scenario-generation", "street-trees", "canopy-to-trees-function.R"))
+  
+  process_trees(tree_raster = tree_height, 
+                save_files = TRUE,
+                infrastructure_path = infrastructure_path)
+  
+  load(here(infrastructure_path, "tree-vars.RData"))
+  st_write(ttops, here(infrastructure_path, "existing-trees.geojson"))
+  crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
     
-  } else {
-    
-    source(here("scenario-generation", "street-trees", "canopy-to-trees-function.R"))
-    
-    process_trees(tree_raster = tree_height, 
-                  save_files = TRUE,
-                  infrastructure_path = infrastructure_path)
-    
-    load(here(infrastructure_path, "tree-vars.RData"))
-    st_write(ttops, here(infrastructure_path, "existing-trees.geojson"))
-    crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
-    
-  }
+
   
   
   # Plantable area  -------------------------------------------------------

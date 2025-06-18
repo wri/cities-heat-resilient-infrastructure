@@ -43,10 +43,10 @@ shade_structure_post_processing <- function(city){
     
     # Write to output
     writeRaster(tmrt_composite, 
-                file.path(output_dir, paste0("utci_", str_remove(time, "D"), "_park_shade_achievable.tif")), 
+                file.path(output_dir, tmrt_file), 
                 overwrite = TRUE)
     writeRaster(shadow_composite, 
-                file.path(output_dir, paste0("shade_", str_remove(time, "D"), "_park_shade_achievable.tif")), 
+                file.path(output_dir, shadow_file), 
     overwrite = TRUE)
     
     message("Composite rasters written for time: ", time)

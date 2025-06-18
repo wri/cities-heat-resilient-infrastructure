@@ -35,7 +35,7 @@ shade_structure_post_processing <- function(city){
       crop(baseline_tmrt, mask = TRUE)
     
     # Create mask: only keep areas where t3 mask is between 0 and 1
-    tree_shade_mask <- struct_t3_mask >= 0 & struct_t3_mask <= 1
+    tree_shade_mask <- struct_t3_mask > 0 & struct_t3_mask < 1
     
     # Apply conditional replacement
     tmrt_composite <- ifel(tree_shade_mask, struct_t0_tmrt, baseline_tmrt)

@@ -6,8 +6,8 @@ library(here)
 # City parameters
 #################
 # city <- "ZAF-Cape_Town"
-city <- "BRA-Rio_de_Janeiro"
-# city <- "MEX-Monterrey"
+# city <- "BRA-Rio_de_Janeiro"
+city <- "MEX-Monterrey"
 
 if (city == "ZAF-Cape_Town"){
   aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
@@ -91,14 +91,26 @@ park_shade_scenario(city, scenario_name = "program-potential",
 # Run CTCM on scenarios ---------------------------------------------------
 
 # street trees
+unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-street-trees-achievable-90pctl")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_outcome", paste0(city, "-street-trees-achievable-90pctl")), recursive = TRUE)
+
 source(here("scenario-generation", "street-trees", "02-run-CTCM-street-trees.R"))
 run_CTCM_street_trees(city, author, utc_offset, scenario_name = "achievable-90pctl", buffer)
 
 # Cool roofs
+unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-cool-roofs-large-buildings")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_outcome", paste0(city, "-cool-roofs-large-buildings")), recursive = TRUE)
+
 source(here("scenario-generation", "cool-roofs", "02-run-CTCM-cool-roofs.R"))
 run_CTCM_cool_roofs(city, author, utc_offset, scenario_name = "large-buildings", buffer)
 
 # Park shade
+unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-program-potential-0")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-program-potential-0")), recursive = TRUE)
+
+unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-program-potential-1")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-program-potential-1")), recursive = TRUE)
+
 source(here("scenario-generation", "park-shade-structures", "02-run-CTCM-park-shade-structures.R"))
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 3, 
                                scenario_name = "program-potential", buffer)

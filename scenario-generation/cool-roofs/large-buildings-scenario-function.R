@@ -5,8 +5,9 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   dir.create(here(infrastructure_path, scenario_name), showWarnings = FALSE)
   
   # Resample albedo to 1-m
-  albedo <- albedo %>% 
-    resample(lulc)
+  albedo <- terra::resample(albedo, lulc, method = "bilinear") 
+    
+  writeRaster(albedo, here(infrastructure_path, scenario_name, "albedo-1m.tif"))
   
   # Reclassify buildings only
   roofs <- (lulc >= 600) & (lulc < 700)

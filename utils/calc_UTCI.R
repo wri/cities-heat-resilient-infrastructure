@@ -62,20 +62,30 @@ calc_UTCI <- function(city, scenario, infrastructure){
                 overwrite = TRUE)
     baseline_shade_rast <- baseline_shade_rast < 1
     
-    scenario_shade_rast <- rast(here(scenario_path, paste0("Shadow_", time, ".tif"))) 
-    writeRaster(scenario_shade_rast, 
-                here(scenario_path, paste0("shade_", time_str, "_", infra_file_name, "_achievable", ".tif")),
-                overwrite = TRUE)
-    scenario_shade_rast <- scenario_shade_rast < 1
-    
-    scenario_shade_rast <- scenario_shade_rast %>% 
-      crop(baseline_shade_rast)
-    
-    diff_shadow <- scenario_shade_rast - baseline_shade_rast
-    writeRaster(diff_shadow, 
-                here(scenario_path, 
-                     paste0("shade_", time_str, "_", infra_file_name, "_achievable_vs_baseline", ".tif")),
-                overwrite = TRUE)
+    if (infrastructure == "cool-roofs") {
+      baseline_alb <- rast(here(scenario_path, "albedo-1m.tif")) 
+      scenario_alb <- rast(here(scenario_path, "updated-albedo.tif")) 
+      
+      diff_alb <- scenario_alb - baseline_alb
+      
+      writeRaster(diff_alb, here(scenario_path, "albedo_achievable_vs_baseline.tif"), overwrite = TRUE) 
+      
+    } else {
+      scenario_shade_rast <- rast(here(scenario_path, paste0("Shadow_", time, ".tif"))) 
+      writeRaster(scenario_shade_rast, 
+                  here(scenario_path, paste0("shade_", time_str, "_", infra_file_name, "_achievable", ".tif")),
+                  overwrite = TRUE)
+      scenario_shade_rast <- scenario_shade_rast < 1
+      
+      scenario_shade_rast <- scenario_shade_rast %>% 
+        crop(baseline_shade_rast)
+      
+      diff_shadow <- scenario_shade_rast - baseline_shade_rast
+      writeRaster(diff_shadow, 
+                  here(scenario_path, 
+                       paste0("shade_", time_str, "_", infra_file_name, "_achievable_vs_baseline", ".tif")),
+                  overwrite = TRUE)
+      }
   }
 }
 

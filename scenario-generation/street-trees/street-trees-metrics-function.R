@@ -38,18 +38,15 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
     utci_path <- here(scenario_path, paste0("UTCI_", time, ".tif"))
     
     # Compute UTCI if the file doesn't already exist
-    if (file.exists(utci_path)) {
-      
-      scenario_utci_rast <- rast(utci_path)  # Load existing UTCI raster
-      
-    } else {
-      
-      Tmrt <- rast(here(scenario_path, paste0("Tmrt_", time, ".tif")))
-      scenario_utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = time, met_data = met_data)
-      
-      writeRaster(scenario_utci_rast, here(scenario_path, paste0("UTCI_", time, ".tif")))
-      
-    }
+    
+    
+    # Tmrt <- rast(here(scenario_path, paste0("Tmrt_", time, ".tif")))
+    # scenario_utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = time, met_data = met_data)
+    
+    # writeRaster(scenario_utci_rast, here(scenario_path, paste0("UTCI_", time, ".tif")))
+    scenario_utci_rast <- rast(here(scenario_path, 
+                                    paste0("utci_", time_str, "_", infra_file_name, "_achievable", ".tif")))
+    
     
     # Load shade raster and mask to AOI
     baseline_shade_rast <- rast(here(baseline_path, paste0("Shadow_", time, ".tif"))) < 1

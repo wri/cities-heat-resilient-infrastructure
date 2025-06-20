@@ -23,6 +23,8 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   
   # Building area raster
   build_raster <- rasterize(build_vectors, lulc)
+  build_raster <- subst(build_raster, NA, 0)
+  
   writeRaster(build_raster, here(infrastructure_path, scenario_name, "buildings_areas.tif"), overwrite = TRUE)
   
   # Filter to area threshold

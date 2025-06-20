@@ -145,4 +145,6 @@ calc_street_tree_metrics(city, scenario = "achievable-90pctl", infrastructure = 
 calc_UTCI(city, scenario = "program-potential", infrastructure = "park-shade-structures")
 
 # Cool roofs
+source(here("scenario-generation", "cool-roofs", "cool-roofs-metrics-function.R"))
 calc_UTCI(city, scenario = "large-buildings", infrastructure = "cool-roofs")
+calc_cool_roofs_metrics(city, scenario = "large-buildings", cool_roof_albedo = 0.62)

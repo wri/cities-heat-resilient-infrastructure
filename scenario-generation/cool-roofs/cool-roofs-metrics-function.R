@@ -1,4 +1,4 @@
-calc_street_park_shade_metrics <- function(city, scenario, cool_roof_albedo){
+calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo){
 
   library(terra)
   library(tidyverse)

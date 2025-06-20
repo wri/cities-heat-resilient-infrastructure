@@ -1,112 +1,69 @@
-calc_street_park_shade_metrics <- function(city, scenario, infrastructure, met_data){
+calc_street_park_shade_metrics <- function(city, scenario, cool_roof_albedo){
 
   library(terra)
   library(tidyverse)
   library(sf)
   library(here)
   
-  infrastructure_path <- here("data", city, "scenarios", infrastructure)
+  scenario_path <- here("data", city, "scenarios", "cool-roofs", scenario)
+  baseline_path <- here("data", city, "scenarios", "baseline")
   
-  if (scenario == "baseline"){
-    scenario_path <- here("data", city, "scenarios", scenario)
-    
-    albedo <- rast(here(infrastructure_path, 'albedo.tif')) 
-  } else {
-    scenario_path <- here(infrastructure_path, scenario)
-    
-    # Load albedo 
-    albedo <- rast(here(scenario_path, 'scenario-albedo.tif')) 
-  }
-  
-  # Load UTCI function
-  source(here("utils", "utci.R"))
+  baseline_albedo <- rast(here(scenario_path, "albedo_baseline.tif"))
+  scenario_albedo <- rast(here(scenario_path, 'albedo_cool_roofs_achievable.tif')) 
   
   # Load AOI
-  aoi <- st_read(here("data", city, "aoi.geojson"))
+  aoi <- st_read(here("data", city, "boundaries.geojson"))
   
+  # Load buildings
+  build_vectors <- st_read(here(scenario_path, "buildings_polygons.geojson"))
+  updated_builds <- st_read(here(scenario_path, "updated-buildings.geojson"))
   
+  # Achievable albedo
+  alb_target <- quantile(build_vectors$mean_albedo, 0.9)
+  roof_raster <- rast(here(scenario_path, "buildings_areas.tif")) %>% 
+    subst(0, NA)
   
-  # Load LULC
-  lulc <- rast(here("data", city, "open-urban.tif")) 
+  # Update the albedo value of targeted roofs
+  achievable_albedo <- mask(baseline_albedo, roof_raster, updatevalue = alb_target, inverse = TRUE) %>% 
+    crop(albedo)
   
-  # Define classification function
-  reclass_fun <- function(x) {
-    ifelse(x == 300 | (x >= 600 & x < 700), 0, 1)
-  }
+  baseline_roof_alb <- mean(values(mask(baseline_albedo, roof_raster)), na.rm = TRUE)
+  scenario_roof_alb <- mean(values(mask(scenario_albedo, roof_raster)), na.rm = TRUE)
   
-  # Apply function
-  lulc_reclass <- app(lulc, reclass_fun)
+  timestamps <- c("1200", "1500", "1800")
+  
+  baseline_Ta <- read_delim(here(baseline_path, "met_era5_hottest_days.txt"))
+  scenario_Ta <- read_delim(here(scenario_path, "met_era5_hottest_days.txt"))
   
   # Initialize results list
-  results <- tibble()
+  results <- tibble(
+    "baseline_cool_roof_area" = sum(build_vectors %>% filter(mean_albedo >= cool_roof_albedo) %>% pull(area_sqm)),
+    "scenario_cool_roof_area" = sum(updated_builds %>% pull(area_sqm)),
+    "achievable_cool_roof_area" = sum(build_vectors %>% pull(area_sqm)),
+    "change_cool_roof_area" = scenario_cool_roof_area - baseline_cool_roof_area,
+    
+    "achievable_cool_roof_reflectivity" = alb_target,
   
-  # scenario_base <- here(scenario_path, scenario)
-  timestamps <- list.files(scenario_path, pattern = "Tmrt") %>% 
-    str_extract("(?<=Tmrt_).*(?=\\.tif)")
+    "baseline_reflectivity" = mean(values(baseline_albedo), na.rm = TRUE) * 100,
+    "scenario_reflectivity" = mean(values(scenario_albedo), na.rm = TRUE) * 100,
+    "achievable_reflectivity" = mean(values(achievable_albedo), na.rm = TRUE) * 100,
+    "change_reflectivity" = (scenario_reflectivity - baseline_reflectivity),
+    
+    "baseline_roof_reflectivity" = baseline_roof_alb * 100,
+    "scenario_roof_reflectivity" = scenario_roof_alb * 100,
+    "change_roof_reflectivity" = (scenario_roof_alb - baseline_roof_alb),
+    
+    "progress_cool_roofs" = (baseline_cool_roof_area + change_cool_roof_area) / achievable_cool_roof_area * 100,
+    
+    "baseline_mean_air_temp_1200" = (baseline_Ta %>% filter(it == 12) %>% pull(Tair)),
+    "baseline_mean_air_temp_1500" = (baseline_Ta %>% filter(it == 15) %>% pull(Tair)),
+    "baseline_mean_air_temp_1800" = (baseline_Ta %>% filter(it == 18) %>% pull(Tair)),
+    "scenario_mean_air_temp_1200" = (scenario_Ta %>% filter(it == 12) %>% pull(Tair)),
+    "scenario_mean_air_temp_1500" = (scenario_Ta %>% filter(it == 15) %>% pull(Tair)),
+    "scenario_mean_air_temp_1800" = (scenario_Ta %>% filter(it == 18) %>% pull(Tair))
+    ) %>% 
+    pivot_longer(cols = everything(), names_to = "indicator_id")
   
-  utci_files <- list.files(scenario_path, pattern = "UTCI")
-  Tmrt_files <- list.files(scenario_path, pattern = "Tmrt")
-  
-  # Load AOI 
-  aoi <- st_read(here("data", city, "aoi.geojson"))
-  
-  for (t in timestamps) {
-    
-    # Compute UTCI if the file doesn't already exist
-    if (any(str_detect(utci_files, t))) {
-      
-      utci_rast <- rast(here(scenario_path, utci_files[str_detect(utci_files, t)]))  # Load existing UTCI raster
-      
-    } else {
-      
-      Tmrt <- rast(here(scenario_path, Tmrt_files[str_detect(Tmrt_files, t)]))
-      utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = t, met_data = met_data)
-      
-      writeRaster(utci_rast, here(scenario_path, paste0("UTCI_", t, ".tif")))
-      
-    }
-    
-    # Mask UTCI to AOI
-    utci_rast <- mask(utci_rast, aoi)
-    
-    # Compute metrics
-    # utci in people areas
-    utci_avg <- mean(values(mask(utci_rast, lulc_reclass, maskvalues = 0) %>% subst(0, NA)), na.rm = TRUE)
-
-    # Albedo of AOI
-    albedo_avg <- mean(values(mask(crop(albedo, aoi), aoi) %>% subst(0, NA)), na.rm = TRUE)
-    
-    # Area and number of buildings updates if any
-    if (scenario == "baseline"){
-      
-      build_no <- 0
-      build_area_m2 <- 0
-      
-    } else {
-      
-      buildings <- st_read(here(scenario_path, "buildings.geojson"))
-      
-      build_no <- nrow(buildings)
-      build_area_m2 <- sum(buildings$area_sqm)
-      
-    }
-    
-    
-    # Store results
-    metrics <- tibble(
-      cities = city,
-      date = str_extract(t, ".*(?=_[^_]+$)"),
-      time = str_extract(t, "(?<=_)[^_D]+(?=D$)"),
-      scenarios = paste(str_replace(infrastructure, "-", "_"), scenario, time, sep = "_"),
-      utci_mean_person_areas = utci_avg,
-      albedo_mean_aoi = albedo_avg,
-      updated_buildings_n_aoi = build_no,
-      updated_buildings_area_m2_aoi = build_area_m2
-    )
-    
-    results <- bind_rows(results, metrics)
-  }
-  
-  return(results)
+  write_csv(results, here(scenario_path, "scenario-metrics.csv"))
 
 }

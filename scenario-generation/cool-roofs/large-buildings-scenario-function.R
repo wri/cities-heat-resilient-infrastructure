@@ -54,7 +54,7 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   # Update the albedo value of targeted roofs
   updated_albedo <- mask(albedo, large_roof_raster, updatevalue = cool_roof_albedo, inverse = TRUE) %>% 
     crop(albedo)
-  writeRaster(updated_albedo, here(infrastructure_path, scenario_name, "updated-albedo.tif"), overwrite = TRUE)
+  writeRaster(updated_albedo, here(infrastructure_path, scenario_name, "albedo_cool_roofs_achievable.tif"), overwrite = TRUE)
   
   # Calculate albedo delta
   albedo_delta_bounds <- mean(values(updated_albedo), na.rm = TRUE) - mean(values(albedo), na.rm = TRUE)

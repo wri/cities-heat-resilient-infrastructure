@@ -1,4 +1,4 @@
-calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo){
+calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo, aoi_name){
 
   library(terra)
   library(tidyverse)
@@ -35,6 +35,11 @@ calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo){
   baseline_Ta <- read_delim(here(baseline_path, "met_era5_hottest_days.txt"))
   scenario_Ta <- read_delim(here(scenario_path, "met_era5_hottest_days.txt"))
   
+  date <- baseline_Ta %>% 
+    slice(1) %>% 
+    mutate(date = paste(`%iy`, id, sep = "_")) %>% 
+    pull(date)
+  
   # Initialize results list
   results <- tibble(
     "baseline_cool_roof_area" = sum(build_vectors %>% filter(mean_albedo >= cool_roof_albedo) %>% pull(area_sqm)),
@@ -62,7 +67,13 @@ calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo){
     "scenario_mean_air_temp_1500" = (scenario_Ta %>% filter(it == 15) %>% pull(Tair)),
     "scenario_mean_air_temp_1800" = (scenario_Ta %>% filter(it == 18) %>% pull(Tair))
     ) %>% 
-    pivot_longer(cols = everything(), names_to = "indicator_id")
+    pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") %>% 
+    mutate(date = date,
+           application_id = "ccl",
+           cities_id = city,
+           areas_of_interest_id = aoi_name,
+           interventions_id = "cool_roofs",
+           scenarios_id = paste("cool_roofs", str_replace(scenario, "-", "_"), sep = "_"))
   
   write_csv(results, here(scenario_path, "scenario-metrics.csv"))
 

@@ -137,17 +137,21 @@ upload_folder_to_s3(city, aoi_name, year)
 source(here("utils", "calc_UTCI.R"))
 
 # Street trees
+##############
 calc_UTCI(city, scenario = "achievable-90pctl", infrastructure = "street-trees")
 
 source(here("scenario-generation", "street-trees", "street-trees-metrics-function.R"))
 calc_street_tree_metrics(city, scenario = "achievable-90pctl", infrastructure = "street-trees", aoi_name)
 
 # Park shade
+##############
 calc_UTCI(city, scenario = "program-potential", infrastructure = "park-shade-structures")
 
-calc_park_shade_metrics(city, scenario = "program-potential", aoi_name)
+source(here("scenario-generation", "park-shade-structures", "park-shade-structures-metrics-function.R"))
+calc_street_park_shade_metrics(city, scenario = "program-potential", aoi_name)
 
 # Cool roofs
+##############
 calc_UTCI(city, scenario = "large-buildings", infrastructure = "cool-roofs")
 
 source(here("scenario-generation", "cool-roofs", "cool-roofs-metrics-function.R"))

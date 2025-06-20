@@ -104,7 +104,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
     park_suitable_area_vector <- open_spaces
   }
   
-  st_write(park_suitable_area_vector, here(infrastructure_path, "open-spaces-no-pitch.geojson"),
+  st_write(park_suitable_area_vector, here(infrastructure_path, "parks.geojson"),
            append = FALSE, delete_dsn = TRUE)
   
   # Small parks -------------------------------------------------------------

@@ -24,8 +24,7 @@ calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo, aoi_name){
     subst(0, NA)
   
   # Update the albedo value of targeted roofs
-  achievable_albedo <- mask(baseline_albedo, roof_raster, updatevalue = alb_target, inverse = TRUE) %>% 
-    crop(albedo)
+  achievable_albedo <- mask(baseline_albedo, roof_raster, updatevalue = alb_target, inverse = TRUE) 
   
   baseline_roof_alb <- mean(values(mask(baseline_albedo, roof_raster)), na.rm = TRUE)
   scenario_roof_alb <- mean(values(mask(scenario_albedo, roof_raster)), na.rm = TRUE)

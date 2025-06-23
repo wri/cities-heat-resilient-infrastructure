@@ -112,13 +112,13 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   baseline_layers <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "raster_files", "tile_001")),
                                 full.names = TRUE, recursive = TRUE)
   
-  file.copy(from = baseline_layers, to = city_folder)
+  file.copy(from = baseline_layers, to = city_folder, overwrite = TRUE)
   
   # Copy processed data to baseline folder
   processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_001")),
                                full.names = TRUE)
   
-  file.copy(from = processed_data, to = baseline_folder)
+  file.copy(from = processed_data, to = baseline_folder, overwrite = TRUE)
     
   # Copy CTCM output to scenario folder
   output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results_umep", "met_era5_hottest_days", "tile_001")),
@@ -131,19 +131,23 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
     map_chr(~ {
       basename(.x) %>%
         str_match("^(Shadow|Tmrt)_.*_(\\d{4})D\\.tif$") %>%
-        { paste0(.[2], "_", .[3], "_baseline.tif") }
+        { 
+          prefix <- ifelse(.[2] == "Shadow", "shade", .[2])
+          paste0(prefix, "_", .[3], "_baseline.tif")
+        }
     })
+  
   
   # Create full destination paths
   new_paths <- file.path(baseline_folder, new_filenames)
   
   # Copy files with new names
-  file.copy(from = output_data, to = new_paths)
+  file.copy(from = output_data, to = new_paths, overwrite = TRUE)
   
   # Copy met file
   met_file <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "met_files")),
                          full.names = TRUE)
-  file.copy(met_file, baseline_folder)
+  file.copy(met_file, baseline_folder, overwrite = TRUE)
   
   # Rename openurban file
   file.rename(from = here(city_folder, "cif_open_urban.tif"), to = here(city_folder, "open-urban.tif"))

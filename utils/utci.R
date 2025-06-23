@@ -266,7 +266,7 @@ create_utci <- function(mrt_rast, timestamp, met_data){
   # mrt_data <- rast(mrt_rast)
   
   # get the timestamp
-  time <- as.numeric(str_extract(timestamp, "(?<=_)[0-9]{2}(?=00D)"))
+  time <- str_sub(timestamp, 1, 2)
   
   # extract met data for the timestamp
   Ta <- met_data %>% 
@@ -291,7 +291,7 @@ create_utci <- function(mrt_rast, timestamp, met_data){
   # check_inputs(Ta, va, vpd, mrt_rast)
   
   # Calculate UTCI
-  utci_values <- utci_calc(Ta, vpd, va, mrt_rast)
+  utci_values <- utci_calc(Ta = Ta, ehPa = vpd, va = va, Tmrt = mrt_rast)
   
   return(utci_values)
   # output_filename <- str_replace(mrt_file_path, "Tmrt", "UTCI")

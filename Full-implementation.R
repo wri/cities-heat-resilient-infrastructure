@@ -5,9 +5,9 @@ library(here)
 
 # City parameters
 #################
-# city <- "ZAF-Cape_Town"
+city <- "ZAF-Cape_Town"
 # city <- "BRA-Rio_de_Janeiro"
-city <- "MEX-Monterrey"
+# city <- "MEX-Monterrey"
 
 if (city == "ZAF-Cape_Town"){
   aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
@@ -28,7 +28,7 @@ if (city == "ZAF-Cape_Town"){
 # AOI parameters
 #################
 # URL for file in S3
-# aoi_file <- ""
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
 # aoi_name <- ""
   
 # CTCM metadata
@@ -44,16 +44,19 @@ buffer <- 100
 # Year for albedo data
 year <- "2024"
 
+source(here("utils", "calc_UTCI.R"))
 
 # Create directory --------------------------------------------------------
 
 dir.create(here("data", city), showWarnings = FALSE)
 
 # Run baseline ------------------------------------------------------------
+unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-baseline")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_outcome", paste0(city, "-baseline")), recursive = TRUE)
 
 source(here("scenario-generation", "baseline", "CTCM-baseline-function.R"))
 run_CTCM_baseline(city, aoi_file, ctcm_run = "baseline", author, utc_offset, buffer)
-
+calc_UTCI(city, scenario = "baseline")
 
 # Get data ----------------------------------------------------------------
 
@@ -90,27 +93,45 @@ park_shade_scenario(city, scenario_name = "program-potential",
 
 # Run CTCM on scenarios ---------------------------------------------------
 
+
 # street trees
+##############
+
+# Remove existing CTCM folders
 unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-street-trees-achievable-90pctl")), recursive = TRUE)
 unlink(file.path("C:", "CTCM_outcome", paste0(city, "-street-trees-achievable-90pctl")), recursive = TRUE)
 
+# Run CTCM
 source(here("scenario-generation", "street-trees", "02-run-CTCM-street-trees.R"))
 run_CTCM_street_trees(city, author, utc_offset, scenario_name = "achievable-90pctl", buffer)
 
+# Calculate UTCI and difference rasters
+calc_UTCI(city, scenario = "achievable-90pctl", infrastructure = "street-trees")
+
 # Cool roofs
+##############
+
+# Remove existing CTCM folders
 unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-cool-roofs-large-buildings")), recursive = TRUE)
 unlink(file.path("C:", "CTCM_outcome", paste0(city, "-cool-roofs-large-buildings")), recursive = TRUE)
 
+# Run CTCM
 source(here("scenario-generation", "cool-roofs", "02-run-CTCM-cool-roofs.R"))
 run_CTCM_cool_roofs(city, author, utc_offset, scenario_name = "large-buildings", buffer)
 
+# Calculate UTCI and difference rasters
+calc_UTCI(city, scenario = "large-buildings", infrastructure = "cool-roofs")
+
 # Park shade
+##############
+
+# Remove existing CTCM folders
 unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-program-potential-0")), recursive = TRUE)
 unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-program-potential-0")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-program-potential-3")), recursive = TRUE)
+unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-program-potential-3")), recursive = TRUE)
 
-unlink(file.path("C:", "CTCM_data_setup", paste0(city, "-park-shade-structures-program-potential-1")), recursive = TRUE)
-unlink(file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-program-potential-1")), recursive = TRUE)
-
+# Run CTCM for transmissivity = 0 and transmissivity = 3
 source(here("scenario-generation", "park-shade-structures", "02-run-CTCM-park-shade-structures.R"))
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 3, 
                                scenario_name = "program-potential", buffer)
@@ -118,8 +139,12 @@ run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 3,
 run_CTCM_park_shade_structures(city, author, utc_offset, transmissivity = 0, 
                                scenario_name = "program-potential", buffer)
 
+# Process to final output
 source(here("scenario-generation", "park-shade-structures", "03-shade-structure-post-processing.R"))
 shade_structure_post_processing(city)
+
+# Calculate UTCI and difference rasters
+calc_UTCI(city, scenario = "program-potential", infrastructure = "park-shade-structures")
 
 
 # Upload files to s3 -------------------------------------------------------
@@ -134,25 +159,20 @@ upload_folder_to_s3(city, aoi_name, year)
 
 # Calculate metrics -------------------------------------------------------
 
-source(here("utils", "calc_UTCI.R"))
 
 # Street trees
 ##############
-calc_UTCI(city, scenario = "achievable-90pctl", infrastructure = "street-trees")
+
 
 source(here("scenario-generation", "street-trees", "street-trees-metrics-function.R"))
 calc_street_tree_metrics(city, scenario = "achievable-90pctl", infrastructure = "street-trees", aoi_name)
 
 # Park shade
 ##############
-calc_UTCI(city, scenario = "program-potential", infrastructure = "park-shade-structures")
-
 source(here("scenario-generation", "park-shade-structures", "park-shade-structures-metrics-function.R"))
 calc_street_park_shade_metrics(city, scenario = "program-potential", aoi_name)
 
 # Cool roofs
 ##############
-calc_UTCI(city, scenario = "large-buildings", infrastructure = "cool-roofs")
-
 source(here("scenario-generation", "cool-roofs", "cool-roofs-metrics-function.R"))
 calc_cool_roofs_metrics(city, scenario = "large-buildings", cool_roof_albedo = 0.62, aoi_name)

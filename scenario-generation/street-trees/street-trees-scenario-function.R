@@ -30,7 +30,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
                 infrastructure_path = infrastructure_path)
   
   load(here(infrastructure_path, "tree-vars.RData"))
-  st_write(ttops, here(baseline_path, "tree_points_baseline.geojson"))
+  st_write(ttops, here(baseline_path, "tree_points_baseline.geojson"), append = FALSE, delete_dsn = TRUE)
   
   crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
     
@@ -47,8 +47,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
                                                 road_vectors = road_vectors, 
                                                 lanes = lanes,
                                                 city = city,
-                                                utm = utm,
-                                                save_files = TRUE)
+                                                utm = utm)
   
   ped_area <- plantable_street$ped_area
   plantable_street <- plantable_street$plantable_street
@@ -189,7 +188,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
               overwrite = TRUE)
   
   # Save the new tree points
-  st_write((updated_tree_points %>% distinct(geometry) %>% filter(type == "new")), 
+  st_write((updated_tree_points %>% distinct(geometry, .keep_all = TRUE) %>% filter(type == "new")), 
            dsn = here(scenario_path, "tree_points_achievable.geojson"),
            append = FALSE,
            delete_dsn = TRUE)

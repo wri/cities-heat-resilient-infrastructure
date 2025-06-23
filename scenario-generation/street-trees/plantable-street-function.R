@@ -12,7 +12,8 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
     st_transform(utm$epsg) %>% 
     st_filter(aoi) 
   
-  st_write(road_vectors, here("data", city, "scenarios", "baseline", "roads.geojson"))
+  st_write(road_vectors, here("data", city, "scenarios", "baseline", "roads.geojson"),
+           append = FALSE, delete_dsn = TRUE)
   
   ped_roads_list <- c("tertiary",
                       "tertiary_link",

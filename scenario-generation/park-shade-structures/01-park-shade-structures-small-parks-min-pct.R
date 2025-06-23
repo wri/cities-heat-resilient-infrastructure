@@ -28,19 +28,8 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
            append = FALSE, delete_dsn = TRUE)
   
   
-  # Find the file
-  shadow_file <- list.files(
-    path = here("data", city, "scenarios", "baseline"),
-    pattern = "^shade.*1200\\.tif$",
-    full.names = TRUE
-  )
-  
-  # Read the file (if it exists)
-  if (length(shadow_file) > 0) {
-    shadow_12pm <- rast(shadow_file)  
-  } else {
-    warning("No matching file found.")
-  }
+  # Shadow at 1200
+  shadow_12pm <- rast(here("data", city, "scenarios", "baseline", "shade_1200_baseline.tif"))
   
   
   # Park shade scenario

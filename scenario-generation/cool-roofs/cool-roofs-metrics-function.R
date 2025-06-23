@@ -8,19 +8,19 @@ calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo, aoi_name){
   scenario_path <- here("data", city, "scenarios", "cool-roofs", scenario)
   baseline_path <- here("data", city, "scenarios", "baseline")
   
-  baseline_albedo <- rast(here(scenario_path, "albedo_baseline.tif"))
+  baseline_albedo <- rast(here(baseline_path, "albedo_baseline.tif"))
   scenario_albedo <- rast(here(scenario_path, 'albedo_cool_roofs_achievable.tif')) 
   
   # Load AOI
   aoi <- st_read(here("data", city, "boundaries.geojson"))
   
   # Load buildings
-  build_vectors <- st_read(here(scenario_path, "buildings_polygons.geojson"))
+  build_vectors <- st_read(here(baseline_path, "buildings_polygons.geojson"))
   updated_builds <- st_read(here(scenario_path, "updated-buildings.geojson"))
   
   # Achievable albedo
   alb_target <- quantile(build_vectors$mean_albedo, 0.9)
-  roof_raster <- rast(here(scenario_path, "buildings_areas.tif")) %>% 
+  roof_raster <- rast(here(baseline_path, "buildings_areas.tif")) %>% 
     subst(0, NA)
   
   # Update the albedo value of targeted roofs

@@ -29,14 +29,14 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
   baselayers <- file.path(here("data", city), 
                           c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "cif_tree_canopy.tif",
                             "open-urban.tif"))
-  file.copy(from = baselayers, to = tile_folder)
+  file.copy(from = baselayers, to = tile_folder, overwrite = TRUE)
   
   # Wall layers
   wall_layers <- file.path(here("data", city, "scenarios", "baseline"), 
                            c("ctcm_wallheight.tif", "ctcm_wallaspect.tif", "ctcm_svfs.zip"))
   dir.create(file.path(run_setup_folder, "processed_data", "tile_001"), 
              recursive = TRUE, showWarnings = FALSE)
-  file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"))
+  file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"), overwrite = TRUE)
   
   # Modify the met file with the updated air temperatures
   air_temp <- read_csv(here("data", city, "scenarios", "cool-roofs", scenario_name, "air_temp_reductions.csv")) %>% 
@@ -45,7 +45,7 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
     select(! time)
   
   file.copy(from = here("data", city, "scenarios", "baseline", "met_era5_hottest_days.txt"),
-            to = here("data", city, "scenarios", "cool-roofs", scenario_name))
+            to = here("data", city, "scenarios", "cool-roofs", scenario_name), overwrite = TRUE)
   
   # Read the meteorological file, skipping % comment line
   met <- read_table(here("data", city, "scenarios", "cool-roofs", scenario_name, "met_era5_hottest_days.txt"),
@@ -151,14 +151,17 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
     map_chr(~ {
       basename(.x) %>%
         str_match("^(Shadow|Tmrt)_.*_(\\d{4})D\\.tif$") %>%
-        { paste0(.[2], "_", .[3], "_baseline.tif") }
+        { 
+          prefix <- ifelse(.[2] == "Shadow", "shade", .[2])
+          paste0(prefix, "_", .[3], "_cool_roofs_achievable.tif")
+        }
     })
   
   # Create full destination paths
-  new_paths <- file.path(baseline_folder, new_filenames)
+  new_paths <- file.path(scenario_folder, new_filenames)
   
   # Copy files with new names
-  file.copy(from = output_data, to = new_paths)
+  file.copy(from = output_data, to = new_paths, overwrite = TRUE)
   
   
   

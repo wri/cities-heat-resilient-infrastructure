@@ -10,7 +10,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
   scenario_path <- here(infrastructure_path, scenario)
   
   # Load parks 
-  parks <- st_read(here(infrastructure_path, "parks.geojson"))
+  parks <- st_read(here(baseline_path, "parks.geojson"))
   
   timestamps <- c("1200", "1500", "1800")
   
@@ -30,7 +30,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
   aoi <- st_read(here("data", city, "boundaries.geojson"))
   
   # Load shade structures
-  shade_structures <- st_read(here(scenario_path, "shade_structures.geojson"))
+  shade_structures <- st_read(here(scenario_path, "shade_structures_parks.geojson"))
   
   # Met data
   met_data <- read_delim(here(baseline_path, "met_era5_hottest_days.txt"))
@@ -71,8 +71,11 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
     park_base <- exactextractr::exact_extract(baseline_shade_rast, parks, 'mean')
     park_scenario <- exactextractr::exact_extract(scenario_shade_rast, parks, 'mean')
     parks <- parks %>% 
-      mutate(baseline_shade_area = area_sqm * park_base,
-             scenario_shade_area = area_sqm * park_scenario)
+      st_transform(st_crs(scenario_shade_rast)) %>% 
+      mutate(area_sqm = as.numeric(st_area(geometry)),
+             baseline_shade_area = area_sqm * park_base,
+             scenario_shade_area = area_sqm * park_scenario,
+             baseline_shade_pct = baseline_shade_area / area_sqm)
     
     # utci in parks
     baseline_mean_utci_parks <- mean(values(baseline_utci), na.rm = TRUE)
@@ -90,7 +93,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
       
       baseline_park_shade_pct = baseline_park_shade_pct * 100,
       scenario_park_shade_pct = scenario_park_shade_pct * 100,
-      change_park_shade_pct = change_park_shade_pct,
+      change_park_shade_pct = change_park_shade_pct * 100,
       
       baseline_park_shade = sum(parks$baseline_shade_area),
       scenario_park_shade = sum(parks$scenario_shade_area),
@@ -113,7 +116,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
     mutate(indicators_id = paste0(indicators_id, "_", time)) %>% 
     bind_rows(tribble(~ indicators_id, ~ value,
                       "new_shade_structures", nrow(shade_structures),
-                     "achievable_park_shade_cover_1200", quantile(parks$shaded_pct, 0.9) * 100)) %>% 
+                     "achievable_park_shade_cover_1200", quantile(parks$baseline_shade_pct, 0.9) * 100)) %>% 
     filter(! indicators_id %in% c("baseline_park_shade_cover_1500", "baseline_park_shade_cover_1800",
                                 "change_park_shade_cover_1500", "change_park_shade_cover_1800")) 
   
@@ -131,7 +134,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
     mutate(
       date = date,
       application_id = "ccl",
-      cities = city,
+      cities_id = city,
       areas_of_interest_id = aoi_name,
       interventions_id = "park_shade",
       scenarios_id = paste("park_shade", str_replace(scenario, "-", "_"), sep = "_"),

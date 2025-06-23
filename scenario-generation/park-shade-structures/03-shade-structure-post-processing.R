@@ -22,7 +22,7 @@ shade_structure_post_processing <- function(city){
       str_subset("aux", negate = TRUE)
     
     # Read rasters
-    baseline_tmrt <- rast(here(baseline_dir, tmrt_file)) 
+    baseline_tmrt <- rast(here(baseline_dir, paste0("Tmrt_", time, "_baseline.tif"))) 
     
     struct_t3_mask <- rast(here(t3_dir, shadow_file)) %>% 
       crop(baseline_tmrt, mask = TRUE)
@@ -30,7 +30,7 @@ shade_structure_post_processing <- function(city){
     struct_t0_tmrt <- rast(here(t0_dir, tmrt_file)) %>% 
       crop(baseline_tmrt, mask = TRUE)
     
-    baseline_shadow <- rast(here(baseline_dir, shadow_file))
+    baseline_shadow <- rast(here(baseline_dir, paste0("shade_", time, "_baseline.tif")))
     struct_t0_shadow <- rast(here(t0_dir, shadow_file)) %>% 
       crop(baseline_tmrt, mask = TRUE)
     

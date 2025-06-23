@@ -1,4 +1,4 @@
-generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, utm, save_files = TRUE) {
+generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, utm) {
   
   # Roads -------------------------------------------------------------------
   
@@ -10,7 +10,9 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   # Load roads and filter to bbox of AOI
   road_vectors <- road_vectors %>% 
     st_transform(utm$epsg) %>% 
-    filter(sapply(geometry, function(geom) st_intersects(geom, st_as_sfc(st_bbox(aoi)), sparse = FALSE))) 
+    st_filter(aoi) 
+  
+  st_write(road_vectors, here("data", city, "scenarios", "baseline", "roads.geojson"))
   
   ped_roads_list <- c("tertiary",
                       "tertiary_link",
@@ -26,15 +28,11 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
     filter(highway %in% ped_roads_list)
   
   infrastructure_path <- here("data", city, "scenarios", "street-trees")
-  
-  if (save_files){
-    file = here(infrastructure_path, "ped_roads.geojson")
-    if (file.exists(file)) {
-      file.remove(file)
-    }
-    st_write(ped_road_vectors, file, append=FALSE)
+
+  st_write(ped_road_vectors, here(infrastructure_path, "ped_roads.geojson"), 
+           append = FALSE, delete_dsn = TRUE)
     
-  }
+
   
   # Buffer roads by lanes * 10 ft (3.048 m) 
   # https://nacto.org/publication/urban-street-design-guide/street-design-elements/lane-width/#:~:text=wider%20lane%20widths.-,Lane%20widths%20of%2010%20feet%20are%20appropriate%20in%20urban%20areas,be%20used%20in%20each%20direction
@@ -48,28 +46,13 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
     width = 3.048
   } 
   
-  road_buff <- road_vectors %>% 
-    st_buffer(dist = road_vectors$lanes * (width / 2),
+  ped_roads_buff <- ped_road_vectors %>% 
+    st_buffer(dist = ped_road_vectors$lanes * (width / 2),
               endCapStyle = "FLAT",
               joinStyle = "MITRE") 
   
-  # if (save_files){
-  #   st_write(road_buff, here("data", city, "scenarios", "street-trees", "road_areas.geojson"))
-  # }
-  
-  ped_roads <- road_buff %>% 
-    filter(highway %in% ped_roads_list)  
-  
-  # if (save_files){
-  #   st_write(ped_roads, here(scenario_path, "ped_roads_areas.geojson"))
-  # }
-  
-  ped_roads_raster <- rasterize(ped_roads, lulc_rast, field = 1, background = 0)
-  
-  # if (save_files){
-  #   writeRaster(ped_roads_raster, here("data", city, "scenarios", "street-trees", "ped-roads-raster.tif"))
-  # }
-  
+  ped_roads_raster <- rasterize(ped_roads_buff, lulc_rast, field = 1, background = 0)
+
   
   # Plantable area ----------------------------------------------------------
   
@@ -140,11 +123,15 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   # Pedstrian area (not building, road, water)
   ped_area <- ped_road_adjacent * abs((floor(lulc_rast / 100) %in% c(3, 5, 6)) - 1)
   
-  # Save raster as Cloud-Optimized GeoTIFF (COG)
-  if (save_files){
-    writeRaster(plantable_street, here(infrastructure_path, "plantable-street.tif"), overwrite = TRUE)
-    writeRaster(ped_area, here(infrastructure_path, "pedestrian-area.tif"), overwrite=TRUE)
-  }
+  # Save rasters 
+
+  writeRaster(plantable_street, 
+              here(infrastructure_path, "plantable_areas.tif"), 
+              overwrite = TRUE)
+  writeRaster(ped_area, 
+              here("data", city, "scenarios", "baseline", "pedestrian_areas.tif"), 
+              overwrite = TRUE)
+
   
   return(list(plantable_street = plantable_street,
               ped_area = ped_area))

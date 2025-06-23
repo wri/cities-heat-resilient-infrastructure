@@ -66,8 +66,6 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
     st_as_sf() %>%
     st_transform(crs = 4326) %>%
     st_bbox()
-  # bbox <- read_csv(here("data", city, "coords.csv")) %>% 
-  #   deframe()
   
   
   
@@ -148,7 +146,19 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))
   
-  file.copy(from = output_data, to = scenario_folder)
+  # Rename files
+  new_filenames <- output_data %>%
+    map_chr(~ {
+      basename(.x) %>%
+        str_match("^(Shadow|Tmrt)_.*_(\\d{4})D\\.tif$") %>%
+        { paste0(.[2], "_", .[3], "_baseline.tif") }
+    })
+  
+  # Create full destination paths
+  new_paths <- file.path(baseline_folder, new_filenames)
+  
+  # Copy files with new names
+  file.copy(from = output_data, to = new_paths)
   
   
   

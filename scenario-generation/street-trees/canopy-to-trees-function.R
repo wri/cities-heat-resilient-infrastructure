@@ -1,6 +1,6 @@
 # Process trees -----------------------------------------------------------
 
-process_trees <- function(tree_raster, save_files = TRUE, infrastructure_path){
+process_trees <- function(tree_raster, infrastructure_path){
   
   tree_height <- tree_raster
   
@@ -12,7 +12,7 @@ process_trees <- function(tree_raster, save_files = TRUE, infrastructure_path){
   crowns <- dalponte2016(tree_height, ttops)()
   names(crowns) <- "treeID"
   
-  writeRaster(crowns, here(infrastructure_path, "existing-tree-crowns.tif"))
+  writeRaster(crowns, here(infrastructure_path, "existing-tree-crowns.tif"), overwrite = TRUE)
   
   # crown vectors
   crown_vectors <- crowns %>% 
@@ -35,9 +35,7 @@ process_trees <- function(tree_raster, save_files = TRUE, infrastructure_path){
   )
   
   # Save tree data
-  if (save_files){
-    save(ttops, crown_vectors, tree_structure, 
-         file = here(infrastructure_path, "tree-vars.RData"))
-  }
+  save(ttops, crown_vectors, tree_structure, 
+       file = here(infrastructure_path, "tree-vars.RData"))
   
 }

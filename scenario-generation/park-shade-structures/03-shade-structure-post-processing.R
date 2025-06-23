@@ -3,7 +3,7 @@ shade_structure_post_processing <- function(city){
   library(terra)
 
 
-  times <- c("1200D", "1500D", "1800D")
+  times <- c("1200", "1500", "1800")
   
   # Input paths
   baseline_dir <- here("data", city, "scenarios", "baseline")
@@ -15,7 +15,7 @@ shade_structure_post_processing <- function(city){
   
   for (time in times) {
     # Input file paths
-    shadow_file <- list.files(t3_dir, pattern = str_c("Shadow.*", time)) %>%
+    shadow_file <- list.files(t3_dir, pattern = str_c("shade.*", time)) %>%
       str_subset("aux", negate = TRUE)
     
     tmrt_file <- list.files(t3_dir, pattern = str_c("Tmrt.*", time)) %>%

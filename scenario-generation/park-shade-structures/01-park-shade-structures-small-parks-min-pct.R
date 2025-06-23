@@ -1,8 +1,6 @@
 park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, spacing,
                                 min_shade_area){
   
-  
-  
   library(sf)
   library(tidyverse)
   library(terra)
@@ -18,7 +16,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   
   
   # Load input data
-  aoi <- st_read(here(inputs_path, "aoi.geojson"))
+  aoi <- st_read(here(inputs_path, "boundaries.geojson"))
   utm_epsg <- st_crs(aoi)
   
   lulc <- rast(here(inputs_path, "open-urban.tif"))
@@ -26,11 +24,14 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
     st_transform(utm_epsg) %>% 
     st_filter(aoi)
   
+  st_write(park_vectors, here(inputs_path, "scenarios", "baseline", "parks.geojson"),
+           append = FALSE, delete_dsn = TRUE)
+  
   
   # Find the file
   shadow_file <- list.files(
     path = here("data", city, "scenarios", "baseline"),
-    pattern = "^Shadow.*1200D\\.tif$",
+    pattern = "^shade.*1200\\.tif$",
     full.names = TRUE
   )
   
@@ -104,7 +105,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
     park_suitable_area_vector <- open_spaces
   }
   
-  st_write(park_suitable_area_vector, here(infrastructure_path, "parks.geojson"),
+  st_write(park_suitable_area_vector, here(infrastructure_path, "parks-no-pitch.geojson"),
            append = FALSE, delete_dsn = TRUE)
   
   # Small parks -------------------------------------------------------------
@@ -148,7 +149,20 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   scenario_path <- here(infrastructure_path, scenario_name)
   dir.create(scenario_path, showWarnings = FALSE)
   
-  st_write(shade_structures_all, here(scenario_path, "shade_structures.geojson"))
+  st_write(shade_structures_all, here(scenario_path, "shade_structures_parks.geojson")
+           , append = FALSE, delete_dsn = TRUE)
+  
+  # Shade structure centroids
+  shade_structures_all %>% 
+    st_centroid() %>% 
+    st_write(here(scenario_path, "shade_structures_parks_centroids.geojson")
+             , append = FALSE, delete_dsn = TRUE)
+  
+  # Parks getting shade
+  park_suitable_area_vector %>% 
+    filter(park_id %in% shade_structures_all$park_id) %>% 
+    st_write(here(scenario_path, "parks_with_new_shade_structures.geojson")
+             , append = FALSE, delete_dsn = TRUE)
   
   
   # Create height raster ----------------------------------------------------
@@ -165,7 +179,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   shade_structures_rast <- shade_structures_all %>% 
     rasterize(cif_lulc, field = "height", background = 0) 
   
-  writeRaster(shade_structures_rast, here(scenario_path, "structures-as-trees.tif"))
+  writeRaster(shade_structures_rast, here(scenario_path, "structures-as-trees.tif"), overwrite = TRUE)
   
   
 }

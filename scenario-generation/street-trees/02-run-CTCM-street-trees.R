@@ -20,15 +20,6 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-street-trees-", scenario_name))
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
-  # # Remove unnecessary folders/files
-  # keep <- c("primary_data",
-  #           "processed_data",
-  #           ".config_method_parameters.yml",
-  #           "a_run_CTCM_pre_check.bat",
-  #           "b_run_CTCM_processing.bat",
-  #           "README.txt")
-  
-  
   # Copy files
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
     
@@ -56,8 +47,6 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
     st_as_sf() %>%
     st_transform(crs = 4326) %>%
     st_bbox()
-  # bbox <- read_csv(here("data", city, "coords.csv")) %>% 
-  #   deframe()
   
   
   # Update the yaml file ----------------------------------------------------
@@ -146,7 +135,19 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))
   
-  file.copy(from = output_data, to = scenario_folder)
+  # Rename files
+  new_filenames <- output_data %>%
+    map_chr(~ {
+      basename(.x) %>%
+        str_match("^(Shadow|Tmrt)_.*_(\\d{4})D\\.tif$") %>%
+        { paste0(.[2], "_", .[3], "_baseline.tif") }
+    })
+  
+  # Create full destination paths
+  new_paths <- file.path(baseline_folder, new_filenames)
+  
+  # Copy files with new names
+  file.copy(from = output_data, to = new_paths)
     
     
   }

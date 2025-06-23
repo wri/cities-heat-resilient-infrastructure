@@ -1,10 +1,5 @@
 # city <- "ZAF-Cape_Town"
 # infrastructure <- "cool-roofs"
-# scenario <- "program"
-# scenario_name <- "large-buildings"
-# area_threshold = 2000
-# cool_roof_albedo = 0.62
-
 cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
                                area_threshold, cool_roof_albedo){
   
@@ -27,7 +22,7 @@ cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
   }
   
   # Load input data
-  aoi <- st_read(here(inputs_path, "aoi.geojson"))
+  aoi <- st_read(here(inputs_path, "boundaries.geojson"))
   lulc <- rast(here(inputs_path, "open-urban.tif"))
   albedo <- rast(here(inputs_path, "albedo.tif"))
   build_vectors <- st_read(here(inputs_path, "buildings.geojson"))

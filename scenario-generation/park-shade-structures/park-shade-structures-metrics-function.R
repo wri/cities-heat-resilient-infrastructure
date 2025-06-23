@@ -35,7 +35,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
   # Met data
   met_data <- read_delim(here(baseline_path, "met_era5_hottest_days.txt"))
   
-  date <- baseline_Ta %>% 
+  date <- met_data %>% 
     slice(1) %>% 
     mutate(date = paste(`%iy`, id, sep = "_")) %>% 
     pull(date)

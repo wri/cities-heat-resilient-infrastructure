@@ -1,6 +1,7 @@
 street_trees_scenario_function <- function(scenario, percentile = NULL, target_coverage = NULL, min_tree_dist, aoi, lulc, 
                                            road_vectors, lanes, canopy_height_existing, scenario_name, infrastructure_path) {
   
+  baseline_path <- here("data", city, "scenarios", "baseline")
   scenario_path <- here(infrastructure_path, scenario_name)
   
   if (!dir.exists(scenario_path)) {
@@ -17,29 +18,26 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   tree_height <- canopy_height_existing
   tree_height[tree_height < 3] <- 0
   
-  # Save binary tree raster
-  writeRaster((tree_height > 0), here(infrastructure_path, "existing-tree-cover.tif"))
+  # Save binary tree raster to baseline folder 
+  writeRaster((tree_height > 0),  here(baseline_path, "tree_cover_baseline.tif"),
+              overwrite = TRUE)
   
   # Process tree canopy to individual trees ---------------------------------
-  
-  # If the tree data already exists, use it, otherwise create it
     
   source(here("scenario-generation", "street-trees", "canopy-to-trees-function.R"))
   
   process_trees(tree_raster = tree_height, 
-                save_files = TRUE,
                 infrastructure_path = infrastructure_path)
   
   load(here(infrastructure_path, "tree-vars.RData"))
-  st_write(ttops, here(infrastructure_path, "existing-trees.geojson"))
+  st_write(ttops, here(baseline_path, "tree_points_baseline.geojson"))
+  
   crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
     
-
-  
   
   # Plantable area  -------------------------------------------------------
   
-  
+
     
   source(here("scenario-generation", "street-trees", "plantable-street-function.R"))
   
@@ -88,8 +86,9 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   
   # Achievable potential ----------------------------------------------------
-  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
-  # aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/", city, "/scenarios/street-trees/street-tree-pct-1km-grid.csv")
+  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", 
+                     city, "/scenarios/street-trees/", 
+                     city, "-street-tree-pct-1km-grid.csv")
     
   # Get percentile value
   ped_area_tree_dist <- read_csv(aws_path)
@@ -173,7 +172,8 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   
   st_write(aoi_grid, 
            dsn = here(scenario_path, "aoi_street-tree-grid.geojson"),
-           delete_dsn = TRUE)
+           delete_dsn = TRUE,
+           append = FALSE)
   
   # Add back in the original vegetation canopy to include areas with height <= 1
   updated_tree_cover <- max(updated_tree_cover, canopy_height_existing, na.rm = TRUE)
@@ -189,8 +189,8 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
               overwrite = TRUE)
   
   # Save the new tree points
-  st_write((updated_tree_points %>% distinct(geometry)), 
-           dsn = here(scenario_path, "scenario-tree-points.geojson"),
+  st_write((updated_tree_points %>% distinct(geometry) %>% filter(type == "new")), 
+           dsn = here(scenario_path, "tree_points_achievable.geojson"),
            append = FALSE,
            delete_dsn = TRUE)
   
@@ -200,7 +200,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
   tree_diff_raster <- mask(updated_tree_cover, diff_mask, maskvalue = FALSE) >= 3
   
   writeRaster(tree_diff_raster, 
-              here(scenario_path, "scenario-new-trees.tif"),
+              here(scenario_path, "tree_cover_achievable.tif"),
               overwrite = TRUE)
   
 }

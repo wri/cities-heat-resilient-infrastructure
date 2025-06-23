@@ -126,8 +126,20 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))
   
-  file.copy(from = output_data, to = baseline_folder)
-    
+  # Rename files
+  new_filenames <- output_data %>%
+    map_chr(~ {
+      basename(.x) %>%
+        str_match("^(Shadow|Tmrt)_.*_(\\d{4})D\\.tif$") %>%
+        { paste0(.[2], "_", .[3], "_baseline.tif") }
+    })
+  
+  # Create full destination paths
+  new_paths <- file.path(baseline_folder, new_filenames)
+  
+  # Copy files with new names
+  file.copy(from = output_data, to = new_paths)
+  
   # Copy met file
   met_file <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "met_files")),
                          full.names = TRUE)

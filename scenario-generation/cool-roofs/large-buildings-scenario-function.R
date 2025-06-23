@@ -2,15 +2,16 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
                                               area_threshold, cool_roof_albedo,
                                               aoi, lulc, albedo, build_vectors){
   
+  baseline_path <- here("data", city, "scenarios", "baseline")
   scenario_path <- here("data", city, "scenarios", "cool-roofs", scenario_name)
+  
   # Create directory
   dir.create(scenario_path, showWarnings = FALSE)
   
   # Resample albedo to 1-m
   albedo <- terra::resample(albedo, lulc, method = "bilinear") 
   
-  writeRaster(albedo, here(scenario_path, "albedo_baseline.tif"), overwrite = TRUE)
-  # albedo <- rast(here(scenario_path, "albedo_baseline.tif"))
+  writeRaster(albedo, here(baseline_path, "albedo_baseline.tif"), overwrite = TRUE)
   
   # Reclassify buildings only
   roofs <- (lulc >= 600) & (lulc < 700)
@@ -20,21 +21,21 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
     st_transform(st_crs(lulc)) %>% 
     st_filter(aoi, .predicate = st_within) %>% 
     mutate(area_sqm = as.numeric(units::set_units(st_area(geometry), "m^2")))
-  # build_vectors <- st_read(here(scenario_path, "buildings_polygons.geojson"))
+
   # Calculate mean albedo of roofs
   mean_albedo <- exactextractr::exact_extract(albedo, build_vectors, 'median')
   
   # Attach to roof polygons
   build_vectors$mean_albedo <- mean_albedo
   
-  st_write(build_vectors, here(scenario_path, "buildings_polygons.geojson"),
+  st_write(build_vectors, here(baseline_path, "buildings_polygons.geojson"),
            delete_dsn = TRUE, append = FALSE)
   
   # Building area raster
   build_raster <- rasterize(build_vectors, lulc)
   build_raster <- subst(build_raster, NA, 0)
   
-  writeRaster(build_raster, here(scenario_path, "buildings_areas.tif"), overwrite = TRUE)
+  writeRaster(build_raster, here(baseline_path, "buildings_areas.tif"), overwrite = TRUE)
   
   # Filter to area threshold
   large_roofs <- build_vectors %>% 
@@ -58,6 +59,10 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   updated_albedo <- mask(albedo, large_roof_raster, updatevalue = cool_roof_albedo, inverse = TRUE) %>% 
     crop(albedo)
   writeRaster(updated_albedo, here(scenario_path, "albedo_cool_roofs_achievable.tif"), overwrite = TRUE)
+  
+  # Albedo difference
+  diff_albedo <- updated_albedo - albedo
+  writeRaster(diff_albedo, here(scenario_path, "albedo_achievable_vs_baseline.tif"), overwrite = TRUE)
   
   # Calculate albedo delta
   albedo_delta_bounds <- mean(values(updated_albedo), na.rm = TRUE) - mean(values(albedo), na.rm = TRUE)

@@ -1,5 +1,3 @@
-
-
 run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_name, transmissivity, buffer){
   
   
@@ -153,7 +151,19 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))
   
-  file.copy(from = output_data, to = t_folder)
+  # Rename files
+  new_filenames <- output_data %>%
+    map_chr(~ {
+      basename(.x) %>%
+        str_match("^(Shadow|Tmrt)_.*_(\\d{4})D\\.tif$") %>%
+        { paste0(.[2], "_", .[3], "_baseline.tif") }
+    })
+  
+  # Create full destination paths
+  new_paths <- file.path(baseline_folder, new_filenames)
+  
+  # Copy files with new names
+  file.copy(from = output_data, to = new_paths)
   
   
   

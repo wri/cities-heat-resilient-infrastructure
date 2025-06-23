@@ -22,15 +22,11 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
     park_pixel_pts <- park_raster_mask %>%
       as.points(na.rm = TRUE) %>%
       st_as_sf() %>%
-      mutate(id = row_number()) %>%
+      mutate(pt_id = row_number()) %>%
       filter(st_within(geometry, inner_buffer, sparse = FALSE)[, 1])
   }
   
-  
-  # # Ensure valid area is not empty
-  # if (nrow(park_pixel_pts) == 0) {
-  #   return(NULL)
-  # }
+
   if (!exists("park_pixel_pts")) {
     return(NULL)
   }
@@ -38,10 +34,6 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
   # Step 4: Calculate the target area (25% of the park area)
   # 0.25 - current shaded percent * unshaded area
   target_area <- (shade_pct - park$shaded_pct) * park$area_sqm
-  # if (target_area < structure_size ^ 2){
-  #   target_area <- 25
-  # }
-  # target_area <- as.numeric(st_area(park) * coverage_threshold)
   
   # Create an empty list to store valid points and squares
   squares <- st_sf(geometry = st_sfc(), crs = st_crs(park))
@@ -57,10 +49,10 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
       rand_point <- park_pixel_pts2 %>% 
         sample_n(1)
       
-      # print(paste0("rand point ", rand_point$id))
+      # print(paste0("rand point ", rand_point$pt_id))
       
       park_pixel_pts2 <- park_pixel_pts2 %>% 
-        filter(id != rand_point$id)
+        filter(pt_id != rand_point$pt_id)
       
       rand_square <- rand_point %>% 
         st_buffer((structure_size/2), endCapStyle = 'SQUARE', joinStyle = 'MITRE') %>% 
@@ -116,7 +108,7 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
   park_pixel_pts <- subst(park_raster_mask, 0, NA) %>% 
     as.points(na.rm = TRUE) %>% 
     st_as_sf() %>% 
-    mutate(id = row_number(), include = lengths(st_within(geometry, park)) > 0) %>% 
+    mutate(pt_id = row_number(), include = lengths(st_within(geometry, park)) > 0) %>% 
     filter(include == TRUE)
   
   if (nrow(park_pixel_pts) == 0) {

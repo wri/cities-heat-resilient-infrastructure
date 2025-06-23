@@ -1,14 +1,3 @@
-####################################################
-# Choose your city & specify the scenario parameters
-####################################################
-# city <- "MEX-Monterrey"
-# 
-# scenario <- "achievable"
-# scenario_name <- "achievable-90pctl"
-# percentile <- 0.90
-# target_coverage <- NULL
-# min_tree_dist <- 5
-
 street_tree_scenario <- function(city, scenario, scenario_name, percentile = NULL, 
                                  target_coverage = NULL, min_tree_dist){
   
@@ -31,14 +20,12 @@ street_tree_scenario <- function(city, scenario, scenario_name, percentile = NUL
   }
   
   # Load input data
-  aoi <- st_read(here(inputs_path, "aoi.geojson"))
+  aoi <- st_read(here(inputs_path, "boundaries.geojson"))
   lulc <- rast(here(inputs_path, "open-urban.tif"))
   road_vectors <- st_read(here(inputs_path, "roads.geojson"))
   lanes <- read_csv(here(inputs_path, "average-lanes.csv"))
   canopy_height_existing <- rast(here(inputs_path, "cif_tree_canopy.tif")) 
   names(canopy_height_existing) <- "height"
-  
-  # ext(lulc) <- ext(canopy_height_existing)
   
   
   # Generate scenarios ------------------------------------------------------

@@ -82,6 +82,10 @@ script_dir <- here()
 py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
 get_data(city, city_folder, aoi_file, buffer, year, script_dir)
 
+# Enter Google Earth Engine credentials before proceeding
+############################################################
+############################################################
+
 
 # Generate scenarios ------------------------------------------------------
 

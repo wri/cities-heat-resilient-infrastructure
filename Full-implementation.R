@@ -43,8 +43,8 @@ aoi_name <- ""                           # Name of the AOI
   
 # CTCM metadata
 #################
-author <- "elizabeth.wesley@wri.org"     # User email
-utc_offset <- 2                          # UTC offset for the city
+author <- ""                             # User email
+utc_offset <-                            # UTC offset for the city
 buffer <- 100                            # AOI buffer
 year <- "2024"                           # Year for albedo data
 

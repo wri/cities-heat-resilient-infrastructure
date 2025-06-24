@@ -1,4 +1,4 @@
-generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vectors, lanes, city, utm) {
+generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_trees, road_vectors, lanes, utm) {
   
   # Roads -------------------------------------------------------------------
   
@@ -12,7 +12,7 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
     st_transform(utm$epsg) %>% 
     st_filter(aoi) 
   
-  st_write(road_vectors, here("data", city, "scenarios", "baseline", "roads.geojson"),
+  st_write(road_vectors, here("data", city_folder, "scenarios", "baseline", "roads.geojson"),
            append = FALSE, delete_dsn = TRUE)
   
   ped_roads_list <- c("tertiary",
@@ -28,7 +28,7 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
   ped_road_vectors <- road_vectors %>% 
     filter(highway %in% ped_roads_list)
   
-  infrastructure_path <- here("data", city, "scenarios", "street-trees")
+  infrastructure_path <- here("data", city_folder, "scenarios", "street-trees")
 
   st_write(ped_road_vectors, here(infrastructure_path, "ped_roads.geojson"), 
            append = FALSE, delete_dsn = TRUE)
@@ -130,7 +130,7 @@ generate_plantable_street <- function(aoi, lulc_rast, existing_trees, road_vecto
               here(infrastructure_path, "plantable_areas.tif"), 
               overwrite = TRUE)
   writeRaster(ped_area, 
-              here("data", city, "scenarios", "baseline", "pedestrian_areas.tif"), 
+              here("data", city_folder, "scenarios", "baseline", "pedestrian_areas.tif"), 
               overwrite = TRUE)
 
   

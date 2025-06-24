@@ -1,12 +1,12 @@
-calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
+calc_street_park_shade_metrics <- function(city, city_folder, scenario, aoi_name){
 
   library(terra)
   library(tidyverse)
   library(sf)
   library(here)
   
-  baseline_path <- here("data", city, "scenarios", "baseline")
-  infrastructure_path <- here("data", city, "scenarios", "park-shade-structures")
+  baseline_path <- here("data", city_folder, "scenarios", "baseline")
+  infrastructure_path <- here("data", city_folder, "scenarios", "park-shade-structures")
   scenario_path <- here(infrastructure_path, scenario)
   
   # Load parks 
@@ -27,7 +27,7 @@ calc_street_park_shade_metrics <- function(city, scenario, aoi_name){
     discard(~ str_detect(.x, "geojson")) 
   
   # Load AOI 
-  aoi <- st_read(here("data", city, "boundaries.geojson"))
+  aoi <- st_read(here("data", city_folder, "boundaries.geojson"))
   
   # Load shade structures
   shade_structures <- st_read(here(scenario_path, "shade_structures_parks.geojson"))

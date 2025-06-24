@@ -1,9 +1,10 @@
 large_buildings_scenario_function <- function(scenario_name, infrastructure_path,
                                               area_threshold, cool_roof_albedo,
-                                              aoi, lulc, albedo, build_vectors){
+                                              aoi, lulc, albedo, build_vectors,
+                                              city_folder){
   
-  baseline_path <- here("data", city, "scenarios", "baseline")
-  scenario_path <- here("data", city, "scenarios", "cool-roofs", scenario_name)
+  baseline_path <- here("data", city_folder, "scenarios", "baseline")
+  scenario_path <- here("data", city_folder, "scenarios", "cool-roofs", scenario_name)
   
   # Create directory
   dir.create(scenario_path, showWarnings = FALSE)
@@ -36,6 +37,9 @@ large_buildings_scenario_function <- function(scenario_name, infrastructure_path
   build_raster <- subst(build_raster, NA, 0)
   
   writeRaster(build_raster, here(baseline_path, "buildings_areas.tif"), overwrite = TRUE)
+  
+  non_build_raster <- abs(build_raster - 1)
+  writeRaster(non_build_raster, here(baseline_path, "non_buildings_areas.tif"), overwrite = TRUE)
   
   # Filter to area threshold
   large_roofs <- build_vectors %>% 

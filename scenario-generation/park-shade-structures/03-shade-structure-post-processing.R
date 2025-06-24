@@ -1,4 +1,4 @@
-shade_structure_post_processing <- function(city){
+shade_structure_post_processing <- function(city_folder){
   
   library(terra)
 
@@ -6,12 +6,12 @@ shade_structure_post_processing <- function(city){
   times <- c("1200", "1500", "1800")
   
   # Input paths
-  baseline_dir <- here("data", city, "scenarios", "baseline")
-  t0_dir <- here("data", city, "scenarios", "park-shade-structures", "program-potential", "t0")
-  t3_dir <- here("data", city, "scenarios", "park-shade-structures", "program-potential", "t3")
+  baseline_dir <- here("data", city_folder, "scenarios", "baseline")
+  t0_dir <- here("data", city_folder, "scenarios", "park-shade-structures", "program-potential", "t0")
+  t3_dir <- here("data", city_folder, "scenarios", "park-shade-structures", "program-potential", "t3")
   
   # Output path
-  output_dir <- here("data", city, "scenarios", "park-shade-structures", "program-potential")
+  output_dir <- here("data", city_folder, "scenarios", "park-shade-structures", "program-potential")
   
   for (time in times) {
     # Input file paths

@@ -1,5 +1,5 @@
 
-run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffer){
+run_CTCM_street_trees <- function(city_folder, author, utc_offset, scenario_name, buffer){
   
   library(R.utils)
   library(here)
@@ -17,25 +17,25 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   template <- file.path("C:", "CTCM_data_setup", "ZZZ_template_city")
   
   # Create setup folder for new run
-  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-street-trees-", scenario_name))
+  run_setup_folder <- file.path(ctcm_setup_path, paste0(city_folder, "-street-trees-", scenario_name))
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
   # Copy files
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
     
   # Tree scenario
-  tree_height_path <- here("data", city, "scenarios", "street-trees",
+  tree_height_path <- here("data", city_folder, "scenarios", "street-trees",
                            scenario_name, "scenario-tree-canopy-height.tif")
   destination_path <- file.path(tile_folder, "tree_canopy.tif")
   file.copy(tree_height_path, destination_path, overwrite = TRUE)
   
   # Baselayers
-  baselayers <- file.path(here("data", city), 
+  baselayers <- file.path(here("data", city_folder), 
                           c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "open-urban.tif"))
   file.copy(from = baselayers, to = tile_folder, overwrite = TRUE)
      
   # Wall layers
-  wall_layers <- file.path(here("data", city, "scenarios", "baseline"), 
+  wall_layers <- file.path(here("data", city_folder, "scenarios", "baseline"), 
                            c("ctcm_wallheight.tif", "ctcm_wallaspect.tif"))
   dir.create(file.path(run_setup_folder, "processed_data", "tile_001"), 
              recursive = TRUE, showWarnings = FALSE)
@@ -79,7 +79,7 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   scenario_yaml[[3]]$MetFiles <- scenario_yaml[[3]]$MetFiles[1]
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.txt"
 
-  file.copy(from = here("data", city, "scenarios", "baseline", "met_era5_hottest_days.txt"),
+  file.copy(from = here("data", city_folder, "scenarios", "baseline", "met_era5_hottest_days.txt"),
             to = file.path(run_setup_folder, "primary_data", "met_files"), overwrite = TRUE)
   
   # filenames
@@ -115,9 +115,9 @@ run_CTCM_street_trees <- function(city, author, utc_offset, scenario_name, buffe
   # After CTCM runs... ------------------------------------------------------
   
   # Copy CTCM output to scenario folder
-  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-street-trees-", scenario_name))
+  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city_folder, "-street-trees-", scenario_name))
     
-  scenario_folder <- here("data", city, "scenarios", "street-trees", scenario_name)
+  scenario_folder <- here("data", city_folder, "scenarios", "street-trees", scenario_name)
     
   if(!dir.exists(scenario_folder)){
     dir.create(scenario_folder)

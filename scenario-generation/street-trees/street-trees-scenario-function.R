@@ -1,7 +1,7 @@
-street_trees_scenario_function <- function(scenario, percentile = NULL, target_coverage = NULL, min_tree_dist, aoi, lulc, 
+street_trees_scenario_function <- function(city_folder, scenario, percentile = NULL, target_coverage = NULL, min_tree_dist, aoi, lulc, 
                                            road_vectors, lanes, canopy_height_existing, scenario_name, infrastructure_path) {
   
-  baseline_path <- here("data", city, "scenarios", "baseline")
+  baseline_path <- here("data", city_folder, "scenarios", "baseline")
   scenario_path <- here(infrastructure_path, scenario_name)
   
   if (!dir.exists(scenario_path)) {
@@ -46,7 +46,7 @@ street_trees_scenario_function <- function(scenario, percentile = NULL, target_c
                                                 existing_trees = tree_height,
                                                 road_vectors = road_vectors, 
                                                 lanes = lanes,
-                                                city = city,
+                                                city_folder = city_folder,
                                                 utm = utm)
   
   ped_area <- plantable_street$ped_area

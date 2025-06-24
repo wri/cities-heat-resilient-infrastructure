@@ -1,4 +1,4 @@
-calc_UTCI <- function(city, scenario, infrastructure = NULL){
+calc_UTCI <- function(city_folder, scenario, infrastructure = NULL){
   
   library(terra)
   library(tidyverse)
@@ -7,16 +7,16 @@ calc_UTCI <- function(city, scenario, infrastructure = NULL){
   
   source(here("utils", "utci.R"))
   
-  met_data <- list.files(here("data", city, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
+  met_data <- list.files(here("data", city_folder, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
     first() %>% 
     read_delim()
   
   if (scenario == "baseline"){
     
-    scenario_path <- here("data", city, "scenarios", "baseline")
+    scenario_path <- here("data", city_folder, "scenarios", "baseline")
   } else {
     
-    scenario_path <- here("data", city, "scenarios", infrastructure, scenario)
+    scenario_path <- here("data", city_folder, "scenarios", infrastructure, scenario)
   }
   
   if (is.null(infrastructure)) {
@@ -29,7 +29,8 @@ calc_UTCI <- function(city, scenario, infrastructure = NULL){
     infra_file_name <- "cool_roofs"
   } 
   
-  tmrt_files <- list.files(scenario_path, pattern = "Tmrt") 
+  tmrt_files <- list.files(scenario_path, pattern = "Tmrt") %>%
+    discard(~ str_detect(.x, "\\.aux\\.xml$"))
   
   for (file in tmrt_files) {
     
@@ -45,7 +46,7 @@ calc_UTCI <- function(city, scenario, infrastructure = NULL){
     if (scenario != "baseline"){
       
       # UTCI difference
-      baseline_utci_rast <- rast(here("data", city, "scenarios", "baseline", paste0("utci_", time, "_baseline.tif"))) 
+      baseline_utci_rast <- rast(here("data", city_folder, "scenarios", "baseline", paste0("utci_", time, "_baseline.tif"))) 
       
       utci_rast <- utci_rast %>% 
         crop(baseline_utci_rast)
@@ -56,11 +57,11 @@ calc_UTCI <- function(city, scenario, infrastructure = NULL){
                        paste0("utci_", time, "_", infra_file_name, "_achievable_vs_baseline", ".tif")),
                   overwrite = TRUE)
       
-      baseline_shade_rast <- rast(here("data", city, "scenarios", "baseline", paste0("shade_", time, "_baseline.tif"))) 
+      baseline_shade_rast <- rast(here("data", city_folder, "scenarios", "baseline", paste0("shade_", time, "_baseline.tif"))) 
       baseline_shade_rast <- baseline_shade_rast < 1
       
       if (infrastructure == "cool-roofs") {
-        baseline_alb <- rast(here("data", city, "scenarios", "baseline", "albedo_baseline.tif")) 
+        baseline_alb <- rast(here("data", city_folder, "scenarios", "baseline", "albedo_baseline.tif")) 
         scenario_alb <- rast(here(scenario_path, "albedo_cool_roofs_achievable.tif")) 
         
         diff_alb <- scenario_alb - baseline_alb

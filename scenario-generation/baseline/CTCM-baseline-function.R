@@ -1,4 +1,4 @@
-run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buffer){
+run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offset, buffer){
   
   library(R.utils)
   library(here)
@@ -16,7 +16,7 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   template <- file.path("C:", "CTCM_data_setup", "ZZZ_template_city")
   
   # Create setup folder for new run
-  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-", ctcm_run))
+  run_setup_folder <- file.path(ctcm_setup_path, paste0(city_folder, "-", ctcm_run))
   unlink(run_setup_folder, recursive = TRUE)
   
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
@@ -36,7 +36,7 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
     value = as.numeric(bbox)
   )
 
-  write_csv(bbox_df, here("data", city, "coords.csv"))
+  write_csv(bbox_df, here("data", city_folder, "coords.csv"))
   
   
   # Update the yaml file ----------------------------------------------------
@@ -99,10 +99,9 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   
   # After CTCM runs... ------------------------------------------------------
   
-  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-", ctcm_run))
+  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city_folder, "-", ctcm_run))
   
-  city_folder <- here("data", city)
-  baseline_folder <- here(city_folder, "scenarios", "baseline")
+  baseline_folder <- here("data", city_folder, "scenarios", "baseline")
   
   if(!dir.exists(baseline_folder)){
     dir.create(baseline_folder, recursive = TRUE)
@@ -112,7 +111,7 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   baseline_layers <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "raster_files", "tile_001")),
                                 full.names = TRUE, recursive = TRUE)
   
-  file.copy(from = baseline_layers, to = city_folder, overwrite = TRUE)
+  file.copy(from = baseline_layers, to = here("data", city_folder), overwrite = TRUE)
   
   # Copy processed data to baseline folder
   processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_001")),
@@ -150,7 +149,7 @@ run_CTCM_baseline <- function(city, aoi_file, ctcm_run, author, utc_offset, buff
   file.copy(met_file, baseline_folder, overwrite = TRUE)
   
   # Rename openurban file
-  file.rename(from = here(city_folder, "cif_open_urban.tif"), to = here(city_folder, "open-urban.tif"))
+  file.rename(from = here("data", city_folder, "cif_open_urban.tif"), to = here("data", city_folder, "open-urban.tif"))
     
 }
   

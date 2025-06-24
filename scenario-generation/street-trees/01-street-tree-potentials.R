@@ -1,4 +1,4 @@
-street_tree_scenario <- function(city, scenario, scenario_name, percentile = NULL, 
+street_tree_scenario <- function(city, city_folder, scenario, scenario_name, percentile = NULL, 
                                  target_coverage = NULL, min_tree_dist){
   
   # Setup ---------------------------------------------------------------------
@@ -11,7 +11,7 @@ street_tree_scenario <- function(city, scenario, scenario_name, percentile = NUL
   library(here)
   library(terra)
   
-  inputs_path <- here("data", city)
+  inputs_path <- here("data", city_folder)
   infrastructure_path <- here(inputs_path, "scenarios", "street-trees")
   
   # Create scenario_path
@@ -32,7 +32,8 @@ street_tree_scenario <- function(city, scenario, scenario_name, percentile = NUL
   
   source(here("scenario-generation", "street-trees", "street-trees-scenario-function.R")) 
   
-  street_trees_scenario_function(scenario = scenario,
+  street_trees_scenario_function(city_folder = city_folder,
+                                 scenario = scenario,
                                  scenario_name = scenario_name,
                                  percentile = percentile, 
                                  target_coverage = target_coverage,

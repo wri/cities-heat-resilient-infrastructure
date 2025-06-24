@@ -1,4 +1,4 @@
-run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_name, transmissivity, buffer){
+run_CTCM_park_shade_structures <- function(city_folder, author, utc_offset, scenario_name, transmissivity, buffer){
   
   
   library(R.utils)
@@ -17,32 +17,32 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   template <- file.path("C:", "CTCM_data_setup", "ZZZ_template_city")
   
   # Create setup folder for new run
-  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-park-shade-structures-", scenario_ouput))
+  run_setup_folder <- file.path(ctcm_setup_path, paste0(city_folder, "-park-shade-structures-", scenario_ouput))
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
    # Copy files
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
   
   # Baselayers
-  baselayers <- file.path(here("data", city), 
+  baselayers <- file.path(here("data", city_folder), 
                           c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "open-urban.tif"))
   file.copy(from = baselayers, to = tile_folder, overwrite = TRUE)
   
   # Wall layers
-  wall_layers <- file.path(here("data", city, "scenarios", "baseline"), 
+  wall_layers <- file.path(here("data", city_folder, "scenarios", "baseline"), 
                            c("ctcm_wallheight.tif", "ctcm_wallaspect.tif"))
   dir.create(file.path(run_setup_folder, "processed_data", "tile_001"), 
              recursive = TRUE, showWarnings = FALSE)
   file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"), overwrite = TRUE)
   
   # Resuse svf from transmissivity = 3 if it exists
-  svf_t3 <- file.path(here("data", city, "scenarios", "park-shade-structures", scenario_name, "t3", "ctcm_svfs.zip"))
+  svf_t3 <- file.path(here("data", city_folder, "scenarios", "park-shade-structures", scenario_name, "t3", "ctcm_svfs.zip"))
   if (file.exists(svf_t3) & transmissivity == 0){
     file.copy(from = svf_t3, to = file.path(run_setup_folder, "processed_data", "tile_001", "ctcm_svfs.zip"), overwrite = TRUE)
   }
   
   # Copy structures as trees layer
-  file.copy(from = here("data", city, "scenarios", "park-shade-structures", 
+  file.copy(from = here("data", city_folder, "scenarios", "park-shade-structures", 
                         scenario_name, "structures-as-trees.tif"),
             to = tile_folder, overwrite = TRUE)
   
@@ -84,7 +84,7 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   scenario_yaml[[3]]$MetFiles <- scenario_yaml[[3]]$MetFiles[1]
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.txt"
   
-  file.copy(from = here("data", city, "scenarios", "baseline", "met_era5_hottest_days.txt"),
+  file.copy(from = here("data", city_folder, "scenarios", "baseline", "met_era5_hottest_days.txt"),
             to = file.path(run_setup_folder, "primary_data", "met_files"), overwrite = TRUE)
   
   # filenames
@@ -130,9 +130,9 @@ run_CTCM_park_shade_structures <- function(city, author, utc_offset, scenario_na
   # After CTCM runs... ------------------------------------------------------
   
   # Copy CTCM output to scenario folder
-  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-park-shade-structures-", scenario_ouput))
+  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city_folder, "-park-shade-structures-", scenario_ouput))
   
-  scenario_folder <- here("data", city, "scenarios", "park-shade-structures", scenario_name)
+  scenario_folder <- here("data", city_folder, "scenarios", "park-shade-structures", scenario_name)
   t_folder <- here(scenario_folder, paste0("t", transmissivity))
   
   if(!dir.exists(t_folder)){

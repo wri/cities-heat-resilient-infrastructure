@@ -1,7 +1,7 @@
 # scenario <- "achievable-90pctl"
 # infrastructure <- "street-trees"
 
-calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
+calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure, aoi_name){
   
   library(terra)
   library(tidyverse)
@@ -10,7 +10,7 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
   
   source(here("utils", "utci.R"))
   
-  met_data <- list.files(here("data", city, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
+  met_data <- list.files(here("data", city_folder, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
     first() %>% 
     read_delim()
   
@@ -19,11 +19,11 @@ calc_street_tree_metrics <- function(city, scenario, infrastructure, aoi_name){
     mutate(date = paste(`%iy`, id, sep = "_")) %>% 
     pull(date)
   
-  baseline_path <- here("data", city, "scenarios", "baseline")
-  scenario_path <- here("data", city, "scenarios", infrastructure, scenario)
+  baseline_path <- here("data", city_folder, "scenarios", "baseline")
+  scenario_path <- here("data", city_folder, "scenarios", infrastructure, scenario)
   
   # Load AOI and clip layers
-  aoi <- st_read(here("data", city, "boundaries.geojson"))
+  aoi <- st_read(here("data", city_folder, "boundaries.geojson"))
   
   # Load pedestrian area raster
   ped_area_rast <- rast(here(baseline_path, "pedestrian_areas.tif")) %>% 

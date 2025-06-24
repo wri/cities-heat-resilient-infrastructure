@@ -1,18 +1,18 @@
-calc_cool_roofs_metrics <- function(city, scenario, cool_roof_albedo, aoi_name){
+calc_cool_roofs_metrics <- function(city, city_folder, scenario, cool_roof_albedo, aoi_name){
 
   library(terra)
   library(tidyverse)
   library(sf)
   library(here)
   
-  scenario_path <- here("data", city, "scenarios", "cool-roofs", scenario)
-  baseline_path <- here("data", city, "scenarios", "baseline")
+  scenario_path <- here("data", city_folder, "scenarios", "cool-roofs", scenario)
+  baseline_path <- here("data", city_folder, "scenarios", "baseline")
   
   baseline_albedo <- rast(here(baseline_path, "albedo_baseline.tif"))
   scenario_albedo <- rast(here(scenario_path, 'albedo_cool_roofs_achievable.tif')) 
   
   # Load AOI
-  aoi <- st_read(here("data", city, "boundaries.geojson"))
+  aoi <- st_read(here("data", city_folder, "boundaries.geojson"))
   
   # Load buildings
   build_vectors <- st_read(here(baseline_path, "buildings_polygons.geojson"))

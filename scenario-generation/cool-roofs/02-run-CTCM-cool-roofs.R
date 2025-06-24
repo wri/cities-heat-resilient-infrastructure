@@ -1,6 +1,6 @@
 
 
-run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer){
+run_CTCM_cool_roofs <- function(city_folder, author, utc_offset, scenario_name, buffer){
   
   
   library(R.utils)
@@ -19,36 +19,36 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
   template <- file.path("C:", "CTCM_data_setup", "ZZZ_template_city")
   
   # Create setup folder for new run
-  run_setup_folder <- file.path(ctcm_setup_path, paste0(city, "-cool-roofs-", scenario_name))
+  run_setup_folder <- file.path(ctcm_setup_path, paste0(city_folder, "-cool-roofs-", scenario_name))
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
    # Copy files
   tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
   
   # Baselayers
-  baselayers <- file.path(here("data", city), 
+  baselayers <- file.path(here("data", city_folder), 
                           c("cif_dem.tif", "cif_dsm_ground_build.tif", "cif_lulc.tif", "cif_tree_canopy.tif",
                             "open-urban.tif"))
   file.copy(from = baselayers, to = tile_folder, overwrite = TRUE)
   
   # Wall layers
-  wall_layers <- file.path(here("data", city, "scenarios", "baseline"), 
+  wall_layers <- file.path(here("data", city_folder, "scenarios", "baseline"), 
                            c("ctcm_wallheight.tif", "ctcm_wallaspect.tif", "ctcm_svfs.zip"))
   dir.create(file.path(run_setup_folder, "processed_data", "tile_001"), 
              recursive = TRUE, showWarnings = FALSE)
   file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"), overwrite = TRUE)
   
   # Modify the met file with the updated air temperatures
-  air_temp <- read_csv(here("data", city, "scenarios", "cool-roofs", scenario_name, "air_temp_reductions.csv")) %>% 
+  air_temp <- read_csv(here("data", city_folder, "scenarios", "cool-roofs", scenario_name, "air_temp_reductions.csv")) %>% 
     mutate(it = time / 100,
            reduction = round(reduction, 2)) %>% 
     select(! time)
   
-  file.copy(from = here("data", city, "scenarios", "baseline", "met_era5_hottest_days.txt"),
-            to = here("data", city, "scenarios", "cool-roofs", scenario_name), overwrite = TRUE)
+  file.copy(from = here("data", city_folder, "scenarios", "baseline", "met_era5_hottest_days.txt"),
+            to = here("data", city_folder, "scenarios", "cool-roofs", scenario_name), overwrite = TRUE)
   
   # Read the meteorological file, skipping % comment line
-  met <- read_table(here("data", city, "scenarios", "cool-roofs", scenario_name, "met_era5_hottest_days.txt"),
+  met <- read_table(here("data", city_folder, "scenarios", "cool-roofs", scenario_name, "met_era5_hottest_days.txt"),
                     col_names = TRUE)
   
   # Subtract the reduction where 'it' (hour) matches 'time'
@@ -57,7 +57,7 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
     mutate(Tair = Tair - reduction) %>%
     select(-reduction)
   
-  write_delim(met, here("data", city, "scenarios", "cool-roofs", scenario_name, "met_era5_hottest_days.txt"))
+  write_delim(met, here("data", city_folder, "scenarios", "cool-roofs", scenario_name, "met_era5_hottest_days.txt"))
   write_delim(met, file.path(run_setup_folder, "primary_data", "met_files", "reduced_temps.txt"))
   
   # get bounding coordinates
@@ -132,9 +132,9 @@ run_CTCM_cool_roofs <- function(city, author, utc_offset, scenario_name, buffer)
   # After CTCM runs... ------------------------------------------------------
   
   # Copy CTCM output to scenario folder
-  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city, "-cool-roofs-", scenario_name))
+  ctcm_output_path <- file.path("C:", "CTCM_outcome", paste0(city_folder, "-cool-roofs-", scenario_name))
   
-  scenario_folder <- here("data", city, "scenarios", "cool-roofs", scenario_name)
+  scenario_folder <- here("data", city_folder, "scenarios", "cool-roofs", scenario_name)
   
   if(!dir.exists(scenario_folder)){
     dir.create(scenario_folder)

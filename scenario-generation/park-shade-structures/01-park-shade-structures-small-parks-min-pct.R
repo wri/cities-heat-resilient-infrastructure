@@ -1,4 +1,4 @@
-park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, spacing,
+park_shade_scenario <- function(city_folder, scenario_name, structure_size, shade_pct, spacing,
                                 min_shade_area){
   
   library(sf)
@@ -6,7 +6,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   library(terra)
   library(exactextractr)
   
-  inputs_path <- here("data", city)
+  inputs_path <- here("data", city_folder)
   infrastructure_path <- here(inputs_path, "scenarios", "park-shade-structures")
   
   # Create infrastructure_path
@@ -29,7 +29,7 @@ park_shade_scenario <- function(city, scenario_name, structure_size, shade_pct, 
   
   
   # Shadow at 1200
-  shadow_12pm <- rast(here("data", city, "scenarios", "baseline", "shade_1200_baseline.tif"))
+  shadow_12pm <- rast(here("data", city_folder, "scenarios", "baseline", "shade_1200_baseline.tif"))
   
   
   # Park shade scenario

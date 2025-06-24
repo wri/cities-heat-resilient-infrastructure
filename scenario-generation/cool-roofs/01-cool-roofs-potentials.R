@@ -1,6 +1,6 @@
 # city <- "ZAF-Cape_Town"
 # infrastructure <- "cool-roofs"
-cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
+cool_roof_scenario <- function(city, city_folder, scenario, scenario_name, infrastructure,
                                area_threshold, cool_roof_albedo){
   
   # Setup ---------------------------------------------------------------------
@@ -12,7 +12,7 @@ cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
   library(tidyverse)
   library(here)
   
-  inputs_path <- here("data", city)
+  inputs_path <- here("data", city_folder)
   infrastructure_path <- here(inputs_path, "scenarios", "cool-roofs")
   scenario_path <- here(infrastructure_path, scenario_name)
   
@@ -43,7 +43,7 @@ cool_roof_scenario <- function(city, scenario, scenario_name, infrastructure,
   
   albedo_delta <- large_buildings_scenario_function(scenario_name, infrastructure_path,
                                                     area_threshold, cool_roof_albedo,
-                                                    aoi, lulc, albedo, build_vectors)
+                                                    aoi, lulc, albedo, build_vectors, city_folder)
   
   ###### CALCULATE TEMP CHAGE ######
   # from Krayenhoff et al. 2021 DOI 10.1088/1748-9326/abdcf1

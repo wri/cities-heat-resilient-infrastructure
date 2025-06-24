@@ -8,8 +8,6 @@ calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure
   library(sf)
   library(here)
   
-  source(here("utils", "utci.R"))
-  
   met_data <- list.files(here("data", city_folder, "scenarios", "baseline"), pattern = "met", full.names = TRUE) %>%
     first() %>% 
     read_delim()

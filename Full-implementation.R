@@ -48,6 +48,7 @@ utc_offset <- 2                          # UTC offset for the city
 buffer <- 100                            # AOI buffer
 year <- "2024"                           # Year for albedo data
 
+city_folder <- paste(city, aoi_name, sep = "-")
 
 ###############################################
 ###############################################
@@ -59,7 +60,6 @@ year <- "2024"                           # Year for albedo data
 source(here("utils", "calc_UTCI.R"))
 
 # Create directory --------------------------------------------------------
-city_folder <- paste(city, aoi_name, sep = "-")
 dir.create(here("data", city_folder), showWarnings = FALSE)
 
 # Run baseline ------------------------------------------------------------

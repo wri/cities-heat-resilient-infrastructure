@@ -7,21 +7,21 @@ library(here)
 # city <- "BRA-Rio_de_Janeiro"
 # city <- "MEX-Monterrey"
 
-if (city == "ZAF-Cape_Town"){
-  aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
-  aoi_name <- "business_district"
-  utc_offset <- 2
-} else if (city == "BRA-Rio_de_Janeiro"){
-  aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
-  aoi_name <- "low_emission_zone"
-  utc_offset <- -3
-} else if (city == "MEX-Monterrey"){
-  aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/solweig_09may24/aoi_monterrey.geojson"
-  aoi_name <- "mitras_centro"
-  utc_offset <- -6
-} else {
-  print("Please specifiy input parameters.")
-}
+# if (city == "ZAF-Cape_Town"){
+#   aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/processed/citycentre_roi.geojson"
+#   aoi_name <- "business_district"
+#   utc_offset <- 2
+# } else if (city == "BRA-Rio_de_Janeiro"){
+#   aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_janeiro/raw/boundaries/BRA-Rio_de_janeiro-DBE_low_emission_zone.geojson"
+#   aoi_name <- "low_emission_zone"
+#   utc_offset <- -3
+# } else if (city == "MEX-Monterrey"){
+#   aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/MEX-Monterrey/solweig_09may24/aoi_monterrey.geojson"
+#   aoi_name <- "mitras_centro"
+#   utc_offset <- -6
+# } else {
+#   print("Please specifiy input parameters.")
+# }
 
 
 
@@ -37,9 +37,9 @@ city <- ""                               # City name (XXX-City_Name, e.g. USA-Lo
 
 # AOI parameters
 #################
-# URL for file in S3
-aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Cape_Town/test-aoi.geojson"
-aoi_name <- "test"                       # Name of the AOI
+
+aoi_file <- ""                           # URL for file in S3
+aoi_name <- ""                           # Name of the AOI
   
 # CTCM metadata
 #################

@@ -32,9 +32,11 @@ calc_UTCI <- function(city_folder, scenario, infrastructure = NULL){
   tmrt_files <- list.files(scenario_path, pattern = "Tmrt") %>%
     discard(~ str_detect(.x, "\\.aux\\.xml$"))
   
-  for (file in tmrt_files) {
+  timestamps <- c("1200", "1500", "1800")
+  
+  for (time in timestamps) {
     
-    time <- str_extract(file, "(?<=Tmrt_)\\d{4}")
+    file <- tmrt_files %>% keep(~ str_detect(.x, time))
     
     Tmrt <- rast(here(scenario_path, file))
     utci_rast <- create_utci(mrt_rast = Tmrt, timestamp = time, met_data = met_data)

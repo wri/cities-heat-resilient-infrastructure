@@ -140,7 +140,10 @@ calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure
   baseline_tree_n <- nrow(baseline_tree_points %>% filter(pedestrian == 1))
   
   scenario_tree_points <- st_read(here(scenario_path, "tree_points_achievable.geojson"))
-  scenario_tree_n <- nrow(scenario_tree_points)
+  pedestrian_vals <- terra::extract(ped_area_rast, vect(scenario_tree_points))
+  scenario_tree_points$pedestrian <- pedestrian_vals[[2]]  # second column is the raster value
+  
+  scenario_tree_n <- nrow(scenario_tree_points %>% filter(pedestrian == 1))
   
   # Achievable potential
   aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")

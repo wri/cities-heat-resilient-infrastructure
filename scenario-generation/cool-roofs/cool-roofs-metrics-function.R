@@ -110,7 +110,8 @@ calc_cool_roofs_metrics <- function(city, city_folder, scenario, cool_roof_albed
     "baseline_roof_reflectivity" = baseline_roof_alb * 100,
     "scenario_roof_reflectivity" = scenario_roof_alb * 100,
     "change_roof_reflectivity" = (scenario_roof_alb - baseline_roof_alb),
-    
+
+    "progress_reflectivity" = scenario_reflectivity / achievable_reflectivity,    
     "progress_cool_roofs" = (baseline_cool_roof_area + change_cool_roof_area) / achievable_cool_roof_area * 100,
     
     "baseline_mean_air_temp_1200" = (baseline_Ta %>% filter(it == 12) %>% pull(Tair)),

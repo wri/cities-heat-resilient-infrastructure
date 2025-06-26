@@ -123,6 +123,7 @@ calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure
   scenario_tree_rast <- rast(here(scenario_path, "tree_cover_achievable.tif")) %>% 
     crop(baseline_utci_rast) %>% 
     mask(aoi)
+  scenario_tree_rast <- scenario_tree_rast + baseline_tree_rast > 0
   
   # Tree pct
   baseline_tree_pct <- sum(values(mask(baseline_tree_rast, ped_area_rast, maskvalues = 0) %>% subst(NA, 0)) != 0) / pedestrian_area
@@ -158,7 +159,8 @@ calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure
       tree_n_baseline_pedestrian = baseline_tree_n,
       tree_n_scenario_pedestrian = scenario_tree_n + baseline_tree_n,
       tree_n_change_pedestrian = scenario_tree_n,
-      tree_cover_achievable_pedestrian = target_coverage * 100
+      tree_cover_achievable_pedestrian = target_coverage * 100,
+      tree_cover_progress = tree_cover_scenario_pedestrian / tree_cover_achievable_pedestrian * 100
     ) %>% 
     pivot_longer(
       cols = everything(),

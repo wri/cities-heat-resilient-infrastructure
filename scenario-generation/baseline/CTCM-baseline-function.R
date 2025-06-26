@@ -151,6 +151,9 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   # Rename openurban file
   file.rename(from = here("data", city_folder, "cif_open_urban.tif"), to = here("data", city_folder, "open-urban.tif"))
     
+  # Copy boundary file
+  file.copy(here("data", city_folder, "boundaries.geojson"), here(baseline_folder, "boundaries.geojson"),
+            overwrite = TRUE)
 }
   
   

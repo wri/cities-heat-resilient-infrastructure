@@ -118,9 +118,11 @@ calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure
   
   # Load updated trees
   baseline_tree_rast <- rast(here(baseline_path, "tree_cover_baseline.tif")) %>% 
+    subst(from = NA, 0) %>% 
     crop(baseline_utci_rast) %>% 
     mask(aoi)
   scenario_tree_rast <- rast(here(scenario_path, "tree_cover_achievable.tif")) %>% 
+    subst(from = NA, 0) %>% 
     crop(baseline_utci_rast) %>% 
     mask(aoi)
   scenario_tree_rast <- scenario_tree_rast + baseline_tree_rast > 0

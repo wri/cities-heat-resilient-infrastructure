@@ -80,7 +80,7 @@ source_python(here("get-data.py"))
 # Add the Python script folder to sys.path
 script_dir <- here()  
 py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
-get_data(city, city_folder, aoi_file, buffer, year, script_dir)
+get_data(city, city_folder, aoi_file, buffer, year)
 
 # Enter Google Earth Engine credentials before proceeding
 ############################################################

@@ -8,10 +8,10 @@
 # year = "2024"
 # buffer = 100
 
-def get_data(city, aoi_file, buffer, year, output_base="."):
+def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   # Create city folder
   import os
-  city_dir = os.path.join(output_base, "data", city)
+  city_dir = os.path.join(output_base, "data", city_folder)
   os.makedirs(city_dir, exist_ok=True)
     
   # path = f"./data/{city}"
@@ -30,17 +30,6 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   import rioxarray
   from shapely.geometry import Polygon
   
-  # # Read the CSV file directly into a Series
-  # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
-  # 
-  # # Convert to dictionary and extract bounding box
-  # bbox_dict = dict(zip(coords['name'], coords['value']))
-  # bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
-  # in_minx = -100.3264087#bbox_tuple[0]
-  # in_miny = 25.6642548#bbox_tuple[1]
-  # in_maxx = -100.3095349#bbox_tuple[2]
-  # in_maxy = 25.6702689#bbox_tuple[3]
-  # 
   raster = rioxarray.open_rasterio(os.path.join(city_dir, "cif_lulc.tif"), masked=True)
   bounds = raster.rio.bounds()
   crs = raster.rio.crs.to_string()
@@ -50,100 +39,14 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
   tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
   bbox = GeoExtent(bbox=tile_gpd, crs=crs)
   
-  # from city_metrix.layers import OpenUrban
-  # from open_urban import OpenUrban
-
-  # lulc = OpenUrban().get_data(bbox)
-  
-  # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
-  
-  ## Write raster to tif file
-  # lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
-  # from city_metrix.metrix_tools import reproject_units, get_utm_zone_from_latlon_point
-  # from shapely import Point
-  # from src.worker_manager.tools import construct_polygon_from_bounds
-  # from src.workers.open_urban import OpenUrban
-  # # from src.workers.worker_tools import save_tiff_file
-  # 
-  
-  # 
-  # # Create GeoDataFrame from bbox.polygon
-  # import rioxarray
-  # 
-  
-  # 
-  
-  # 
-  # midx = (in_minx + in_maxx) / 2
-  # midy = (in_miny + in_maxy) / 2
-  # utm_crs = get_utm_zone_from_latlon_point(Point(midy, midx))
-  # 
-  # reproj_bbox = reproject_units(in_minx, in_miny, in_maxx, in_maxy, 'EPSG:4326', utm_crs)
-  
-  # bbox_poly = construct_polygon_from_bounds(bounds[0], bounds[1], bounds[2], bounds[3])
-  # tile_gpd = gpd.GeoDataFrame(index=[0], crs=crs, geometry=[bbox_poly])
-  # tile_gpd.to_file(os.path.join(city_dir, "test.geojson"))
-  # 
-  # bbox = GeoExtent(tile_gpd.total_bounds, crs)
-  # lulc = OpenUrban().get_data(bbox)
-  # 
-  # # save_tiff_file(lulc, '.', 'test_open_urban.tif')
-  # lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban-temp.tif"))
-  # coords = pd.read_csv(os.path.join(city_dir, "coords.csv"))
-  # 
-  # # Convert to dictionary and extract bounding box
-  # bbox_dict = dict(zip(coords['name'], coords['value']))
-  # bbox_tuple = (bbox_dict['xmin'], bbox_dict['ymin'], bbox_dict['xmax'], bbox_dict['ymax'])
-  # 
-  # # Create GeoExtent
-  # geo_extent = GeoExtent(bbox_tuple)
-  
-  # bbox = GeoExtent(aoi_gdf.total_bounds, aoi_gdf.crs.srs)
-  # lulc = OpenUrban().get_data(bbox)
-
-  # bbox = GeoExtent(aoi.total_bounds, aoi.crs.srs).as_utm_bbox()
-  
-  
   ## save aoi with UTM crs
-  aoi.to_crs(crs).to_file(os.path.join(city_dir, "aoi.geojson"))
+  aoi.to_crs(crs).to_file(os.path.join(city_dir, "boundaries.geojson"))
   
   
   ## Setup Earth Engine
   import ee
   ee.Authenticate(auth_mode="notebook")
   ee.Initialize(project='wri-earthengine')
-  
-  #TODD: Get UTM from OpenUrban and resample others
-  #TODO: add projection to all downloads
-  
-  # ######################
-  # # Get the tree canopy height
-  # ######################
-  # from city_metrix.layers import TreeCanopyHeight
-  # city_TreeCanopyHeight = TreeCanopyHeight().get_data(bbox)
-  # 
-  # ## Write raster to tif file
-  # city_TreeCanopyHeight.rio.to_raster(raster_path=os.path.join(city_dir, "tree-canopy-height.tif"))
-  
-  ######################
-  # Get OpenUrban
-  ######################
-  # import open_urban
-  # from open_urban import OpenUrban
-  # from shapely.geometry import box
-  # 
-  # lulc = OpenUrban().get_data(bbox)
-  # 
-  # # Create a GeoDataFrame from GeoExtent
-  # bbox_geom = box(*bbox.bounds)
-  # bbox_gdf = gpd.GeoDataFrame(geometry=[bbox_geom], crs=bbox.crs)
-  # 
-  # # Clip the raster
-  # lulc = lulc.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
-  # 
-  # ## Save data to file
-  # lulc.rio.to_raster(raster_path=os.path.join(city_dir, "open-urban.tif"))
-  
   
   ######################
   # Get roads
@@ -205,8 +108,6 @@ def get_data(city, aoi_file, buffer, year, output_base="."):
     
   from city_metrix.layers import AlbedoCloudMasked
   city_Albedo = AlbedoCloudMasked(start_date=summer_start, end_date=summer_end).get_data(bbox)
-  
-  # city_Albedo = city_Albedo.rio.clip(bbox_gdf.geometry, bbox_gdf.crs, drop=True)
   
   ## Write raster to tif file
   city_Albedo.rio.to_raster(raster_path=os.path.join(city_dir, "albedo.tif"))

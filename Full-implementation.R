@@ -187,10 +187,10 @@ calc_cool_roofs_metrics(city, city_folder, scenario = "large-buildings", cool_ro
 
 
 # # Upload files to s3 -------------------------------------------------------
-source_python(here("upload-data.py"))
-
-# Add the Python script folder to sys.path
-script_dir <- here()
-py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
-
-upload_folder_to_s3(city, city_folder, aoi_name)
+# source_python(here("upload-data.py"))
+# 
+# # Add the Python script folder to sys.path
+# script_dir <- here()
+# py_run_string(sprintf("import sys; sys.path.append('%s')", script_dir))
+# 
+# upload_folder_to_s3(city, city_folder, aoi_name)

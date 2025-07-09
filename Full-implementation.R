@@ -45,7 +45,7 @@ aoi_name <- ""                           # Name of the AOI
 #################
 author <- ""                             # User email
 utc_offset <-                            # UTC offset for the city
-buffer <- 100                            # AOI buffer
+buffer <- 600                            # AOI buffer
 year <- "2024"                           # Year for albedo data
 
 city_folder <- paste(city, aoi_name, sep = "-")

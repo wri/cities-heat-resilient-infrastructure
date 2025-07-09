@@ -2,12 +2,12 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 
-def upload_folder_to_s3(city, aoi, year, bucket = "wri-cities-heat"):
+def upload_folder_to_s3(city, city_folder, aoi, year, bucket = "wri-cities-heat"):
     """
     Recursively upload a local folder to an S3 bucket under the given prefix.
     """
-    local_folder = f"data/{city}/scenarios"
-    s3_prefix = f"{city}/scenarios/aoi/{aoi}/{year}"
+    local_folder = f"data/{city_folder}/scenarios"
+    s3_prefix = f"{city}/scenarios/aoi/{aoi}"
 
     s3 = boto3.client("s3")
     local_folder = os.path.abspath(local_folder)

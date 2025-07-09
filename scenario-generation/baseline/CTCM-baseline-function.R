@@ -1,4 +1,4 @@
-run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offset, buffer){
+run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offset, tile_size, buffer){
   
   library(R.utils)
   library(here)
@@ -59,8 +59,8 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   baseline_yaml[[2]]$max_lon <- bbox["xmax"]
   baseline_yaml[[2]]$max_lat <- bbox["ymax"]
   
-  # tiling (optional, leave blank for no tiling)
-  baseline_yaml[[2]]$tile_side_meters <- ""
+  # tiling (optional)
+  baseline_yaml[[2]]$tile_side_meters <- tile_size
   
   # buffer
   baseline_yaml[[2]]$tile_buffer_meters <- buffer

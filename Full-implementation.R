@@ -45,6 +45,9 @@ aoi_name <- ""                           # Name of the AOI
 #################
 author <- ""                             # User email
 utc_offset <-                            # UTC offset for the city
+  
+tile_size <- "None"                      # tile size--Change to number without quotes for tiling
+
 buffer <- 600                            # AOI buffer
 year <- "2024"                           # Year for albedo data
 

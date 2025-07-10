@@ -33,22 +33,22 @@ library(here)
 
 # City parameters
 #################
-city <- ""                               # City name (XXX-City_Name, e.g. USA-Los_Angeles)
+city <- "BRA-Rio_de_Janeiro"                               # City name (XXX-City_Name, e.g. USA-Los_Angeles)
 
 # AOI parameters
 #################
 
-aoi_file <- ""                           # URL for file in S3
-aoi_name <- ""                           # Name of the AOI
+aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_Janeiro/scenarios/test-AOI.geojson"                           # URL for file in S3
+aoi_name <- "brazil_test1"                           # Name of the AOI
   
 # CTCM metadata
 #################
-author <- ""                             # User email
-utc_offset <-                            # UTC offset for the city
+author <- "Lincoln.chanakira@wri.com"                             # User email
+utc_offset <- -3                           # UTC offset for the city
   
 tile_size <- "None"                      # tile size--Change to number without quotes for tiling
 
-buffer <- 600                            # AOI buffer
+buffer <- 100                            # AOI buffer
 year <- "2024"                           # Year for albedo data
 
 city_folder <- paste(city, aoi_name, sep = "-")
@@ -70,7 +70,8 @@ unlink(file.path("C:", "CTCM_data_setup", paste0(city_folder, "-baseline")), rec
 unlink(file.path("C:", "CTCM_outcome", paste0(city_folder, "-baseline")), recursive = TRUE)
 
 source(here("scenario-generation", "baseline", "CTCM-baseline-function.R"))
-run_CTCM_baseline(city_folder, aoi_file, ctcm_run = "baseline", author, utc_offset, buffer)
+run_CTCM_baseline( city_folder = city_folder, aoi_file = aoi_file, ctcm_run = "baseline",author = author,
+                   utc_offset = utc_offset, buffer = buffer, tile_size = tile_size)
 calc_UTCI(city_folder, scenario = "baseline")
 
 # Get data ----------------------------------------------------------------

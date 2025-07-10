@@ -41,6 +41,7 @@ def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   
   ## save aoi with UTM crs
   aoi.to_crs(crs).to_file(os.path.join(city_dir, "boundaries.geojson"))
+  aoi.to_crs(crs).to_file(os.path.join(city_dir, "scenarios", "baseline", "boundaries.geojson"))
   
   
   ## Setup Earth Engine

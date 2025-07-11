@@ -74,8 +74,9 @@ generate_trees <- function(plantable_area, ped_area, existing_tree_cover,
                            target_coverage, min_dist, crown_vectors, crown_raster) {
   
   # Indicate that trees already exist
-  existing_tree_points <- existing_tree_points %>% 
-    mutate(type = "existing")
+  # existing_tree_points <- existing_tree_points %>% 
+  #   mutate(type = "existing")
+  new_tree_pts <- st_sf(geometry = st_sfc(), crs = st_crs(existing_tree_points))
   
   # Existing tree cover masked to the pedestrian area
   existing_cover_mask <- existing_tree_cover %>% 
@@ -191,7 +192,7 @@ generate_trees <- function(plantable_area, ped_area, existing_tree_cover,
              height = as.numeric(tree_height_class),
              type = "new")
     
-    existing_tree_points <- rbind(existing_tree_points, candidate_point)
+    new_tree_pts <- rbind(new_tree_pts, candidate_point)
     
     print("added tree")
     
@@ -216,6 +217,6 @@ generate_trees <- function(plantable_area, ped_area, existing_tree_cover,
               beginning_tree_cover_area = current_tree_cover_size,
               target_tree_cover_area = target_tree_cover_size, 
               final_tree_cover_area = updated_tree_cover_area,
-              tree_points = existing_tree_points, 
+              new_tree_pts = new_tree_pts, 
               updated_tree_cover = existing_tree_cover))
 }

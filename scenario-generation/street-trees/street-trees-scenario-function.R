@@ -69,7 +69,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   
   # Create a grid over the aoi to iterate over for creating trees
   aoi_grid <- aoi %>% 
-    st_make_grid(cellsize = c(1000, 1000), square = TRUE, what = "polygons") %>% 
+    st_make_grid(cellsize = c(100, 100), square = TRUE, what = "polygons") %>% 
     st_sf() %>% 
     # st_filter(aoi) %>%
     st_intersection(aoi) %>% 
@@ -152,7 +152,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
     
     # Update the points
     updated_tree_points <- updated_tree_points %>% 
-      bind_rows(updated_trees$tree_points)
+      bind_rows(updated_trees$new_tree_pts)
     
     # Update grid with info
     aoi_grid <- aoi_grid %>% 
@@ -188,7 +188,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
               overwrite = TRUE)
   
   # Save the new tree points
-  st_write((updated_tree_points %>% distinct(geometry, .keep_all = TRUE) %>% filter(type == "new")), 
+  st_write(updated_tree_points, 
            dsn = here(scenario_path, "tree_points_achievable.geojson"),
            append = FALSE,
            delete_dsn = TRUE)

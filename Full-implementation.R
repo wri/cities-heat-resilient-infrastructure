@@ -33,22 +33,22 @@ library(here)
 
 # City parameters
 #################
-city <- "BRA-Rio_de_Janeiro"                               # City name (XXX-City_Name, e.g. USA-Los_Angeles)
+city <- ""                               # City name (XXX-City_Name, e.g. USA-Los_Angeles)
 
 # AOI parameters
 #################
 
-aoi_file <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/BRA-Rio_de_Janeiro/scenarios/test-AOI.geojson"                           # URL for file in S3
-aoi_name <- "brazil_test1"                           # Name of the AOI
+aoi_file <- ""                           # URL for file in S3
+aoi_name <- ""                           # Name of the AOI
   
 # CTCM metadata
 #################
-author <- "Lincoln.chanakira@wri.com"                             # User email
-utc_offset <- -3                           # UTC offset for the city
+author <- ""                             # User email
+utc_offset <-                            # UTC offset for the city
   
 tile_size <- "None"                      # tile size--Change to number without quotes for tiling
 
-buffer <- 100                            # AOI buffer
+buffer <- 600                            # AOI buffer
 year <- "2024"                           # Year for albedo data
 
 city_folder <- paste(city, aoi_name, sep = "-")

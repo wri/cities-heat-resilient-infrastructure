@@ -1,12 +1,24 @@
 library(terra)
 library(tidyverse)
 
+# sources for this code include
+# https://gist.github.com/chriswmackey/b852dd9e01f79402d8a7b355f97b84c8
+# https://james-ramsden.com/calculate-utci-c-code/
+# eOUBLE PRECISION Function value is the UTCI in degree Celsius
+# computed by a 6th order approximating polynomial from the 4 Input paramters 
+# Input parameters (all of type double precision)
+# 	- Ta : air temperature, degree Celsius
+# 	- ehPa : water vapour presure, hPa=hecto Pascal
+# 	- va : wind speed 10 m above ground level in m/s
+# 	- Tmrt : mean radiant temperature, degree Celsius
 
+# UTCI_approx, Version a 0.002, October 2009
+# Copyright (C) 2009  Peter Broede
 # Directory where MRT files are
-# mrt_dir <- "~/Library/CloudStorage/OneDrive-WorldResourcesInstitute/Documents/Research/thermal-comfort-analysis/data/ZAF-Cape_town/scenarios/baseline"
+# mrt_dir <- "~/path/to/file"
 
 # Met file with data corresponding to MRT files
-# met_file <- "~/Library/CloudStorage/OneDrive-WorldResourcesInstitute/Documents/Research/thermal-comfort-analysis/data/ZAF-Cape_town/scenarios/met_20jan2022.txt"
+# met_file <- "~/path/to/file"
 
 # Functions
 
@@ -17,8 +29,8 @@ check_inputs <- function(at, wind, vpd, Tmrt) {
     stop("Wind must be between 0.5 and 17 m/s!")
   } else if (!(vpd >= 0 & vpd <= 50)) {
     stop("Vapor pressure deficit must be between 0 and 50 hPa!")
-  } else if (any(values(Tmrt, na.rm = TRUE) < (at - 30) | values(Tmrt, na.rm = TRUE) > (at + 70))) {
-    stop("MRT must be between 30 C below and 70 C above the air temp!")
+  } else if (any(values(Tmrt, na.rm = TRUE) < (at - 50) | values(Tmrt, na.rm = TRUE) > (at + 70))) {
+    stop("MRT must be between 50 C below and 70 C above the air temp!")
   }
 }
 
@@ -282,13 +294,18 @@ create_utci <- function(mrt_rast, timestamp, met_data){
     pull(RH)
   
   # Calculate vpd from rh and Ta
-  svp <-  610.78 * 2.72 ^ (Ta / (Ta + 237.3) * 17.2694)
-  vpd <-  svp * (1 - rh/100)
-  
-  vpd <- vpd / 100
+  g <- c(-2836.5744, -6028.076559, 19.54263612, -0.02737830188,
+           0.000016261698, (7.0229056*(10^(-10))), (-1.8680009*(10^(-13))))      
+  tk <- Ta + 273.15 # air temp in K
+  es <- 2.7150305 * log(tk)
+  for (i in 1:length(g)) {
+    es <- es + (g[i] * (tk^(i - 2)))
+  }
+  es <- exp(es) * 0.01  # Convert from Pa to hPa
+  vpd <- es * (RH / 100.0)  # Actual vapor pressure in hPa
   
   # Make sure all the input values are valid
-  # check_inputs(Ta, va, vpd, mrt_rast)
+  check_inputs(Ta, va, vpd, mrt_rast)
   
   # Calculate UTCI
   utci_values <- utci_calc(Ta = Ta, ehPa = vpd, va = va, Tmrt = mrt_rast)

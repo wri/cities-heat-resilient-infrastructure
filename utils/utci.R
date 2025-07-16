@@ -15,10 +15,10 @@ library(tidyverse)
 # UTCI_approx, Version a 0.002, October 2009
 # Copyright (C) 2009  Peter Broede
 # Directory where MRT files are
-mrt_dir <- "/Users/ruth/Desktop/mrt/"
+# mrt_dir <- "~/path/to/file"
 
 # Met file with data corresponding to MRT files
-met_file <- "/Users/ruth/Desktop/met_era5_hottest_days_bhopal.txt"
+# met_file <- "~/path/to/file"
 
 # Functions
 
@@ -311,6 +311,6 @@ create_utci <- function(mrt_rast, timestamp, met_data){
   utci_values <- utci_calc(Ta = Ta, ehPa = vpd, va = va, Tmrt = mrt_rast)
   
   return(utci_values)
-  output_filename <- str_replace(mrt_file_path, "Tmrt", "UTCI")
-  writeRaster(utci_values, output_file_path)
+  # output_filename <- str_replace(mrt_file_path, "Tmrt", "UTCI")
+  # writeRaster(utci_values, output_file_path)
 }

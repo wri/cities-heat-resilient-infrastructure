@@ -302,7 +302,7 @@ create_utci <- function(mrt_rast, timestamp, met_data){
     es <- es + (g[i] * (tk^(i - 2)))
   }
   es <- exp(es) * 0.01  # Convert from Pa to hPa
-  vpd <- es * (RH / 100.0)  # Actual vapor pressure in hPa
+  vpd <- es * (rh / 100.0)  # Actual vapor pressure in hPa
   
   # Make sure all the input values are valid
   check_inputs(Ta, va, vpd, mrt_rast)

@@ -102,13 +102,13 @@ calc_cool_roofs_metrics <- function(city, city_folder, scenario, cool_roof_albed
     
     "achievable_cool_roof_reflectivity" = alb_target,
   
-    "baseline_reflectivity" = mean(values(baseline_albedo), na.rm = TRUE) * 100,
-    "scenario_reflectivity" = mean(values(scenario_albedo), na.rm = TRUE) * 100,
-    "achievable_reflectivity" = mean(values(achievable_albedo), na.rm = TRUE) * 100,
+    "baseline_reflectivity" = mean(values(baseline_albedo), na.rm = TRUE),
+    "scenario_reflectivity" = mean(values(scenario_albedo), na.rm = TRUE),
+    "achievable_reflectivity" = mean(values(achievable_albedo), na.rm = TRUE),
     "change_reflectivity" = (scenario_reflectivity - baseline_reflectivity),
     
-    "baseline_roof_reflectivity" = baseline_roof_alb * 100,
-    "scenario_roof_reflectivity" = scenario_roof_alb * 100,
+    "baseline_roof_reflectivity" = baseline_roof_alb,
+    "scenario_roof_reflectivity" = scenario_roof_alb,
     "change_roof_reflectivity" = (scenario_roof_alb - baseline_roof_alb),
 
     "progress_reflectivity" = scenario_reflectivity / achievable_reflectivity,    

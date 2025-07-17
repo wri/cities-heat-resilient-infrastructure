@@ -30,7 +30,7 @@ calc_street_park_shade_metrics <- function(city, city_folder, scenario, aoi_name
   aoi <- st_read(here("data", city_folder, "boundaries.geojson"))
   
   # Load shade structures
-  shade_structures <- st_read(here(scenario_path, "shade_structures_parks.geojson"))
+  shade_structures <- st_read(here(scenario_path, "shade_structures.geojson"))
   
   # Met data
   met_data <- read_delim(here(baseline_path, "met_era5_hottest_days.txt"))

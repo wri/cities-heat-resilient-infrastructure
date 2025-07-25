@@ -71,152 +71,115 @@ move_polygon_to_cover_point <- function(polygon, point) {
 
 generate_trees <- function(plantable_area, ped_area, existing_tree_cover, 
                            existing_tree_points, tree_structure, tree_height,
-                           target_coverage, min_dist, crown_vectors, crown_raster) {
+                           target_coverage, min_dist, crown_vectors, crown_raster,
+                           infrastructure_path, city_folder) {
   
-  # Indicate that trees already exist
-  # existing_tree_points <- existing_tree_points %>% 
-  #   mutate(type = "existing")
-  new_tree_pts <- st_sf(geometry = st_sfc(), crs = st_crs(existing_tree_points))
+  # Existing trees
+  crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
+  canopy_height_existing <- rast(here("data", city_folder, "cif_tree_canopy.tif"))
   
-  # Existing tree cover masked to the pedestrian area
-  existing_cover_mask <- existing_tree_cover %>% 
-    mask(subst(ped_area, 0, NA))
-  
-  binary_tree_cover <- existing_cover_mask > 1
-  # binary_no_trees <- abs(binary_trees - 1)
-  
-  # Calculate the plantable area and current tree cover
+  # Setup
   plantable_area_size <- sum(values(plantable_area), na.rm = TRUE)
   ped_area_size <- sum(values(ped_area), na.rm = TRUE)
-  current_tree_cover_size <- sum(values(binary_tree_cover), na.rm = TRUE)
-  
-  # Calculate the target tree cover size
+  current_tree_cover <- existing_tree_cover %>% mask(subst(ped_area, 0, NA))
+  binary_tree_cover <- current_tree_cover > 3
+  beginning_tree_cover_size <- sum(values(binary_tree_cover), na.rm = TRUE)
+  current_tree_cover_size <- beginning_tree_cover_size
   target_tree_cover_size <- ceiling(ped_area_size * target_coverage)
+  prop_covered <- current_tree_cover_size / ped_area_size
   
-  
-  # Check if there's enough space for new trees or if any new trees are needed
-  if (target_tree_cover_size <= 0 | plantable_area_size <= 0) {
-    # return(NULL)  # No new trees needed
-    return(list(plantable_area = plantable_area_size,
-                ped_area = ped_area_size,
-                beginning_tree_cover_area = current_tree_cover_size,
-                target_tree_cover_area = target_tree_cover_size, 
-                final_tree_cover_area = current_tree_cover_size,
-                tree_points = existing_tree_points, 
-                updated_tree_cover = existing_tree_cover))
+  # Exit early if no space or no target
+  if (target_tree_cover_size <= current_tree_cover_size | plantable_area_size <= 0) {
+    return(list(
+      plantable_area = plantable_area_size,
+      ped_area = ped_area_size,
+      beginning_tree_cover_area = beginning_tree_cover_size,
+      beginning_prop_cover = prop_covered,
+      target_tree_cover_area = target_tree_cover_size,
+      final_tree_cover_area = current_tree_cover_size,
+      new_tree_pts = st_sf(geometry = st_sfc(), crs = st_crs(existing_tree_points)),
+      updated_tree_cover = existing_tree_cover,
+      final_prop_cover = prop_covered
+    ))
   }
   
-  updated_tree_cover_area <- current_tree_cover_size
+  # Initialize
+  new_tree_pts <- st_sf(geometry = st_sfc(), crs = st_crs(existing_tree_points))
+  raster_stack <- list()
+  tree_coords <- st_coordinates(existing_tree_points)
   
-  # Find available positions in the plantable area
-  available_positions <- plantable_area %>% 
-    mask(binary_tree_cover) %>% 
-    subst(0, NA) %>% 
-    as.points() %>% 
+  # Find available positions
+  available <- mask(plantable_area, binary_tree_cover, maskvalue = 1, updatevalue = NA) %>% 
+    subst(0, NA)
+  available_pts <- as.points(available) %>% 
     st_as_sf() %>% 
     mutate(pt_id = row_number())
   
-  while (updated_tree_cover_area < target_tree_cover_size) {
+  # Main loop
+  while (current_tree_cover_size < target_tree_cover_size && nrow(available_pts) > 0) {
     
-    if (nrow(available_positions) == 0) break  # No available positions
+    candidate <- available_pts %>% sample_n(1)
+    coord <- st_coordinates(candidate)
     
-    # Sample a candidate point from available positions
-    valid_candidate_found <- FALSE
-    while (!valid_candidate_found) {
-      
-      # Check if there are still available positions
-      if (nrow(available_positions) == 0) break  # No valid positions left
-      
-      # Sample a candidate point
-      candidate_point <- available_positions %>% sample_n(1)
-      
-      # Check minimum distance constraint
-      if (is_far_enough(candidate_point, existing_tree_points, min_dist)) {
-        valid_candidate_found <- TRUE
-        available_positions <- available_positions %>% filter(pt_id != candidate_point$pt_id)
-      } else {
-        # Remove the invalid candidate from available positions
-        available_positions <- available_positions %>% filter(pt_id != candidate_point$pt_id)
-        print(nrow(available_positions))
+    if (nrow(tree_coords) > 0) {
+      d <- RANN::nn2(tree_coords, query = coord, k = 1)$nn.dists[1]
+      if (d <= min_dist) {
+        available_pts <- available_pts %>% filter(pt_id != candidate$pt_id)
+        next
       }
     }
     
-    # If no valid candidate was found, break out of the main loop
-    if (!valid_candidate_found) break
-    
-    # Randomly select a tree height class based on weights
+    # Accept tree
     tree_height_class <- sample(tree_structure$tree_heights, 1, prob = tree_structure$weights)
+    crown_geom <- crown_vectors %>% filter(height == tree_height_class) %>% sample_n(1)
     
-    # Sample a corresponding tree crown geometry for the selected height class
-    sampled_geometry <- crown_vectors %>%
-      filter(height == tree_height_class) %>%
-      sample_n(1)
-    
-    # Assign the geometry to the candidate point
-    candidate_tree <- candidate_point %>%
-      mutate(geometry = move_polygon_to_cover_point(sampled_geometry$geometry,
-                                                    candidate_point$geometry))
-    
-    # Get the height pixels for the tree
-    candidate_tree_pixels <- crown_raster == sampled_geometry$treeID
-    candidate_tree_pixels <- candidate_tree_pixels %>% 
-      subst(0,  NA)
-    
-    # Get heights of tree pixels
-    candidate_tree_pixels <- tree_height %>% 
-      mask(candidate_tree_pixels) 
-    
-    # Move the height pixels to the desired point
-    # Get the coordinates of the tree pixels
-    candidate_tree_pixel_coords <- xyFromCell(candidate_tree_pixels, cells(candidate_tree_pixels))
-    
-    # Calculate the centroid of the tree pixels (mean of the x and y coordinates)
-    candidate_tree_pixel_centroid <- colMeans(candidate_tree_pixel_coords)
-    
-    # Calculate the centroid of the point where the tree pixels should go
-    candidate_point_rast <- rasterize(vect(candidate_point), existing_tree_cover)
-    candidate_point_coords <- xyFromCell(candidate_point_rast, cells(candidate_point_rast))
-    
-    # Calculate the offset between the tree pixel centroid and the target point
-    x_offset <- candidate_point_coords[1] - candidate_tree_pixel_centroid[1]
-    y_offset <- candidate_point_coords[2] - candidate_tree_pixel_centroid[2]
-    
-    # Shift the tree pixels by the calculated offset
-    shifted_tree <- terra::shift(candidate_tree_pixels, dx = x_offset, dy = y_offset) %>% 
-      resample(existing_tree_cover)
-    
-    # Add the new tree point to the list
-    candidate_point <- candidate_point %>% 
-      select(geometry) %>% 
-      mutate(treeID = max(existing_tree_points$treeID) + 1,
-             height = as.numeric(tree_height_class),
+    candidate <- candidate %>%
+      mutate(height = as.numeric(tree_height_class),
              type = "new")
     
-    new_tree_pts <- rbind(new_tree_pts, candidate_point)
+    new_tree_pts <- rbind(new_tree_pts, candidate)
+    tree_coords <- rbind(tree_coords, coord)
+    available_pts <- available_pts %>% filter(pt_id != candidate$pt_id)
     
-    print("added tree")
+    # Rasterize crown
+    tree_pixels <- crown_raster == crown_geom$treeID
+    tree_pixels <- subst(tree_pixels, 0, NA)
+    tree_pixels <- mask(canopy_height_existing, tree_pixels)
     
-    # Update existing tree cover by taking the cell-wise maximum
-    # existing_tree_cover <- cover(shifted_tree, existing_tree_cover) 
-    existing_tree_cover <- app(c(shifted_tree, existing_tree_cover), fun = max, na.rm = TRUE)
+    px_coords <- xyFromCell(tree_pixels, which(!is.na(values(tree_pixels))))
+    if (nrow(px_coords) == 0) next
+    crown_centroid <- colMeans(px_coords)
     
-    # Update existing cover mask (masked to pedestrian area)
-    existing_cover_mask <- existing_tree_cover %>% 
-      mask(subst(ped_area, 0, NA))
+    point_rast <- rasterize(vect(candidate), existing_tree_cover)
+    pt_coords <- xyFromCell(point_rast, which(!is.na(values(point_rast))))
     
-    # Update binary tree cover
-    binary_tree_cover <- existing_cover_mask > 1
+    dx <- pt_coords[1] - crown_centroid[1]
+    dy <- pt_coords[2] - crown_centroid[2]
     
-    updated_tree_cover_area <- sum(values(binary_tree_cover), na.rm = TRUE)
-    print(paste0("update area: ", updated_tree_cover_area))
+    shifted <- terra::shift(tree_pixels, dx = dx, dy = dy) %>% resample(existing_tree_cover)
+    raster_stack[[length(raster_stack) + 1]] <- shifted
     
+    binary_tree_cover <- binary_tree_cover | (shifted > 0)
+    current_tree_cover_size <- sum(values(binary_tree_cover), na.rm = TRUE)
   }
   
-  return(list(plantable_area = plantable_area_size,
-              ped_area = ped_area_size,
-              beginning_tree_cover_area = current_tree_cover_size,
-              target_tree_cover_area = target_tree_cover_size, 
-              final_tree_cover_area = updated_tree_cover_area,
-              new_tree_pts = new_tree_pts, 
-              updated_tree_cover = existing_tree_cover))
+  # Merge crown rasters
+  if (length(raster_stack) > 0) {
+    new_crowns <- do.call(app, c(list(rast(raster_stack)), fun = max, na.rm = TRUE))
+    existing_tree_cover <- app(c(existing_tree_cover, new_crowns), fun = max, na.rm = TRUE)
+  } else {
+    existing_tree_cover <- existing_tree_cover
+  }
+  
+  return(list(
+    plantable_area = plantable_area_size,
+    ped_area = ped_area_size,
+    beginning_tree_cover_area = beginning_tree_cover_size,
+    beginning_prop_cover = prop_covered,
+    target_tree_cover_area = target_tree_cover_size,
+    final_tree_cover_area = current_tree_cover_size,
+    new_tree_pts = new_tree_pts,
+    updated_tree_cover = existing_tree_cover,
+    final_prop_cover = current_tree_cover_size / ped_area_size
+  ))
 }

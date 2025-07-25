@@ -1,6 +1,11 @@
 street_trees_scenario_function <- function(city_folder, scenario, percentile = NULL, target_coverage = NULL, min_tree_dist, aoi, lulc, 
                                            road_vectors, lanes, canopy_height_existing, scenario_name, infrastructure_path) {
   
+  library(tidyverse)
+  library(sf)
+  library(terra)
+  library(RANN)
+  
   baseline_path <- here("data", city_folder, "scenarios", "baseline")
   scenario_path <- here(infrastructure_path, scenario_name)
   
@@ -49,24 +54,13 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
                                                 city_folder = city_folder,
                                                 utm = utm)
   
-  ped_area <- plantable_street$ped_area
-  plantable_street <- plantable_street$plantable_street
+  ped_area <- rast(here("data", city_folder, "scenarios", "baseline", "pedestrian_areas.tif"))
+  plantable_street <- rast(here(infrastructure_path, "plantable_areas.tif"))
   
   rm(road_vectors, lanes)
-    
-  
-  
   
   # Evaluate baseline conditions --------------------------------------------
-  
-  
-  
-  # Copy the tree height raster that the new trees will get added to
-  updated_tree_cover <- tree_height
-  
-  # Create an empty sf that trees will get added to
-  updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm$epsg)
-  
+
   # Create a grid over the aoi to iterate over for creating trees
   aoi_grid <- aoi %>% 
     st_make_grid(cellsize = c(100, 100), square = TRUE, what = "polygons") %>% 
@@ -78,11 +72,6 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   
   # Calculate the existing percent cover of trees in pedestrian areas for each gridcell
   source(here("scenario-generation", "street-trees", "tree-generating-functions.R"))
-  
-  aoi_grid <- calc_pct_grid_cover(aoi_grid = aoi_grid,
-                                  existing_tree_cover = tree_height,
-                                  ped_area = ped_area)
-  
   
   # Achievable potential ----------------------------------------------------
   aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", 
@@ -108,66 +97,70 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   
   # Generate new trees
   
-  # Add columns to aoi
-  aoi_grid <- aoi_grid %>%
-    mutate(plantable_area = NA_real_,
-           pedestrian_area = NA_real_,
-           beginning_tree_cover_area = NA_real_,
-           target_tree_cover_area = NA_real_,
-           final_tree_cover_area = NA_real_)
+  # Initialize outputs
+  updated_tree_cover <- canopy_height_existing  # assuming this is your starting raster
+  updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm$epsg)
   
-  # Loop through each grid cell 
+  # Ensure area columns exist in aoi_grid
+  aoi_grid <- aoi_grid %>%
+    mutate(
+      plantable_area = NA_real_,
+      pedestrian_area = NA_real_,
+      beginning_tree_cover_area = NA_real_,
+      beginning_prop_cover = NA_real_, 
+      target_tree_cover_area = NA_real_,
+      final_tree_cover_area = NA_real_,
+      final_prop_cover = NA_real_
+    )
+  
+  # Loop over grid cells
   for (i in pull(aoi_grid, ID)) {
     
     gridcell <- filter(aoi_grid, ID == i)
     
-    # Extract the plantable area for the current cell
+    # Crop rasters to gridcell
     plantable_grid <- crop(plantable_street, gridcell)
+    existing_tree_cover_grid <- crop(updated_tree_cover, gridcell)
+    ped_area_grid <- crop(ped_area, gridcell)
+    tree_height_grid <- crop(tree_height, gridcell)
     
-    # Extract the existing tree cover for the current cell
-    existing_tree_cover_grid <- crop(tree_height, gridcell) 
+    # Filter existing tree points to current grid
+    existing_tree_points_grid <- st_filter(ttops, gridcell)
     
-    # Extract the existing pedestrian area for the current cell
-    ped_area_grid <- crop(ped_area, gridcell) 
+    # Generate trees for the grid cell
+    updated <- generate_trees(
+      plantable_area = plantable_grid,
+      ped_area = ped_area_grid,
+      existing_tree_cover = existing_tree_cover_grid,
+      existing_tree_points = existing_tree_points_grid,
+      tree_structure = tree_structure,
+      tree_height = tree_height_grid,
+      target_coverage = target_coverage,
+      min_dist = min_tree_dist,
+      crown_vectors = crown_vectors,
+      crown_raster = crowns,
+      infrastructure_path = infrastructure_path,
+      city_folder = city_folder
+    )
     
-    # Filter ttops to those in current grid
-    existing_tree_points_grid <- ttops %>% 
-      filter(rowSums(st_intersects(gridcell, sparse = FALSE)) > 0)
+    # Merge updated raster back into global raster
+    updated_tree_cover <- terra::merge(updated$updated_tree_cover, updated_tree_cover)
+
+    # Append new tree points
+    updated_tree_points <- bind_rows(updated_tree_points, updated$new_tree_pts)
     
-    
-    # # Generate new trees for the current cell
-    updated_trees <- generate_trees(plantable_area = plantable_grid,
-                                    ped_area = ped_area_grid,
-                                    existing_tree_cover = existing_tree_cover_grid,
-                                    existing_tree_points = existing_tree_points_grid,
-                                    tree_structure = tree_structure,
-                                    tree_height = tree_height,
-                                    target_coverage = target_coverage,
-                                    min_dist = min_tree_dist,
-                                    crown_vectors = crown_vectors,
-                                    crown_raster = crowns)
-    
-    # Update the raster with new tree cover
-    updated_tree_cover <- merge(updated_trees$updated_tree_cover, updated_tree_cover)
-    
-    # Update the points
-    updated_tree_points <- updated_tree_points %>% 
-      bind_rows(updated_trees$new_tree_pts)
-    
-    # Update grid with info
-    aoi_grid <- aoi_grid %>% 
-      mutate(plantable_area = case_when(ID == i ~ updated_trees$plantable_area, .default = plantable_area),
-             pedestrian_area = case_when(ID == i ~ updated_trees$ped_area, .default = pedestrian_area),
-             beginning_tree_cover_area = case_when(ID == i ~ updated_trees$beginning_tree_cover_area, .default = beginning_tree_cover_area),
-             target_tree_cover_area = case_when(ID == i ~ updated_trees$target_tree_cover_area, .default = target_tree_cover_area),
-             final_tree_cover_area = case_when(ID == i ~ updated_trees$final_tree_cover_area, .default = final_tree_cover_area))
-    
+    # Update area summaries in grid
+    aoi_grid <- aoi_grid %>%
+      mutate(
+        plantable_area = if_else(ID == i, updated$plantable_area, plantable_area),
+        pedestrian_area = if_else(ID == i, updated$ped_area, pedestrian_area),
+        beginning_tree_cover_area = if_else(ID == i, updated$beginning_tree_cover_area, beginning_tree_cover_area),
+        beginning_prop_cover = if_else(ID == i, updated$beginning_prop_cover, beginning_prop_cover),
+        target_tree_cover_area = if_else(ID == i, updated$target_tree_cover_area, target_tree_cover_area),
+        final_tree_cover_area = if_else(ID == i, updated$final_tree_cover_area, final_tree_cover_area),
+        final_prop_cover = if_else(ID == i, updated$final_prop_cover, final_prop_cover)
+      )
   }
-  
-  # Save aoi grid
-  aoi_grid <- aoi_grid %>% 
-    mutate(final_prop_cover = final_tree_cover_area / plantable_area,
-           final_increase = final_prop_cover - prop_covered)
   
   st_write(aoi_grid, 
            dsn = here(scenario_path, "aoi_street-tree-grid.geojson"),
@@ -201,5 +194,5 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   writeRaster(tree_diff_raster, 
               here(scenario_path, "tree_cover_achievable.tif"),
               overwrite = TRUE)
-  
+
 }

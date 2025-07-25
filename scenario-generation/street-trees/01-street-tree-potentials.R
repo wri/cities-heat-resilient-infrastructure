@@ -24,7 +24,7 @@ street_tree_scenario <- function(city, city_folder, scenario, scenario_name, per
   lulc <- rast(here(inputs_path, "open-urban.tif"))
   road_vectors <- st_read(here(inputs_path, "roads.geojson"))
   lanes <- read_csv(here(inputs_path, "average-lanes.csv"))
-  canopy_height_existing <- rast(here(inputs_path, "cif_tree_canopy.tif")) 
+  canopy_height_existing <- rast(here(inputs_path, "cif_tree_canopy.tif"))
   names(canopy_height_existing) <- "height"
   
   

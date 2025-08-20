@@ -70,7 +70,7 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   
   # Met file
   # baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]
-  baseline_yaml[[3]]$MetFiles <- "ERA5:<prior_5_years>"
+  baseline_yaml[[3]]$MetFiles[[1]]$filename <- "ERA5:<prior_5_years>"
   # baseline_yaml[[3]]$MetFiles <- "None"
   
   # filenames

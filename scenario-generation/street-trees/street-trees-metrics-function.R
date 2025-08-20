@@ -42,7 +42,9 @@ calc_street_tree_metrics <- function(city, city_folder, scenario, infrastructure
     infra_file_name <- "park_shade"
   } else if (infrastructure == "cool-roofs"){
     infra_file_name <- "cool_roofs"
-  } 
+  } else if (infrastructure == "street-trees-achievable-cool-roofs-all"){
+    infra_file_name <- "street_trees_cool_roofs"
+  }
   
   for (time in timestamps) {
 

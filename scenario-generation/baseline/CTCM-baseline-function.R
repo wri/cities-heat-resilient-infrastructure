@@ -69,7 +69,8 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   baseline_yaml[[2]]$remove_mrt_buffer_for_final_output <- "False"
   
   # Met file
-  baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]
+  # baseline_yaml[[3]]$MetFiles <- baseline_yaml[[3]]$MetFiles[-1]
+  baseline_yaml[[3]]$MetFiles <- "ERA5:<prior_5_years>"
   # baseline_yaml[[3]]$MetFiles <- "None"
   
   # filenames
@@ -80,6 +81,7 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   baseline_yaml[[4]]$tree_canopy_tif_filename <- "None"
   
   # Set sampling_local_hours as a verbatim string
+  baseline_yaml[[6]]$method <- "umep_solweig"
   baseline_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
   class(baseline_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
   

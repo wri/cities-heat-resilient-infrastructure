@@ -53,7 +53,7 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   baseline_yaml[[1]]$author <- author
   
   # bounds
-  baseline_yaml[[2]]$utc_offset <- utc_offset
+  baseline_yaml[[2]]$seasonal_utc_offset <- utc_offset
   baseline_yaml[[2]]$min_lon <- bbox["xmin"]
   baseline_yaml[[2]]$min_lat <- bbox["ymin"]
   baseline_yaml[[2]]$max_lon <- bbox["xmax"]

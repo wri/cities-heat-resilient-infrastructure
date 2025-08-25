@@ -141,7 +141,7 @@ run_CTCM_cool_roofs <- function(city_folder, author, utc_offset, scenario_name, 
   }
   
   # Copy CTCM output to scenario folder
-  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results_umep", "reduced_temps", "tile_001")),
+  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "reduced_temps", "tile_001")),
                             full.names = TRUE) %>%
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))

@@ -146,7 +146,7 @@ run_CTCM_park_shade_structures <- function(city_folder, author, utc_offset, scen
   file.copy(from = processed_data, to = t_folder, overwrite = TRUE)
 
   # Copy CTCM output to scenario folder
-  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results_umep", "met_era5_hottest_days", "tile_001")),
+  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "met_era5_hottest_days", "tile_001")),
                             full.names = TRUE) %>%
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))

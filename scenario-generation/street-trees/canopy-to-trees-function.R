@@ -6,7 +6,7 @@ process_trees <- function(tree_raster, infrastructure_path){
   
   # Get tree height and area for local maxima
   # locate trees
-  ttops <- locate_trees(tree_height, lmf(3)) 
+  ttops <- locate_trees(tree_height, lmf(5)) 
   
   # segment crowns
   crowns <- dalponte2016(tree_height, ttops)()

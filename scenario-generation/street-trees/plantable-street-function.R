@@ -122,7 +122,7 @@ generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_tree
   plantable_street <- plantable_street * (existing_trees < 1)
   
   # Pedstrian area (not building, road, water)
-  ped_area <- ped_road_adjacent * abs((floor(lulc_rast / 100) %in% c(3, 5, 6)) - 1)
+  ped_area <- ped_road_adjacent * abs((floor(lulc_rast / 100) %in% c(3, 5)) - 1)
   
   # Save rasters 
 

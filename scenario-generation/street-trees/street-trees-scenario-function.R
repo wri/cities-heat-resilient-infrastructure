@@ -71,7 +71,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
     mutate(ID = row_number())
   
   # Calculate the existing percent cover of trees in pedestrian areas for each gridcell
-  source(here("scenario-generation", "street-trees", "tree-generating-functions.R"))
+  source(here("scenario-generation", "street-trees", "tree-generating-functions-TESTING.R"))
   
   # Achievable potential ----------------------------------------------------
   aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", 
@@ -98,7 +98,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   # Generate new trees
   
   # Initialize outputs
-  updated_tree_cover <- canopy_height_existing  # assuming this is your starting raster
+  updated_tree_cover <- canopy_height_existing  
   updated_tree_points <- st_sf(geometry = st_sfc(), crs = utm$epsg)
   
   # Ensure area columns exist in aoi_grid

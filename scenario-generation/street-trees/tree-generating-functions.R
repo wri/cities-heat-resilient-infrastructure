@@ -28,8 +28,11 @@ calc_pct_grid_cover <- function(aoi_grid, existing_tree_cover, ped_area){
     masked_tree_cover_grid <- mask(binary_tree_grid, ped_area_grid)
     
     # Calculate the number of cells with tree cover and plantable area
-    tree_cover_area_value <- sum(values(masked_tree_cover_grid), na.rm = TRUE)
-    ped_area_grid_value <- sum(values(ped_area_grid), na.rm = TRUE)
+    tree_cover_area_value <- global(cellSize(masked_tree_cover_grid) * masked_tree_cover_grid, "sum", na.rm = TRUE)[1,1] %>%
+      replace_na(0)
+    ped_area_grid_value <- global(cellSize(ped_area_grid) * ped_area_grid, "sum", na.rm = TRUE)[1,1] %>%
+      replace_na(0)
+    
     
     # Calculate the proportion of plantable area with tree cover
     if (ped_area_grid_value > 0) {
@@ -79,13 +82,23 @@ generate_trees <- function(plantable_area, ped_area, existing_tree_cover,
   canopy_height_existing <- rast(here("data", city_folder, "cif_tree_canopy.tif"))
   
   # Setup
-  plantable_area_size <- sum(values(plantable_area), na.rm = TRUE)
-  ped_area_size <- sum(values(ped_area), na.rm = TRUE)
-  current_tree_cover <- existing_tree_cover %>% mask(subst(ped_area, 0, NA))
-  binary_tree_cover <- current_tree_cover > 3
-  beginning_tree_cover_size <- sum(values(binary_tree_cover), na.rm = TRUE)
+  plantable_area <- plantable_area %>% subst(0, NA)
+  plantable_area_size <- global(cellSize(plantable_area) * plantable_area, "sum", na.rm = TRUE)[1,1] %>%
+    replace_na(0)
+  
+  ped_area <- ped_area %>% subst(0, NA)
+  ped_area_size <- global(cellSize(ped_area) * ped_area, "sum", na.rm = TRUE)[1,1] %>%
+    replace_na(0)
+  
+  current_tree_cover <- existing_tree_cover %>% mask(ped_area)
+  binary_tree_cover <- current_tree_cover >= 3
+  
+  beginning_tree_cover_size <- global(cellSize(binary_tree_cover) * binary_tree_cover, "sum", na.rm = TRUE)[1,1] %>%
+    replace_na(0)
+  
   current_tree_cover_size <- beginning_tree_cover_size
   target_tree_cover_size <- ceiling(ped_area_size * target_coverage)
+  
   prop_covered <- current_tree_cover_size / ped_area_size
   
   # Exit early if no space or no target
@@ -159,17 +172,24 @@ generate_trees <- function(plantable_area, ped_area, existing_tree_cover,
     shifted <- terra::shift(tree_pixels, dx = dx, dy = dy) %>% resample(existing_tree_cover)
     raster_stack[[length(raster_stack) + 1]] <- shifted
     
+    # Add new tree cover to binary tree raster
     binary_tree_cover <- binary_tree_cover | (shifted > 0)
-    current_tree_cover_size <- sum(values(binary_tree_cover), na.rm = TRUE)
+    
+    # Mask binary layer to ped area and calculate coverage
+    binary_tree_cover <- binary_tree_cover * ped_area
+    current_tree_cover_size <- global(cellSize(binary_tree_cover) * binary_tree_cover, "sum", na.rm = TRUE)[1,1] %>%
+      replace_na(0)
+    
+    # Merge crown rasters
+    if (length(raster_stack) > 0) {
+      new_crowns <- do.call(app, c(list(rast(raster_stack)), fun = max, na.rm = TRUE))
+      existing_tree_cover <- app(c(existing_tree_cover, new_crowns), fun = max, na.rm = TRUE)
+    } else {
+      existing_tree_cover <- existing_tree_cover
+    }
   }
   
-  # Merge crown rasters
-  if (length(raster_stack) > 0) {
-    new_crowns <- do.call(app, c(list(rast(raster_stack)), fun = max, na.rm = TRUE))
-    existing_tree_cover <- app(c(existing_tree_cover, new_crowns), fun = max, na.rm = TRUE)
-  } else {
-    existing_tree_cover <- existing_tree_cover
-  }
+  
   
   return(list(
     plantable_area = plantable_area_size,

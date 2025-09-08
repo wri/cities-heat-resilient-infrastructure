@@ -23,7 +23,7 @@ run_CTCM_cool_roofs <- function(city_folder, author, utc_offset, scenario_name, 
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
    # Copy files
-  tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
+  tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_00001")
   
   # Baselayers
   baselayers <- file.path(here("data", city_folder), 
@@ -34,9 +34,9 @@ run_CTCM_cool_roofs <- function(city_folder, author, utc_offset, scenario_name, 
   # Wall layers
   wall_layers <- file.path(here("data", city_folder, "scenarios", "baseline"), 
                            c("ctcm_wallheight.tif", "ctcm_wallaspect.tif", "ctcm_svfs.zip"))
-  dir.create(file.path(run_setup_folder, "processed_data", "tile_001"), 
+  dir.create(file.path(run_setup_folder, "processed_data", "tile_00001"), 
              recursive = TRUE, showWarnings = FALSE)
-  file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"), overwrite = TRUE)
+  file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_00001"), overwrite = TRUE)
   
   # Modify the met file with the updated air temperatures
   air_temp <- read_csv(here("data", city_folder, "scenarios", "cool-roofs", scenario_name, "air_temp_reductions.csv")) %>% 
@@ -141,7 +141,7 @@ run_CTCM_cool_roofs <- function(city_folder, author, utc_offset, scenario_name, 
   }
   
   # Copy CTCM output to scenario folder
-  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "reduced_temps", "tile_001")),
+  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "reduced_temps", "tile_00001")),
                             full.names = TRUE) %>%
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))

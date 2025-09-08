@@ -21,7 +21,7 @@ run_CTCM_street_trees <- function(city_folder, author, utc_offset, scenario_name
   copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
   # Copy files
-  tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_001")
+  tile_folder <- file.path(run_setup_folder, "primary_data", "raster_files", "tile_00001")
     
   # Tree scenario
   tree_height_path <- here("data", city_folder, "scenarios", "street-trees",
@@ -37,9 +37,9 @@ run_CTCM_street_trees <- function(city_folder, author, utc_offset, scenario_name
   # Wall layers
   wall_layers <- file.path(here("data", city_folder, "scenarios", "baseline"), 
                            c("ctcm_wallheight.tif", "ctcm_wallaspect.tif"))
-  dir.create(file.path(run_setup_folder, "processed_data", "tile_001"), 
+  dir.create(file.path(run_setup_folder, "processed_data", "tile_00001"), 
              recursive = TRUE, showWarnings = FALSE)
-  file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_001"), overwrite = TRUE)
+  file.copy(from = wall_layers, to = file.path(run_setup_folder, "processed_data", "tile_00001"), overwrite = TRUE)
   
   # get bounding coordinates
   scenario_rast <- rast(destination_path)
@@ -124,13 +124,13 @@ run_CTCM_street_trees <- function(city_folder, author, utc_offset, scenario_name
   }
     
   # Copy processed data to scenario folder
-  processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_001")),
+  processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_00001")),
                                full.names = TRUE)
   
   file.copy(from = processed_data, to = scenario_folder, overwrite = TRUE)
     
   # Copy CTCM output to scenario folder
-  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "met_era5_hottest_days", "tile_001")),
+  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "met_era5_hottest_days", "tile_00001")),
                             full.names = TRUE) %>%
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))

@@ -113,19 +113,19 @@ run_CTCM_baseline <- function(city_folder, aoi_file, ctcm_run, author, utc_offse
   }
   
   # Copy baseline layers to city data folder
-  baseline_layers <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "raster_files", "tile_001")),
+  baseline_layers <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "primary_data", "raster_files", "tile_00001")),
                                 full.names = TRUE, recursive = TRUE)
   
   file.copy(from = baseline_layers, to = here("data", city_folder), overwrite = TRUE)
   
   # Copy processed data to baseline folder
-  processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_001")),
+  processed_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "processed_data", "tile_00001")),
                                full.names = TRUE)
   
   file.copy(from = processed_data, to = baseline_folder, overwrite = TRUE)
     
   # Copy CTCM output to scenario folder
-  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "met_era5_hottest_days", "tile_001")),
+  output_data <- list.files(path = Sys.glob(here(ctcm_output_path, "*", "tcm_results", "met_era5_hottest_days", "tile_00001")),
                             full.names = TRUE) %>%
     keep(~ str_detect(.x, "Shadow|Tmrt") &
            !str_detect(.x, "Tmrt_average"))

@@ -71,7 +71,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
     mutate(ID = row_number())
   
   # Calculate the existing percent cover of trees in pedestrian areas for each gridcell
-  source(here("scenario-generation", "street-trees", "tree-generating-functions-TESTING.R"))
+  source(here("scenario-generation", "street-trees", "tree-generating-functions.R"))
   
   # Achievable potential ----------------------------------------------------
   aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", 

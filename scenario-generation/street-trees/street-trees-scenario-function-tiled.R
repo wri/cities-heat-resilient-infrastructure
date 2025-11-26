@@ -1,18 +1,24 @@
 street_trees_scenario_function <- function(city_folder, scenario, percentile = NULL, target_coverage = NULL, min_tree_dist, aoi, lulc, 
-                                           road_vectors, lanes, canopy_height_existing, scenario_name, infrastructure_path) {
+                                           road_vectors, lanes, canopy_height_existing, scenario_name, infrastructure, tile) {
   
   library(tidyverse)
   library(sf)
   library(terra)
   library(RANN)
   
-  baseline_path <- here("data", city_folder, "scenarios", "baseline")
-  scenario_path <- here(infrastructure_path, scenario_name)
+  baseline_path <- here("data", city_folder, "scenarios", "baseline", tile)
+  if (!dir.exists(baseline_path)) {
+    dir.create(baseline_path)
+  }
   
+  infrastructure_path <- here("data", city_folder, "scenarios", infrastructure, tile)
+  if (!dir.exists(infrastructure_path)) {
+    dir.create(infrastructure_path)
+  }
+  
+  scenario_path <- here(infrastructure_path, scenario_name, tile)
   if (!dir.exists(scenario_path)) {
-    
     dir.create(scenario_path)
-    
   }
   
   # Get UTM from OpenUrban
@@ -26,6 +32,10 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   # Save binary tree raster to baseline folder 
   writeRaster((tree_height > 0),  here(baseline_path, "tree_cover_baseline.tif"),
               overwrite = TRUE)
+  
+  # Tile boundary
+  tile_geom <- st_as_sf(as.polygons(ext(tree_height)))
+  st_crs(tile_geom) <- utm
   
   # Process tree canopy to individual trees ---------------------------------
     
@@ -41,30 +51,30 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
     
   
   # Plantable area  -------------------------------------------------------
-  
-
     
-  source(here("scenario-generation", "street-trees", "plantable-street-function.R"))
+  source(here("scenario-generation", "street-trees", "plantable-street-function-tile.R"))
   
-  plantable_street <- generate_plantable_street(aoi = aoi, 
+  plantable_street <- generate_plantable_street(aoi = tile_geom, 
                                                 lulc_rast = lulc, 
                                                 existing_trees = tree_height,
                                                 road_vectors = road_vectors, 
                                                 lanes = lanes,
-                                                city_folder = city_folder)
+                                                city_folder = city_folder,
+                                                utm = utm,
+                                                tile = tile)
   
-  ped_area <- rast(here("data", city_folder, "scenarios", "baseline", "pedestrian_areas.tif"))
+  ped_area <- rast(here(baseline_path, "pedestrian_areas.tif"))
   plantable_street <- rast(here(infrastructure_path, "plantable_areas.tif"))
   
   rm(road_vectors, lanes)
   
   # Evaluate baseline conditions --------------------------------------------
 
-  # Create a grid over the aoi to iterate over for creating trees
-  aoi_grid <- aoi %>% 
+  # Create a grid over the tile geometery to iterate over for creating trees
+  # intersect with AOI so only areas within the aoi are planted
+  aoi_grid <- tile_geom %>% 
     st_make_grid(cellsize = c(100, 100), square = TRUE, what = "polygons") %>% 
     st_sf() %>% 
-    # st_filter(aoi) %>%
     st_intersection(aoi) %>% 
     select(geometry) %>% 
     mutate(ID = row_number())

@@ -69,7 +69,7 @@ generate_squares_in_valid_area <- function(park, unshaded_raster, structure_size
       } 
     } else {
       if (total_square_area < target_area) {
-        # If there are 5 restarts, 
+        # If there are 3 restarts, 
         if (restart_counter >= 3) {
           print(paste0("Maxed out at ", nrow(squares)))
           return(squares)
@@ -104,12 +104,21 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
   # Mask and crop the unshaded raster to the park boundary
   park_raster_mask <- mask(crop(unshaded_raster, park), vect(park)) > 0
   
-  # Generate points for unshaded areas
-  park_pixel_pts <- subst(park_raster_mask, 0, NA) %>% 
-    as.points(na.rm = TRUE) %>% 
-    st_as_sf() %>% 
-    mutate(pt_id = row_number(), include = lengths(st_within(geometry, park)) > 0) %>% 
-    filter(include == TRUE)
+  # Buffer the park inward to exclude points where the structure will overhang
+  # the park boundary
+  inner_buffer <- st_buffer(park, dist = -structure_size / 2)
+  
+  # Safely check if buffer exists before filtering
+  if (nrow(inner_buffer) == 0 || all(st_is_empty(inner_buffer))) {
+    warning("Inner buffer is empty; no points retained.")
+  } else {
+    # Generate points for unshaded areas
+    park_pixel_pts <- subst(park_raster_mask, 0, NA) %>% 
+      as.points(na.rm = TRUE) %>% 
+      st_as_sf() %>% 
+      mutate(pt_id = row_number(), include = lengths(st_within(geometry, park)) > 0) %>% 
+      filter(include == TRUE)
+  }
   
   if (nrow(park_pixel_pts) == 0) {
     return(st_sf(geometry = st_sfc(), crs = st_crs(park)))

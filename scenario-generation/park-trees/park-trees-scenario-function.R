@@ -7,7 +7,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   library(RANN)
   
   baseline_path <- here("data", city_folder, "scenarios", "baseline")
-  scenario_path <- here(infrastructure_path, scenario_name)
+  scenario_path <- here("data", city_folder, "scenarios", "park-trees", "achievable-90pctl")
   
   if (!dir.exists(scenario_path)) {
     

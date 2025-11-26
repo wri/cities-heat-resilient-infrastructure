@@ -86,3 +86,45 @@ load_and_merge <- function(paths) {
     return(do.call(merge, c(rasters)))  # merge multiple rasters
   }
 }
+
+# Get tile ids
+# prefix helper: ensure it ends with a single slash
+norm_prefix <- function(x) sub("/+$", "/", paste0(sub("^/+", "", x), "/"))
+
+list_tiles <- function(bucket, prefix) {
+  prefix <- norm_prefix(prefix)
+  tiles <- character()
+  token <- NULL
+  
+  repeat {
+    resp <- s3$list_objects_v2(
+      Bucket = bucket,
+      Prefix = prefix,
+      Delimiter = "/",                  # <- needed to get folder-like prefixes
+      ContinuationToken = token
+    )
+    
+    # 1) Folders directly under prefix (CommonPrefixes)
+    if (!is.null(resp$CommonPrefixes)) {
+      from_prefixes <- vapply(resp$CommonPrefixes, `[[`, character(1), "Prefix") |>
+        basename() |>                     # e.g., "tile_00383/"
+        str_remove("/$") |>
+        str_extract("tile_\\d{5}")
+      tiles <- c(tiles, from_prefixes)
+    }
+    
+    # 2) Also parse any object keys returned on this page (in case tiles are deeper)
+    if (!is.null(resp$Contents)) {
+      from_keys <- vapply(resp$Contents, `[[`, character(1), "Key") |>
+        str_extract("tile_\\d{5}")
+      tiles <- c(tiles, from_keys)
+    }
+    
+    if (isTRUE(resp$IsTruncated)) {
+      token <- resp$NextContinuationToken
+    } else break
+  }
+  
+  tiles <- tiles[!is.na(tiles)] |> unique() |> sort()
+  tiles
+}

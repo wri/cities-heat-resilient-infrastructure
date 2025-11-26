@@ -10,6 +10,8 @@ library(sfarrow)
 library(tidyverse)
 library(exactextractr)
 
+source(here("tiling-scripts", "utils.R"))
+
 # Sign in to AWS ----------------------------------------------------------
 
 system("aws sso login --profile cities-data-dev")
@@ -49,18 +51,19 @@ t <- s3$list_objects_v2(
 # } else {
 #   tiles <- t$Contents %>%
 #     map_chr("Key") %>%
-#     str_extract("tile_\\d{5}") %>%  
+#     str_extract("tile_\\d{5}") %>%
 #     { .[!is.na(.)] } %>%
 #     unique() %>%
 #     sort()
 # }
+tiles <- list_tiles(bucket, baseline_folder)
 # TODO: remove when all tiles are ready
-tiles <- c(
-  "tile_00015","tile_00016","tile_00017",
-  "tile_00077","tile_00078","tile_00079","tile_00080","tile_00081",
-  "tile_00139","tile_00140","tile_00141","tile_00142","tile_00143","tile_00144",
-  "tile_00201","tile_00202","tile_00203","tile_00204","tile_00205","tile_00206"
-)
+# tiles <- c(
+#   "tile_00015","tile_00016","tile_00017",
+#   "tile_00077","tile_00078","tile_00079","tile_00080","tile_00081",
+#   "tile_00139","tile_00140","tile_00141","tile_00142","tile_00143","tile_00144",
+#   "tile_00201","tile_00202","tile_00203","tile_00204","tile_00205","tile_00206"
+# )
 
 aoi <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/urban_extent_boundary.geojson"))
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
@@ -124,10 +127,11 @@ park_suitable_area_vectors <- park_suitable_area_vectors %>%
 
 # Functions ---------------------------------------------------------------
 
-source(here("tiling-scripts", "utils.R"))
+# source(here("tiling-scripts", "utils.R"))
 source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
 
 shade_structures_all_parks <- st_sf(geometry = st_sfc(), crs = st_crs(park_vectors))
+all_parks <- st_sf(geometry = st_sfc(), crs = st_crs(park_vectors))
 
 # Calculate average distance to shade
 calc_avg_shade_dist <- function(park_idx, shade_rast, structure_size = 5, shade_pct = 0.25, 
@@ -145,81 +149,97 @@ calc_avg_shade_dist <- function(park_idx, shade_rast, structure_size = 5, shade_
   shade_paths <- glue("{aws_http}/{baseline_folder}/{tile_ids}/tcm_results/met_era5_hottest_days/Shadow_2022_22_1200D.tif")
   shade_rast <- load_and_merge(shade_paths)
   
+  tree_paths <- glue("{aws_http}/{baseline_folder}/{tile_ids}/raster_files/cif_tree_canopy.tif")
+  tree_rast <- load_and_merge(tree_paths) >= 3
+  
   # Combine tree shade and building shade
   shaded <- shade_rast < 1
   unshaded <- isFALSE(shaded) 
+  
+  dist_to_shade <- distance(subst(shaded, 0, NA)) %>% 
+    mask(vect(park))
+  dist_to_shade <- global(dist_to_shade, "max", na.rm = TRUE)[,1]
   
   park <- park %>% 
     mutate(shaded_pct = exact_extract(shaded, geometry, "mean"),
            shaded_area = shaded_pct * area_sqm,
            unshaded_pct = 1 - shaded_pct,
-           unshaded_area = unshaded_pct * area_sqm)
+           unshaded_area = unshaded_pct * area_sqm,
+           dist_to_shade = dist_to_shade,
+           tree_pct = exact_extract(tree_rast, geometry, "mean"))
   
-  if (park$area_sqm > 4046.86) {
-    shade_structures <- shade_dist_area(
-      park = park, 
-      unshaded_raster = unshaded, 
-      min_shade_area = min_shade_area,
-      max_dist_to_shade = max_dist_to_shade,
-      structure_size = structure_size,
-      spacing = spacing
-    )
-  } else {
-    shade_structures <- generate_squares_in_valid_area(
-      park = park, 
-      unshaded_raster = unshaded, 
-      structure_size = structure_size, 
-      shade_pct = shade_pct, 
-      spacing = spacing
-    )
-  }
   
-  # https://srpshade.caddetails.com/products/square-hip-shades-4430/80366
-  # 8-ft height for shade structures
-  structure_height <- 8 / 3.281 # convert to meters
   
-  shade_structures <- shade_structures %>% 
-    mutate(height = structure_height)
+  all_parks <- bind_rows(all_parks, park)
   
-  shade_structures_rast <- shade_structures %>% 
-    rasterize(shade_rast, field = "height", background = 0) 
-  
-  # If shade structures are added, save the raster and add them to feature
-  # collection
-  if (!is.null(shade_structures)) {
-    
-    for (t in tile_ids){
-      
-      tile <- buffered_tile_grid %>% 
-        filter(tile_name == t)
-      x <- shade_structures_rast %>% 
-        crop(tile)
-      
-      ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/layers"))
-      
-      # IF there is already a structures-as-trees raster, load it and merge it
-      existing <- tryCatch(rast(url_existing), error = function(e) NULL)
-      
-      if (!is.null(existing)) {
-        x <- mosaic(x, existing, fun = "max", na.rm = TRUE)
-      }
-        
-      write_s3(x, glue("{bucket}/{scenario_folder}/{t}/layers/structures-as-trees.tif"))
-      print(glue("{t} shade raster saved"))
-    }
-    
-    shade_structures_all_parks <- bind_rows(shade_structures_all_parks, shade_structures)
-  }
+  # if (park$area_sqm > 4046.86) {
+  #   shade_structures <- shade_dist_area(
+  #     park = park, 
+  #     unshaded_raster = unshaded, 
+  #     min_shade_area = min_shade_area,
+  #     max_dist_to_shade = max_dist_to_shade,
+  #     structure_size = structure_size,
+  #     spacing = spacing
+  #   )
+  # } else {
+  #   shade_structures <- generate_squares_in_valid_area(
+  #     park = park, 
+  #     unshaded_raster = unshaded, 
+  #     structure_size = structure_size, 
+  #     shade_pct = shade_pct, 
+  #     spacing = spacing
+  #   )
+  # }
+  # 
+  # # https://srpshade.caddetails.com/products/square-hip-shades-4430/80366
+  # # 8-ft height for shade structures
+  # structure_height <- 8 / 3.281 # convert to meters
+  # 
+  # shade_structures <- shade_structures %>% 
+  #   mutate(height = structure_height)
+  # 
+  # shade_structures_rast <- shade_structures %>% 
+  #   rasterize(shade_rast, field = "height", background = 0) 
+  # 
+  # # If shade structures are added, save the raster and add them to feature
+  # # collection
+  # if (!is.null(shade_structures)) {
+  #   
+  #   for (t in tile_ids){
+  #     
+  #     tile <- buffered_tile_grid %>% 
+  #       filter(tile_name == t)
+  #     x <- shade_structures_rast %>% 
+  #       crop(tile)
+  #     
+  #     ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/layers"))
+  #     
+  #     # IF there is already a structures-as-trees raster, load it and merge it
+  #     existing <- tryCatch(rast(url_existing), error = function(e) NULL)
+  #     
+  #     if (!is.null(existing)) {
+  #       x <- mosaic(x, existing, fun = "max", na.rm = TRUE)
+  #     }
+  #       
+  #     write_s3(x, glue("{bucket}/{scenario_folder}/{t}/layers/structures-as-trees.tif"))
+  #     print(glue("{t} shade raster saved"))
+  #   }
+  #   
+  #   shade_structures_all_parks <- bind_rows(shade_structures_all_parks, shade_structures)
+  # }
  
-  return(shade_structures_all_parks)
+  return(all_parks)
 }
 
 shade_structures_all_parks <- map(park_suitable_area_vectors$park_id, 
                                   ~ calc_avg_shade_dist(.x, shade_rast)) %>% 
   compact() %>% 
-  bind_rows()
+  bind_rows() 
 
-write_s3(shade_structures_all_parks, glue("{bucket}/{scenario_folder}/shade_structures_all_parks.geojson"))
+parks2 <- shade_structures_all_parks %>% 
+  select(-unbuffered_tile_names, - buffered_tile_names, -tree_pct)
+
+write_s3(parks2, glue("{bucket}/{scenario_folder}/all_parks.geojson"))
 
 
 

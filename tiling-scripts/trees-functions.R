@@ -8,6 +8,9 @@ library(glue)
 library(geoarrow)
 library(sfarrow)
 
+# Functions 
+
+source(here("tiling-scripts", "utils.R"))
 
 # Sign in to AWS ----------------------------------------------------------
 
@@ -43,23 +46,7 @@ t <- s3$list_objects_v2(
   Prefix = baseline_folder
 )
 
-# if (is.null(t$Contents)) {
-#   tiles <- character(0)
-# } else {
-#   tiles <- t$Contents %>%
-#     map_chr("Key") %>%
-#     str_extract("tile_\\d{5}") %>%  
-#     { .[!is.na(.)] } %>%
-#     unique() %>%
-#     sort()
-# }
-# TODO: remove when all tiles are ready
-tiles <- c(
-  "tile_00015","tile_00016","tile_00017",
-  "tile_00077","tile_00078","tile_00079","tile_00080","tile_00081",
-  "tile_00139","tile_00140","tile_00141","tile_00142","tile_00143","tile_00144",
-  "tile_00201","tile_00202","tile_00203","tile_00204","tile_00205","tile_00206"
-)
+tiles <- list_tiles(bucket, baseline_folder)
 
 aoi <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/urban_extent_boundary.geojson"))
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
@@ -71,9 +58,7 @@ buffered_tile_grid <- buffered_tile_grid %>%
 tile_grid <- tile_grid %>% 
   filter(tile_name %in% tiles)
 
-# Functions 
 
-source(here("tiling-scripts", "utils.R"))
 
 # Make binary tree cover --------------------------------------------------
 

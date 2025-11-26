@@ -13,7 +13,7 @@ cool_roof_scenario <- function(city, city_folder, scenario, scenario_name, infra
   library(here)
   
   inputs_path <- here("data", city_folder)
-  infrastructure_path <- here(inputs_path, "scenarios", "cool-roofs")
+  infrastructure_path <- here(inputs_path, "scenarios", infrastructure)
   scenario_path <- here(infrastructure_path, scenario_name)
   
   # Create scenario_path
@@ -29,7 +29,7 @@ cool_roof_scenario <- function(city, city_folder, scenario, scenario_name, infra
   
   # Generate scenarios ------------------------------------------------------
   
-  source(here("scenario-generation", infrastructure, paste0(scenario_name, "-scenario-function.R"))) 
+  source(here("scenario-generation", infrastructure, "cool-roofs-scenario-function.R")) 
   
   params <- tibble(
     city = city,
@@ -41,7 +41,7 @@ cool_roof_scenario <- function(city, city_folder, scenario, scenario_name, infra
   
   write_csv(params, here(infrastructure_path, scenario_name, "scenario-params.csv"))
   
-  albedo_delta <- large_buildings_scenario_function(scenario_name, infrastructure_path,
+  albedo_delta <- cool_roofs_scenario_function(scenario_name, infrastructure_path,
                                                     area_threshold, cool_roof_albedo,
                                                     aoi, lulc, albedo, build_vectors, city_folder)
   

@@ -1,4 +1,4 @@
-generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_trees, road_vectors, lanes) {
+generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_trees, road_vectors, lanes, utm, tile) {
   
   # Roads -------------------------------------------------------------------
   
@@ -9,15 +9,16 @@ generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_tree
   
   # Load roads and filter to bbox of AOI
   road_vectors <- road_vectors %>% 
-    st_transform(st_crs(lulc_rast)) %>% 
+    st_transform(utm$epsg) %>% 
     st_filter(aoi) 
   
-  st_write(road_vectors, here("data", city_folder, "scenarios", "baseline", "roads.geojson"),
+  st_write(road_vectors, here("data", city_folder, "scenarios", "baseline", tile, "roads.geojson"),
            append = FALSE, delete_dsn = TRUE)
   
-  # road_vectors <- st_read(here("data", city_folder, "scenarios", "baseline", "roads.geojson"))
-  
-  exclude <- c("primary", "primary_link", "motorway", "motorway_junction", "motorway_link")
+  ped_roads_list <- c("tertiary",
+                      "tertiary_link",
+                      "residential",
+                      "living_street")
   
   road_vectors <- road_vectors %>% 
     select(highway, lanes) %>% 
@@ -25,9 +26,9 @@ generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_tree
     mutate(lanes = coalesce(lanes, avg.lanes))
   
   ped_road_vectors <- road_vectors %>% 
-    filter(!(highway %in% exclude))
+    filter(highway %in% ped_roads_list)
   
-  infrastructure_path <- here("data", city_folder, "scenarios", "street-trees")
+  infrastructure_path <- here("data", city_folder, "scenarios", "trees", tile)
 
   st_write(ped_road_vectors, here(infrastructure_path, "ped_roads.geojson"), 
            append = FALSE, delete_dsn = TRUE)
@@ -65,7 +66,7 @@ generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_tree
   # 5-meter buffer 
   ped_road_adjacent <- ped_roads_raster %>% 
     subst(0, NA) %>% 
-    terra::buffer(5) %>% 
+    buffer(5) %>% 
     as.numeric()
   
   ped_road_adjacent <- ped_road_adjacent - ped_roads_raster  
@@ -76,7 +77,7 @@ generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_tree
   
   builds_buff <- builds %>% 
     subst(0, NA) %>% 
-    terra::buffer(5)
+    buffer(5)
   
   builds_buff <- abs(builds_buff - builds - 1) 
   
@@ -129,7 +130,7 @@ generate_plantable_street <- function(city_folder, aoi, lulc_rast, existing_tree
               here(infrastructure_path, "plantable_areas.tif"), 
               overwrite = TRUE)
   writeRaster(ped_area, 
-              here("data", city_folder, "scenarios", "baseline", "pedestrian_areas.tif"), 
+              here("data", city_folder, "scenarios", "baseline", tile, "pedestrian_areas.tif"), 
               overwrite = TRUE)
 
   

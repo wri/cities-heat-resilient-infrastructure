@@ -78,7 +78,7 @@ generate_trees <- function(plantable_area, ped_area, existing_tree_cover,
                            infrastructure_path, city_folder) {
   
   # Existing trees
-  crowns <- rast(here(infrastructure_path, "existing-tree-crowns.tif"))
+  crowns <- crown_raster
   canopy_height_existing <- rast(here("data", city_folder, "cif_tree_canopy.tif"))
   
   # Setup

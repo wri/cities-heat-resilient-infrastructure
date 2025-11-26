@@ -282,16 +282,16 @@ create_utci <- function(mrt_rast, timestamp, met_data){
   
   # extract met data for the timestamp
   Ta <- met_data %>% 
-    filter(it == time) %>% 
-    pull(Tair)
+    filter(Hour == time) %>% 
+    pull(Temperature)
   
   va <- met_data %>% 
-    filter(it == time) %>% 
-    pull(U)
+    filter(Hour == time) %>% 
+    pull(`Wind Speed`)
   
   rh <- met_data %>% 
-    filter(it == time) %>% 
-    pull(RH)
+    filter(Hour == time) %>% 
+    pull(`Relative Humidity`)
   
   # Calculate vpd from rh and Ta
   g <- c(-2836.5744, -6028.076559, 19.54263612, -0.02737830188,

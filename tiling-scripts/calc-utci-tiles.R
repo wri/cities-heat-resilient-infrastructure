@@ -14,8 +14,8 @@ bucket <- "wri-cities-tcm"
 aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 
 # Process baseline tile data ----------------------------------------------
-city <- "ZAF-Durban"
-aoi_name <- "inner_city_lap"
+city <- "MEX-Hermosillo"
+aoi_name <- "urban_extent"
 city_folder <- glue("city_projects/{city}/{aoi_name}")
 
 infra_id <- "baseline"
@@ -51,6 +51,15 @@ missing_tmrt <- tibble(
 
 source(here("utils", "utci.R"))
 
+tile_stats <- tibble(
+  tile   = character(),
+  time   = integer(),
+  min    = double(),
+  mean   = double(),
+  median = double(),
+  max    = double()
+)
+
 for (t in tiles) {
   message("Tile: ", t)
   
@@ -74,14 +83,43 @@ for (t in tiles) {
       next
     }
     
-    # Otherwise, proceed as usual
     utci <- create_utci(mrt, time, met)
+    
+    stats_df <- global(
+      utci,
+      fun = function(x, ...) {
+        c(
+          min    = min(x, ...),
+          mean   = mean(x, ...),
+          median = median(x, ...),
+          max    = max(x, ...)
+        )
+      },
+      na.rm = TRUE
+    )
+    
+    # Append to running stats tibble
+    tile_stats <- bind_rows(
+      tile_stats,
+      tibble(
+        tile   = t,
+        time   = time,
+        min    = stats_df$min,
+        mean   = stats_df$mean,
+        median = stats_df$median,
+        max    = stats_df$max
+      )
+    )
+    
+    # Otherwise, proceed as usual
+    
     out_path <- glue("{bucket}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{date}_{time}D.tif")
     write_s3(utci, out_path)
     
     ensure_s3_prefix(bucket, prefix = glue("{baseline_folder}/{t}/ccl_layers/"))
     out_path2 <- glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-{time}__{infra_id}__{scenario_id}.tif")
     write_s3(utci, out_path2)
+    
   }
 }
 

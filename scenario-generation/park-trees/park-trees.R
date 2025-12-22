@@ -1,11 +1,14 @@
 load(here("~/Documents/github/cities-heat-resilient-infrastructure/data/ZAF-Cape_Town-test/scenarios/street-trees", "tree-vars.RData"))
 crowns <- rast(here("~/Documents/github/cities-heat-resilient-infrastructure/data/ZAF-Cape_Town-test/scenarios/street-trees", "existing-tree-crowns.tif"))
 infrastructure_path <- here("~/Documents/github/cities-heat-resilient-infrastructure/data/ZAF-Cape_Town-test/scenarios/park-trees")
-parks_rast <- parks %>% rasterize(lulc)
+
+
 baseline_tree <- (rast(here("data", city_folder, "cif_tree_canopy.tif")) ) %>% 
   # subst(0, NA) %>% 
   crop(aoi)
+parks_rast <- parks %>% rasterize(baseline_tree)
 
+source(here("scenario-generation", "street-trees", "tree-generating-functions.R"))
 existing_tree_points = st_read("~/Documents/github/cities-heat-resilient-infrastructure/data/ZAF-Cape_Town-test/scenarios/baseline/tree_points_baseline.geojson")
 
 updated <- generate_trees(
@@ -23,4 +26,5 @@ updated <- generate_trees(
   city_folder = city_folder
 )
 
-writeRaster(updated$updated_tree_cover, here(infrastructure_path, "achievable-90pctl", "updated-tree-canopy.tif"))
+writeRaster(updated$updated_tree_cover, here(infrastructure_path, "achievable-90pctl", "updated-tree-canopy.tif"), overwrite = TRUE)
+st_write(updated$new_tree_pts, here(infrastructure_path, "achievable-90pctl", "new-tree-points.geojson"))

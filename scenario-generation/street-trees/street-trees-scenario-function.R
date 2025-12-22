@@ -78,7 +78,8 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
                      city, "-street-tree-pct-1km-grid.csv")
     
   # Get percentile value
-  ped_area_tree_dist <- read_csv(aws_path)
+  ped_area_tree_dist <- read_csv(aws_path) %>% 
+    filter(`pct-tree` > 0)
   
   if (scenario == "achievable"){
     

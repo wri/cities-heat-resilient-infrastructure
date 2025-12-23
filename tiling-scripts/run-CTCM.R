@@ -1,8 +1,23 @@
-library(here)
-library(terra)
-library(sf)
-library(tidyverse)
-library(glue)
+pkgs <- c(
+  "here",
+  "terra",
+  "sf",
+  "tidyverse",
+  "lidR",
+  "RANN",
+  "glue",
+  "geoarrow",
+  "sfarrow"
+)
+
+to_install <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+
+if (length(to_install) > 0) {
+  install.packages(to_install)
+}
+
+invisible(lapply(pkgs, library, character.only = TRUE))
+
 
 # THIS SCRIPT ASSUMES THAT BASELINE DATA EXISTS FOR THE AOI
 

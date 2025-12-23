@@ -4,12 +4,14 @@
 # Run example -------------------------------------------------------------
 
 
-# Rscript download-tiles-from-s3.r \
+
+# Rscript download-tiles-from-s3.R \
 #   "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Durban/ZAF-Durban__inner_city_lap.geojson" \
 #   "inner_city_lap" \
 #   "ZAF-Durban" \
 #   "trees" \
 #   "pedestrian-achievable-90pctl" \
+#   FALSE \
 #   FALSE \
 #   TRUE
 
@@ -23,12 +25,14 @@ aoi_name <-       args[2]
 city     <-       args[3]
 infra    <-       args[4]
 scenario <-       args[5]
-s3_copy <-        args[6]
-local_download <- args[7]
+from_urban_extent <- args[6]
+s3_copy <-        args[7]
+local_download <- args[8]
+
 
 
 if (any(is.na(c(aoi_path, aoi_name, city, infra, scenario)))) {
-  stop("Usage: get_tiles_and_copy.R <aoi_path> <aoi_name> <city> <infra> <scenario>")
+  stop("Usage: download-tiles-from-s3.R <aoi_path> <aoi_name> <city> <infra> <scenario>")
 }
 
 pkgs <- c("sf", "glue", "here")
@@ -43,7 +47,7 @@ invisible(lapply(pkgs, library, character.only = TRUE))
 
 source(here("tiling-scripts", "utils.R"))
 
-download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban_extent = TRUE, s3_copy = TRUE, local_download = TRUE){
+download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban_extent, s3_copy, local_download){
   
   profile  <- "cities-data-dev"
   bucket <- "wri-cities-tcm"
@@ -115,4 +119,12 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
   
 }
 
-
+download_tiles(
+  aoi_path = aoi_path,
+  aoi_name = aoi_name,
+  city = city, 
+  infra = infra,
+  scenario = scenario,
+  s3_copy = s3_copy,
+  local_download = local_download
+)

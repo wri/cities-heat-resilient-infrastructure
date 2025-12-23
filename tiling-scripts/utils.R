@@ -18,6 +18,11 @@ write_s3 <- function(obj, file_path) {
     writeRaster(obj, tmp, overwrite = TRUE)
     ctype <- if (ext %in% c("tif","tiff")) "image/tiff" else "application/octet-stream"
     
+  } else if (inherits(obj, c("RasterLayer", "RasterStack", "RasterBrick"))) {
+    # for objects from the {raster} package
+    raster::writeRaster(obj, tmp, overwrite = TRUE)
+    ctype <- if (ext %in% c("tif","tiff")) "image/tiff" else "application/octet-stream"
+    
   } else if (ext == "csv") {                  
     write_csv(obj, file = tmp)
     ctype <- "application/octet-stream"

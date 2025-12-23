@@ -5,7 +5,7 @@
 
 
 
-# Rscript download-tiles-from-s3.R \
+# Rscript download-tiles-from-s3.r \
 #   "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Durban/ZAF-Durban__inner_city_lap.geojson" \
 #   "inner_city_lap" \
 #   "ZAF-Durban" \
@@ -125,6 +125,7 @@ download_tiles(
   city = city, 
   infra = infra,
   scenario = scenario,
+  from_urban_extent = from_urban_extent,
   s3_copy = s3_copy,
   local_download = local_download
 )

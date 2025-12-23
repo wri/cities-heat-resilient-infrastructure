@@ -52,12 +52,14 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
   profile  <- "cities-data-dev"
   bucket <- "wri-cities-tcm"
   
-  # # 1) Load AOI polygon
+  # Load AOI polygon
   aoi <- st_read(aoi_path, quiet = TRUE)
+  
+  # Create CTCM directory
   out_dir <- file.path("~/CTCM_data_setup", paste(city, scenario, sep = "_"))
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   
-  # 2) Load city grid geojson from AWS (public URL)
+  # Download baseline raster data layers
   if (from_urban_extent){
     grid_url <- glue(
       "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/urban_extent/scenarios/{infra}/{scenario}/metadata/.qgis_data/unbuffered_tile_grid.geojson",
@@ -96,14 +98,14 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
     
   } else {
     
-    data_path <- glue(
-      "s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/"
+    baseline_path <- glue(
+      "s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline"
     )
     
-    tiles <- list_tiles(data_path)
+    tiles <- list_tiles(baseline_path)
     
     for (t in tiles) {
-      s3_src  <- glue("{data_path}/{t}/raster_files")
+      s3_src  <- glue("{baseline_path}/{t}/raster_files")
       
       if (isTRUE(local_download)){
         local_d <- file.path(out_dir, "primary_data", "raster_files", t)

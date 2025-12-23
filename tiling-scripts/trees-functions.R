@@ -527,14 +527,15 @@ plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
 }
 
 # Create city-wide grid ---------------------------------------------------
-run_tree_scenario <- function(
-    tiles,
-    bucket,
-    aws_http,
-    baseline_folder,
-    scenario_folder,
-    city_folder
-) {
+# run_tree_scenario <- function(
+#     tiles,
+#     bucket,
+#     aws_http,
+#     baseline_folder,
+#     scenario_folder,
+#     city_folder
+# ) {
+run_tree_scenario <- function() {
   
   # Make required objects visible to functions that were written expecting globals.
   list2env(
@@ -544,7 +545,8 @@ run_tree_scenario <- function(
       aws_http = aws_http,
       baseline_folder = baseline_folder,
       scenario_folder = scenario_folder,
-      city_folder = city_folder
+      city_folder = city_folder,
+      aoi_path = aoi_path
     ),
     envir = .GlobalEnv
   )

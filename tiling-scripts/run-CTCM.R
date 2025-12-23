@@ -72,7 +72,7 @@ baseline_folder <- glue("{city_folder}/scenarios/baseline/baseline")
   
 
 # Get tile ids
-tiles <- list_tiles(glue("s3://wri-cities-tcm/{city_folder}"))
+tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
 
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
 tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson"))
@@ -98,18 +98,19 @@ if ("cool-roofs__large-buildings" %in% scenarios){
   scenario <- "large-buildings"
   scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
   
-  update_albedo(tiles) 
+  map(tiles, update_albedo) 
 }
 
 # Shade structures
-if ("shade-structures__all-parks" %in% scenarios){
+if ("shade-structures__all-parks" %in% scenarios) {
   source(here("tiling-scripts", "park-shade-functions.R"))
+  source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
   
   infra <- "shade-structures"
   scenario <- "all-parks"
   scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
   
-  run_shade_scenario() 
+  run_shade_scenario()
 }
 
 

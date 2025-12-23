@@ -1,22 +1,35 @@
+library(here)
+library(terra)
+library(sf)
+library(tidyverse)
+library(glue)
+
+# THIS SCRIPT ASSUMES THAT BASELINE DATA EXISTS FOR THE AOI
 
 # Specify variables -------------------------------------------------------
 
+# city, aoi_name, aoi_path, scenarios
+
 # From urban extent
-city <- "ZAF-Cape_Town"
-aoi_name <- "business_district"
-aoi_path <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/ZAF-Cape_Town/business_district/scenarios/baseline/baseline/tile_00001/ccl_layers/aoi__baseline__baseline.geojson"
+# city <- "ZAF-Cape_Town"
+# aoi_name <- "business_district"
+# aoi_path <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/ZAF-Cape_Town/business_district/scenarios/baseline/baseline/tile_00001/ccl_layers/aoi__baseline__baseline.geojson"
 
 # From AOI
 city <- "ZAF-Durban"
 aoi_name <- "inner_city_lap"
 aoi_path <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Durban/ZAF-Durban__inner_city_lap.geojson"
+# scenarios <- c("trees__pedestrian-achievable-90pctl",
+#                "cool-roofs__large-buildings",
+#                "shade-structures__all-parks")
+scenarios <- c("trees__pedestrian-achievable-90pctl")
 
-city <- "ZAF-Cape_Town"
-aoi_name <- "test"
-aoi_path <-  "~/Documents/github/cities-heat-resilient-infrastructure/data/ZAF-Cape_Town-test/boundaries.geojson"
+# city <- "ZAF-Cape_Town"
+# aoi_name <- "test"
+# aoi_path <-  "~/Documents/github/cities-heat-resilient-infrastructure/data/ZAF-Cape_Town-test/boundaries.geojson"
 
-infra_name <- "trees"
-scenario_name <- "pedestrian-achievable-90pctl"
+# infra_name <- "trees"
+# scenario_name <- "pedestrian-achievable-90pctl"
 
 # Functions 
 
@@ -34,30 +47,55 @@ bucket <- "wri-cities-tcm"
 aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 
 # Process baseline tile data ----------------------------------------------
-src_data_folder <- glue("city_projects/{city}/urban_extent")
+
+# src_data_folder <- glue("city_projects/{city}/urban_extent")
 city_folder <- glue("city_projects/{city}/{aoi_name}")
+baseline_folder <- glue("{city_folder}/scenarios/baseline/baseline")
 
-open_urban_aws_http <- glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
-
-baseline_name <- "baseline"
-
-baseline_folder <- glue("{src_data_folder}/scenarios/baseline/{baseline_name}")
+# If aoi does not exist, copy data from urban extent
+# if (glue("{aws_http}/{baseline_folder}"))
+  
 
 # Get tile ids
-tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
-
-if (aoi_name == "urban_extent"){
-  aoi <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/urban_extent_boundary.geojson"))
-} else {
-  aoi <- st_read(aoi_path)
-}
+tiles <- list_tiles(glue("s3://wri-cities-tcm/{city_folder}"))
 
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
 tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson"))
 
 # create scenario data
-source(here("tiling-scripts", "trees-functions.R"))
-run_tree_scenario(tiles, bucket, aws_http, baseline_folder, scenario_folder, city_folder, open_urban_aws_http)
+
+# Trees
+if ("trees__pedestrian-achievable-90pctl" %in% scenarios){
+  source(here("tiling-scripts", "trees-functions.R"))
+  
+  infra <- "trees"
+  scenario <- "pedestrian-achievable-90pctl"
+  scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+  
+  run_tree_scenario(tiles, bucket, aws_http, baseline_folder, scenario_folder, city_folder)
+}
+
+# Cool roofs
+if ("cool-roofs__large-buildings" %in% scenarios){
+  source(here("tiling-scripts", "cool-roofs-functions.R"))
+  
+  infra <- "cool-roofs"
+  scenario <- "large-buildings"
+  scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+  
+  update_albedo(tiles) 
+}
+
+# Shade structures
+if ("shade-structures__all-parks" %in% scenarios){
+  source(here("tiling-scripts", "park-shade-functions.R"))
+  
+  infra <- "shade-structures"
+  scenario <- "all-parks"
+  scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+  
+  run_shade_scenario() 
+}
 
 
 # download tiles

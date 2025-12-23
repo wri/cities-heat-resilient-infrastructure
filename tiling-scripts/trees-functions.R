@@ -341,7 +341,8 @@ create_tree_population <- function(tiles){
 
 
 # Gridcell is grid geometry
-plant_in_gridcell <- function(grid_index, target_coverage, min_dist){
+plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
+                              trees, crowns, tree_structure){
   
   gridcell <- aoi_grid %>%
     filter(ID == grid_index)
@@ -505,12 +506,8 @@ plant_in_gridcell <- function(grid_index, target_coverage, min_dist){
     }
   }
   
-  # Add new tree points to layer
-  new_trees <- rbind(new_trees, new_tree_pts)
-  
   # Update tree canopy for all intersecting buffered tree canopy layers
   update_paths <- glue("{aws_http}/{scenario_folder}/{buffered_tile_names}/raster_files/tree_canopy.tif")
-  ensure_s3_prefix(update_paths)
   
   for (p in update_paths) {
     r <- rast(p)
@@ -536,8 +533,7 @@ run_tree_scenario <- function(
     aws_http,
     baseline_folder,
     scenario_folder,
-    city_folder,
-    open_urban_aws_http
+    city_folder
 ) {
   
   # Make required objects visible to functions that were written expecting globals.
@@ -548,14 +544,13 @@ run_tree_scenario <- function(
       aws_http = aws_http,
       baseline_folder = baseline_folder,
       scenario_folder = scenario_folder,
-      city_folder = city_folder,
-      open_urban_aws_http = open_urban_aws_http
+      city_folder = city_folder
     ),
     envir = .GlobalEnv
   )
   
-  map(tiles, baseline_processing)
-  create_tree_population(tiles)
+  # map(tiles, baseline_processing)
+  # create_tree_population(tiles)
   
   # Achievable potential
   open_urban_aws_http <- glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
@@ -567,14 +562,16 @@ run_tree_scenario <- function(
                               names = FALSE, na.rm = TRUE)
   min_dist <- 5
   
-  # Create a grid over the tile geometery to iterate over for creating trees
+  # Create a grid over the tile geometry to iterate over for creating trees
   # intersect with AOI so only areas within the aoi are planted
-  aoi <- st_read(aoi_path)
+  aoi <- st_read(aoi_path) %>% 
+    st_transform(st_crs(buffered_tile_grid))
   
   aoi_grid <- aoi %>% 
     st_make_grid(cellsize = c(100, 100), square = TRUE, what = "polygons") %>% 
     st_sf() %>% 
     st_intersection(aoi) %>% 
+    st_intersection(tile_grid) %>% 
     select(geometry) %>% 
     mutate(ID = row_number())
   
@@ -594,16 +591,19 @@ run_tree_scenario <- function(
   new_trees <- st_sf(
     height = numeric(0),
     type   = character(0),
-    geometry = st_sfc(crs = st_crs(aoi))
+    geometry = st_sfc(crs = st_crs(buffered_tile_grid))
   )
   
-  new_trees <- map(aoi_grid$ID, 
-                   ~ plant_in_gridcell(.x, target_coverage = target_coverage, min_dist = min_dist)) %>% 
+  updated_trees <- map(aoi_grid$ID, 
+                   ~ plant_in_gridcell(.x, aoi_grid, 
+                                       target_coverage = target_coverage, 
+                                       min_dist = min_dist,
+                                       trees, crowns, tree_structure)) %>% 
     compact() %>% 
     bind_rows() %>% 
     select(height, type)
   
   # Write new tree points
-  write_s3(new_trees, glue("{bucket}/{scenario_folder}/new-tree-points.geojson"))
+  write_s3(updated_trees, glue("{bucket}/{scenario_folder}/new-tree-points.geojson"))
   
 }

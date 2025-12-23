@@ -59,7 +59,9 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
   out_dir <- file.path("~/CTCM_data_setup", paste(city, scenario, sep = "_"))
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   
-  # Download baseline raster data layers
+
+# Download baseline raster data layers ------------------------------------
+
   if (from_urban_extent){
     grid_url <- glue(
       "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/urban_extent/scenarios/{infra}/{scenario}/metadata/.qgis_data/unbuffered_tile_grid.geojson",
@@ -105,7 +107,7 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
     tiles <- list_tiles(baseline_path)
     
     for (t in tiles) {
-      s3_src  <- glue("{baseline_path}/{t}/raster_files")
+      s3_src  <- glue("{baseline_path}/{t}/raster_files/")
       
       if (local_download){
         local_d <- file.path(out_dir, "primary_data", "raster_files", t)
@@ -116,8 +118,27 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
         cat("\n", cmd, "\n", sep = "")
         system(cmd)
       }
+      
+      if (infra == "trees") {
+        tree_path <- glue(
+          "s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/{t}/ccl_layers/tree_canopy.tif"
+        ) 
+        out_path <- glue("{local_d}/cif_tree_canopy.tif")
+        cmd <- sprintf("aws s3 cp %s %s --recursive --no-sign-request",
+                       shQuote(tree_path), shQuote(out_path))
+        cat("\n", cmd, "\n", sep = "")
+        system(cmd)
+      }
     }
   }
+  
+
+# Scenario data -----------------------------------------------------------
+
+  if (infra == "trees"){
+    
+   
+  }  
   
 }
 

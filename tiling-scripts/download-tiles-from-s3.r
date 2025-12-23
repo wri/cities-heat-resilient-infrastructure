@@ -103,6 +103,7 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
     )
     
     tiles <- list_tiles(baseline_path)
+    write_csv(tiles, here("tiles.csv"))
     
     for (t in tiles) {
       s3_src  <- glue("{baseline_path}/{t}/raster_files")

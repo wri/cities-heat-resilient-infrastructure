@@ -109,7 +109,7 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
       
       if (isTRUE(local_download)){
         local_d <- file.path(out_dir, "primary_data", "raster_files", t)
-        dir.create(local_d, recursive = FALSE, showWarnings = FALSE)
+        dir.create(local_d, recursive = TRUE, showWarnings = FALSE)
         
         cmd <- sprintf("aws s3 cp %s %s --recursive --no-sign-request",
                        shQuote(s3_src), shQuote(local_d))

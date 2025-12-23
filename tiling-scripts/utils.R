@@ -96,40 +96,55 @@ load_and_merge <- function(paths) {
 # prefix helper: ensure it ends with a single slash
 norm_prefix <- function(x) sub("/+$", "/", paste0(sub("^/+", "", x), "/"))
 
-list_tiles <- function(bucket, prefix) {
-  prefix <- norm_prefix(prefix)
-  tiles <- character()
-  token <- NULL
+# list_tiles <- function(bucket, prefix) {
+#   prefix <- norm_prefix(prefix)
+#   tiles <- character()
+#   token <- NULL
+#   
+#   repeat {
+#     resp <- s3$list_objects_v2(
+#       Bucket = bucket,
+#       Prefix = prefix,
+#       Delimiter = "/",                  # <- needed to get folder-like prefixes
+#       ContinuationToken = token
+#     )
+#     
+#     # 1) Folders directly under prefix (CommonPrefixes)
+#     if (!is.null(resp$CommonPrefixes)) {
+#       from_prefixes <- vapply(resp$CommonPrefixes, `[[`, character(1), "Prefix") |>
+#         basename() |>                     # e.g., "tile_00383/"
+#         str_remove("/$") |>
+#         str_extract("tile_\\d{5}")
+#       tiles <- c(tiles, from_prefixes)
+#     }
+#     
+#     # 2) Also parse any object keys returned on this page (in case tiles are deeper)
+#     if (!is.null(resp$Contents)) {
+#       from_keys <- vapply(resp$Contents, `[[`, character(1), "Key") |>
+#         str_extract("tile_\\d{5}")
+#       tiles <- c(tiles, from_keys)
+#     }
+#     
+#     if (isTRUE(resp$IsTruncated)) {
+#       token <- resp$NextContinuationToken
+#     } else break
+#   }
+#   
+#   tiles <- tiles[!is.na(tiles)] |> unique() |> sort()
+#   tiles
+# }
+
+list_tiles <- function(folder_s3_url, profile = "cities-data-dev") {
+  # Normalize: ensure trailing slash so `aws s3 ls` treats it as a "folder"
+  folder_s3_url <- sub("/?$", "/", folder_s3_url)
   
-  repeat {
-    resp <- s3$list_objects_v2(
-      Bucket = bucket,
-      Prefix = prefix,
-      Delimiter = "/",                  # <- needed to get folder-like prefixes
-      ContinuationToken = token
-    )
-    
-    # 1) Folders directly under prefix (CommonPrefixes)
-    if (!is.null(resp$CommonPrefixes)) {
-      from_prefixes <- vapply(resp$CommonPrefixes, `[[`, character(1), "Prefix") |>
-        basename() |>                     # e.g., "tile_00383/"
-        str_remove("/$") |>
-        str_extract("tile_\\d{5}")
-      tiles <- c(tiles, from_prefixes)
-    }
-    
-    # 2) Also parse any object keys returned on this page (in case tiles are deeper)
-    if (!is.null(resp$Contents)) {
-      from_keys <- vapply(resp$Contents, `[[`, character(1), "Key") |>
-        str_extract("tile_\\d{5}")
-      tiles <- c(tiles, from_keys)
-    }
-    
-    if (isTRUE(resp$IsTruncated)) {
-      token <- resp$NextContinuationToken
-    } else break
-  }
+  lines <- system2(
+    "aws",
+    c("s3", "ls", folder_s3_url, "--profile", profile),
+    stdout = TRUE,
+    stderr = TRUE
+  )
   
-  tiles <- tiles[!is.na(tiles)] |> unique() |> sort()
-  tiles
+  tile_lines <- grep("^[[:space:]]*PRE[[:space:]]+tile_[0-9]+/", lines, value = TRUE)
+  sub("^[[:space:]]*PRE[[:space:]]+(tile_[0-9]+)/$", "\\1", tile_lines)
 }

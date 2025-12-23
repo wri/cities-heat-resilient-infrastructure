@@ -63,6 +63,17 @@ source(here("tiling-scripts", "utils.R"))
 
 update_albedo <- function(tile_idx){
   
+  list2env(
+    list(
+      city = city,
+      bucket = bucket,
+      aws_http = aws_http,
+      baseline_folder = baseline_folder,
+      scenario_folder = scenario_folder
+    ),
+    envir = .GlobalEnv
+  )
+  
   tile <- tile_grid %>% 
     filter(tile_name == tile_idx)
   
@@ -71,7 +82,7 @@ update_albedo <- function(tile_idx){
   # lulc <- rast(glue("{aws_http}/{baseline_folder}/{tile_id}/raster_files/cif_open_urban.tif"))
   
   # Get buildings
-  # TODO: fix geoparquet so that we can load with a bbox
+  open_urban_aws_http <- glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
   buildings_path <- glue("{open_urban_aws_http}/buildings/buildings_all.parquet")
   buildings <- st_read_parquet(buildings_path, quiet = TRUE) %>% 
     st_filter(tile) %>% 

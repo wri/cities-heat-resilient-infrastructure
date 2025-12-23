@@ -103,12 +103,11 @@ download_tiles <- function(aoi_path, aoi_name, city, infra, scenario, from_urban
     )
     
     tiles <- list_tiles(baseline_path)
-    write.csv(tiles, here("tiles.csv"))
     
     for (t in tiles) {
       s3_src  <- glue("{baseline_path}/{t}/raster_files")
       
-      if (isTRUE(local_download)){
+      if (local_download){
         local_d <- file.path(out_dir, "primary_data", "raster_files", t)
         dir.create(local_d, recursive = TRUE, showWarnings = FALSE)
         

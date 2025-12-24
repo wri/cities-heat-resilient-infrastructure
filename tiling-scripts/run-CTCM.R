@@ -21,10 +21,10 @@ library(glue)
 city <- "ZAF-Durban"
 aoi_name <- "inner_city_lap"
 aoi_path <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Durban/ZAF-Durban__inner_city_lap.geojson"
-# scenarios <- c("trees__pedestrian-achievable-90pctl",
-#                "cool-roofs__large-buildings",
-#                "shade-structures__all-parks")
-scenarios <- c("trees__pedestrian-achievable-90pctl")
+scenarios <- c("trees__pedestrian-achievable-90pctl",
+               "cool-roofs__large-buildings",
+               "shade-structures__all-parks")
+# scenarios <- c("trees__pedestrian-achievable-90pctl")
 
 # city <- "ZAF-Cape_Town"
 # aoi_name <- "test"
@@ -39,10 +39,10 @@ source(here("tiling-scripts", "utils.R"))
 
 # Sign in to AWS ----------------------------------------------------------
 
-system("aws sso login --profile cities-data-dev")
-Sys.setenv(AWS_PROFILE = "cities-data-dev",
-           AWS_DEFAULT_REGION = "us-east-1",
-           AWS_SDK_LOAD_CONFIG = "1")
+# system("aws sso login --profile cities-data-dev")
+# Sys.setenv(AWS_PROFILE = "cities-data-dev",
+#            AWS_DEFAULT_REGION = "us-east-1",
+#            AWS_SDK_LOAD_CONFIG = "1")
 
 s3 <- paws::s3()
 bucket <- "wri-cities-tcm"

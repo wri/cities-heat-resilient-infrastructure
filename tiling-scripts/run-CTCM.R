@@ -18,9 +18,9 @@ library(glue)
 # aoi_path <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/ZAF-Cape_Town/business_district/scenarios/baseline/baseline/tile_00001/ccl_layers/aoi__baseline__baseline.geojson"
 
 # From AOI
-city <- "ZAF-Durban"
-aoi_name <- "inner_city_lap"
-aoi_path <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Durban/ZAF-Durban__inner_city_lap.geojson"
+city <- "BRA-Recife"
+aoi_name <- "accelerator_area"
+aoi_path <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/accelerator_area/scenarios/baseline/baseline/aoi__baseline__baseline.geojson")
 scenarios <- c("baseline", 
                "trees__pedestrian-achievable-90pctl",
                "cool-roofs__large-buildings",
@@ -86,7 +86,7 @@ if (copy_from_extent) {
 # Create baseline data layers
 if ("baseline" %in% scenarios){
   source(here("tiling-scripts", "baseline-layers.R"))
-  save_baseline_layers(aoi, tiles, baseline_folder)
+  save_baseline_layers()
 }
 
 # create scenario data
@@ -111,8 +111,9 @@ if ("cool-roofs__large-buildings" %in% scenarios){
   infra <- "cool-roofs"
   scenario <- "large-buildings"
   scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+  country <- str_split(city, "-")[[1]][1]
   
-  map(tiles, update_albedo) 
+  map(tiles, update_albedo()) 
 }
 
 # Shade structures

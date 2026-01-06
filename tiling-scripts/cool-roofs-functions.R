@@ -67,6 +67,7 @@ update_albedo <- function(tile_idx, country, area_threshold = 2000){
   list2env(
     list(
       city = city,
+      aoi = aoi,
       bucket = bucket,
       aws_http = aws_http,
       city_folder = city_folder,
@@ -90,6 +91,7 @@ update_albedo <- function(tile_idx, country, area_threshold = 2000){
   buildings_path <- glue("{open_urban_aws_http}/buildings/buildings_all.parquet")
   buildings <- st_read_parquet(buildings_path, quiet = TRUE) %>% 
     st_filter(tile) %>% 
+    st_filter(aoi) %>% 
     mutate(area_m2 = as.numeric(units::set_units(st_area(.), m^2)))
   
   med_build_alb <- exactextractr::exact_extract(albedo, buildings, 'median', force_df = TRUE) 

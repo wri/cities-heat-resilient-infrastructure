@@ -62,11 +62,11 @@ tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
 tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson"))
 
+aoi <- st_read(aoi_path) %>% 
+  st_transform(st_crs(tile_grid))
+
 # If aoi does not exist, copy data from urban extent
 if (copy_from_extent) {
-  
-  aoi <- st_read(aoi_path) %>% 
-    st_transform(st_crs(tile_grid))
   
   tile_ids <- tile_grid %>% 
     st_filter(aoi) %>% 

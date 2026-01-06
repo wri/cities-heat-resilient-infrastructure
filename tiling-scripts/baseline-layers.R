@@ -32,7 +32,7 @@ save_baseline_layers <- function(){
       aws_http = aws_http,
       baseline_folder = baseline_folder,
       aoi_path = aoi_path,
-      tiles = tiles
+      tiles_s3 = tiles_s3
     ),
     envir = .GlobalEnv
   )
@@ -56,10 +56,10 @@ save_baseline_layers <- function(){
               overwrite = TRUE) 
   
   # Get date stamp
-  stamp <- find_shadow_stamp(bucket, baseline_folder, tiles[[1]])
+  stamp <- find_shadow_stamp(bucket, baseline_folder, tiles_s3[[1]])
   
   # per tile
-  for (t in tiles){
+  for (t in tiles_s3){
     print(t)
     
     # Albedo

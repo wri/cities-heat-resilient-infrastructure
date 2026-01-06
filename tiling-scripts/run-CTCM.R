@@ -1,8 +1,8 @@
 library(here)
 library(terra)
 library(sf)
-library(dplyr)
 library(glue)
+library(tidyverse)
 
 
 
@@ -23,7 +23,7 @@ aoi_name <- "accelerator_area"
 aoi_path <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/accelerator_area/scenarios/baseline/baseline/aoi__baseline__baseline.geojson")
 scenarios <- c("baseline", 
                "trees__pedestrian-achievable-90pctl",
-               "cool-roofs__large-buildings",
+               "cool-roofs",
                "shade-structures__all-parks")
 copy_from_extent <- FALSE
 # scenarios <- c("trees__pedestrian-achievable-90pctl")
@@ -57,13 +57,14 @@ city_folder <- glue("city_projects/{city}/{aoi_name}")
 baseline_folder <- glue("{city_folder}/scenarios/baseline/baseline")
 
 # Get tile ids
-tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
+tiles_s3 <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
 
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
 tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson"))
 
 aoi <- st_read(aoi_path) %>% 
   st_transform(st_crs(tile_grid))
+
 
 # If aoi does not exist, copy data from urban extent
 if (copy_from_extent) {
@@ -91,6 +92,14 @@ if ("baseline" %in% scenarios){
 
 # create scenario data
 
+# Filter tile grids to those that intersect the AOI
+buffered_tile_grid <- buffered_tile_grid %>% 
+  st_filter(aoi)
+tile_grid <- tile_grid %>% 
+  st_filter(aoi)
+
+tiles_aoi <- tile_grid$tile_name
+
 # Trees
 if ("trees__pedestrian-achievable-90pctl" %in% scenarios){
   source(here("tiling-scripts", "trees-functions.R"))
@@ -105,15 +114,13 @@ if ("trees__pedestrian-achievable-90pctl" %in% scenarios){
 }
 
 # Cool roofs
-if ("cool-roofs__large-buildings" %in% scenarios){
+if ("cool-roofs" %in% scenarios){
   source(here("tiling-scripts", "cool-roofs-functions.R"))
   
   infra <- "cool-roofs"
-  scenario <- "large-buildings"
-  scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
   country <- str_split(city, "-")[[1]][1]
   
-  map(tiles, update_albedo()) 
+  update_albedo() 
 }
 
 # Shade structures

@@ -269,37 +269,6 @@ source(here("scenario-generation", "park-shade-structures", "shade-generating-fu
 # 
 # 
 # shade-generating-functions.R
-# Find the yyyy_dd stamp used in Shadow_yyyy_dd_1200D.tif
-find_shadow_stamp <- function(bucket, baseline_folder, tile_id, profile = "cities-data-dev") {
-  # Folder containing the Shadow rasters for a tile
-  s3_dir <- sprintf("s3://%s/%s/%s/tcm_results/met_era5_hottest_days/", bucket, baseline_folder, tile_id)
-  
-  # List files in the folder
-  lines <- system2(
-    "aws",
-    c("s3", "ls", s3_dir, "--profile", profile),
-    stdout = TRUE,
-    stderr = TRUE
-  )
-  
-  # Find a matching filename
-  m <- regmatches(
-    lines,
-    regexec("Shadow_(\\d{4}_\\d{1,3})_1200D\\.tif", lines)
-  )
-  
-  stamps <- vapply(m, function(x) if (length(x) >= 2) x[2] else NA_character_, character(1))
-  stamps <- unique(stats::na.omit(stamps))
-  
-  if (length(stamps) == 0) {
-    stop("No Shadow_*_1200D.tif files found in: ", s3_dir)
-  }
-  if (length(stamps) > 1) {
-    stop("Multiple yyyy_dd stamps found in ", s3_dir, ": ", paste(stamps, collapse = ", "))
-  }
-  
-  stamps[[1]]
-}
 
 
 
@@ -339,23 +308,17 @@ generate_shade_structures <- function(
   tree_paths <- glue::glue("{aws_http}/{baseline_folder}/{tile_ids}/raster_files/cif_tree_canopy.tif")
   tree_rast <- load_and_merge(tree_paths) >= 3
   
-  # Shade raster convention: Shadow == 0 means shaded (your code uses < 1)
+  # Shade raster convention: Shadow == 0 means shaded 
   shaded   <- shade_rast < 1
   unshaded <- (shade_rast >= 1) * 1  # 1 = unshaded, 0 = shaded
   
-  dist_to_shade <- terra::distance(terra::subst(shaded, 0, NA)) |>
-    terra::mask(terra::vect(park))
-  dist_to_shade <- terra::global(dist_to_shade, "max", na.rm = TRUE)[, 1]
+  # dist_to_shade <- terra::distance(terra::subst(shaded, 0, NA)) |>
+  #   terra::mask(terra::vect(park))
+  # dist_to_shade <- terra::global(dist_to_shade, "max", na.rm = TRUE)[, 1]
   
   park <- park %>%
     dplyr::mutate(
-      shaded_pct   = exact_extract(shaded, geometry, "mean"),
-      shaded_area  = shaded_pct * area_sqm,
-      unshaded_pct = 1 - shaded_pct,
-      unshaded_area= unshaded_pct * area_sqm,
-      dist_to_shade= dist_to_shade,
-      tree_pct     = exact_extract(tree_rast, geometry, "mean")
-    )
+      shaded_pct   = exact_extract(shaded, geometry, "mean"))
   
   if (park$area_sqm > 4046.86) {
     shade_structures <- shade_dist_area(
@@ -376,8 +339,9 @@ generate_shade_structures <- function(
     )
   }
   
-  if (is.null(shade_structures) || nrow(shade_structures) == 0) {
-    return(list(park_row = park, structures = NULL))
+  if (nrow(shade_structures) == 0) {
+    # return an empty sf in the right CRS
+    return(shade_structures)
   }
   
   structure_height <- 8 / 3.281
@@ -401,14 +365,14 @@ generate_shade_structures <- function(
     existing <- tryCatch(terra::rast(url_existing), error = function(e) NULL)
     
     if (!is.null(existing)) {
-      x <- terra::mosaic(x, existing, fun = "max", na.rm = TRUE)
+      x <- terra::mosaic(x, existing, fun = "max")
     }
     
     write_s3(x, glue::glue("{bucket}/{scenario_folder}/{t}/ccl_layers/structures-as-trees.tif"))
     message(glue::glue("{t} shade raster saved"))
   }
   
-  list(park_row = park, structures = shade_structures)
+  return(list(park = park, shade_structures = shade_structures))
 }
 
 # park-shade-functions.R
@@ -489,9 +453,11 @@ run_shade_scenario <- function() {
     )
   )
   
-  all_parks <- purrr::map(results, "park_row") %>% dplyr::bind_rows()
+  all_parks <- purrr::map(results, "park") %>% 
+    dplyr::bind_rows() %>% 
+    select(- buffered_tile_names, - unbuffered_tile_names)
   
-  shade_structures_all_parks <- purrr::map(results, "structures") %>%
+  shade_structures_all_parks <- purrr::map(results, "shade_structures") %>%
     purrr::compact() %>%
     dplyr::bind_rows()
   
@@ -501,9 +467,9 @@ run_shade_scenario <- function() {
     write_s3(shade_structures_all_parks, glue::glue("{bucket}/{scenario_folder}/structures__shade-structures__all-parks.geojson"))
   }
   
-  invisible(list(
-    parks = all_parks,
-    structures = shade_structures_all_parks
-  ))
+  # invisible(list(
+  #   parks = all_parks,
+  #   structures = shade_structures_all_parks
+  # ))
 }
 

@@ -23,16 +23,34 @@ library(tidyverse)
 # Functions
 
 check_inputs <- function(at, wind, vpd, Tmrt) {
+  
   if (!(at >= -50 & at <= 50)) {
-    stop("Temperature must be between -50 and 50 C!")
-  } else if (!(wind >= 0.5 & wind <= 17)) {
-    stop("Wind must be between 0.5 and 17 m/s!")
-  } else if (!(vpd >= 0 & vpd <= 50)) {
-    stop("Vapor pressure deficit must be between 0 and 50 hPa!")
-  } else if (any(values(Tmrt, na.rm = TRUE) < (at - 50) | values(Tmrt, na.rm = TRUE) > (at + 70))) {
-    stop("MRT must be between 50 C below and 70 C above the air temp!")
+    warning("Temperature must be between -50 and 50 °C!", call. = FALSE)
   }
+  
+  if (!(wind >= 0.5 & wind <= 17)) {
+    warning("Wind must be between 0.5 and 17 m/s!", call. = FALSE)
+  }
+  
+  if (!(vpd >= 0 & vpd <= 50)) {
+    warning("Vapor pressure deficit must be between 0 and 50 hPa!", call. = FALSE)
+  }
+  
+  if (
+    any(
+      terra::values(Tmrt, na.rm = TRUE) < (at - 50) |
+      terra::values(Tmrt, na.rm = TRUE) > (at + 70)
+    )
+  ) {
+    warning(
+      "MRT must be between 50 °C below and 70 °C above the air temperature!",
+      call. = FALSE
+    )
+  }
+  
+  invisible(TRUE)
 }
+
 
 utci_calc <- function(Ta, ehPa, va, Tmrt) {
   # Calculate the difference between mean radiant temperature and air temperature

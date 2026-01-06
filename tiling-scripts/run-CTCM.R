@@ -21,9 +21,11 @@ library(glue)
 city <- "ZAF-Durban"
 aoi_name <- "inner_city_lap"
 aoi_path <- "https://wri-cities-heat.s3.us-east-1.amazonaws.com/ZAF-Durban/ZAF-Durban__inner_city_lap.geojson"
-scenarios <- c("trees__pedestrian-achievable-90pctl",
+scenarios <- c("baseline", 
+               "trees__pedestrian-achievable-90pctl",
                "cool-roofs__large-buildings",
                "shade-structures__all-parks")
+copy_from_extent <- FALSE
 # scenarios <- c("trees__pedestrian-achievable-90pctl")
 
 # city <- "ZAF-Cape_Town"
@@ -39,10 +41,10 @@ source(here("tiling-scripts", "utils.R"))
 
 # Sign in to AWS ----------------------------------------------------------
 
-# system("aws sso login --profile cities-data-dev")
-# Sys.setenv(AWS_PROFILE = "cities-data-dev",
-#            AWS_DEFAULT_REGION = "us-east-1",
-#            AWS_SDK_LOAD_CONFIG = "1")
+system("aws sso login --profile cities-data-dev")
+Sys.setenv(AWS_PROFILE = "cities-data-dev",
+           AWS_DEFAULT_REGION = "us-east-1",
+           AWS_SDK_LOAD_CONFIG = "1")
 
 s3 <- paws::s3()
 bucket <- "wri-cities-tcm"
@@ -54,15 +56,38 @@ aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 city_folder <- glue("city_projects/{city}/{aoi_name}")
 baseline_folder <- glue("{city_folder}/scenarios/baseline/baseline")
 
-# If aoi does not exist, copy data from urban extent
-# if (glue("{aws_http}/{baseline_folder}"))
-  
-
 # Get tile ids
 tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
 
 buffered_tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"))
 tile_grid <- st_read(glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson"))
+
+# If aoi does not exist, copy data from urban extent
+if (copy_from_extent) {
+  
+  aoi <- st_read(aoi_path) %>% 
+    st_transform(st_crs(tile_grid))
+  
+  tile_ids <- tile_grid %>% 
+    st_filter(aoi) %>% 
+    pull(tile_name)
+  
+  # copy folders
+  for (t in tile_ids){
+    
+    from <- glue("city_projects/{city}/urban_extent/baseline/baseline/{t}")
+    to <- glue("{baseline_folder}/{t}")
+    
+    ensure_s3_prefix(bucket, to)
+    s3_copy_vec(from = from, to = to, bucket = bucket)
+  }
+}
+
+# Create baseline data layers
+if ("baseline" %in% scenarios){
+  source(here("tiling-scripts", "baseline-layers.R"))
+  save_baseline_layers(aoi, tiles, baseline_folder)
+}
 
 # create scenario data
 
@@ -74,7 +99,9 @@ if ("trees__pedestrian-achievable-90pctl" %in% scenarios){
   scenario <- "pedestrian-achievable-90pctl"
   scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
   
-  run_tree_scenario(tiles, bucket, aws_http, baseline_folder, scenario_folder, city_folder)
+  # run_tree_scenario(tiles, bucket, aws_http, baseline_folder, scenario_folder, city_folder)
+  run_tree_scenario()
+  
 }
 
 # Cool roofs
@@ -106,3 +133,7 @@ if ("shade-structures__all-parks" %in% scenarios) {
 # run CTCM on scenarios
 
 # upload data to s3
+
+
+
+

@@ -55,27 +55,72 @@ ensure_s3_prefix <- function(bucket, prefix){
 }
 
 # Copy files in S3
-s3_copy_vec <- function(from, to, bucket, overwrite = TRUE) {
+s3_copy_vec <- function(from, to,
+                            from_bucket,
+                            to_bucket,
+                            overwrite = TRUE,
+                            quiet = FALSE,
+                            dryrun = FALSE) {
+  stopifnot(length(from) == length(to))
   
-  norm <- function(k) sub("^/+","", sub("/+$","", k))  # strip leading/trailing "/"
-  vapply(seq_along(from), function(i) {
-    src <- norm(from[i]); dst <- norm(to[i])
+  norm_key <- function(k) sub("^/+", "", k)  # remove leading /
+  mk_s3 <- function(bucket, key) {
+    sprintf("s3://%s/%s", sub("^s3://", "", sub("/+$", "", bucket)), norm_key(key))
+  }
+  
+  results <- vector("list", length(from))
+  
+  for (i in seq_along(from)) {
+    src <- mk_s3(from_bucket, from[i])
+    dst <- mk_s3(to_bucket,   to[i])
+    
+    # aws s3 cp behavior:
+    # - By default it WILL overwrite.
+    # - To avoid overwriting, we do a HEAD check first via `aws s3api head-object`.
     if (!overwrite) {
-      exists <- tryCatch({ s3$head_object(Bucket = bucket, Key = dst); TRUE },
-                         error = function(e) FALSE)
-      if (exists) return(FALSE)
+      head_cmd <- c("aws", "s3api", "head-object",
+                    "--bucket", sub("^s3://", "", sub("/+$", "", to_bucket)),
+                    "--key", norm_key(to[i]))
+      head_out <- suppressWarnings(system2(head_cmd[1], head_cmd[-1],
+                                           stdout = TRUE, stderr = TRUE))
+      if (!quiet) message("HEAD ", dst)
+      if (attr(head_out, "status") == 0) {
+        if (!quiet) message("SKIP (exists): ", dst)
+        results[[i]] <- list(ok = TRUE, skipped = TRUE, src = src, dst = dst, msg = "exists")
+        next
+      }
     }
-    tryCatch({
-      s3$copy_object(
-        Bucket = bucket,
-        Key = dst,
-        CopySource = paste0("/", bucket, "/", src),
-        MetadataDirective = "COPY"
-      )
-      TRUE
-    }, error = function(e) FALSE)
-  }, logical(1))
+    
+    cmd <- c("aws", "s3", "cp", src, dst)
+    if (dryrun) cmd <- c(cmd, "--dryrun")
+    if (quiet)  cmd <- c(cmd, "--only-show-errors")
+    
+    if (!quiet) message("CP ", src, " -> ", dst)
+    
+    out <- suppressWarnings(system2(cmd[1], cmd[-1], stdout = TRUE, stderr = TRUE))
+    status <- attr(out, "status"); if (is.null(status)) status <- 0
+    
+    results[[i]] <- list(
+      ok = (status == 0),
+      skipped = FALSE,
+      src = src,
+      dst = dst,
+      status = status,
+      output = paste(out, collapse = "\n")
+    )
+    
+    if (!quiet && status != 0) {
+      message("ERROR (status ", status, "):\n", results[[i]]$output)
+    }
+  }
+  
+  # Return a simple logical vector invisibly + attach details
+  ok <- vapply(results, function(x) isTRUE(x$ok), logical(1))
+  attr(ok, "details") <- results
+  ok
 }
+
+
 
 # Function to load and merge rasters from a list of paths
 load_and_merge <- function(paths) {
@@ -148,3 +193,36 @@ list_tiles <- function(folder_s3_url, profile = "cities-data-dev") {
   tile_lines <- grep("^[[:space:]]*PRE[[:space:]]+tile_[0-9]+/", lines, value = TRUE)
   sub("^[[:space:]]*PRE[[:space:]]+(tile_[0-9]+)/$", "\\1", tile_lines)
 }
+
+# Find the yyyy_dd stamp used in Shadow_yyyy_dd_1200D.tif
+find_shadow_stamp <- function(bucket, baseline_folder, tile_id, profile = "cities-data-dev") {
+  # Folder containing the Shadow rasters for a tile
+  s3_dir <- sprintf("s3://%s/%s/%s/tcm_results/met_era5_hottest_days/", bucket, baseline_folder, tile_id)
+  
+  # List files in the folder
+  lines <- system2(
+    "aws",
+    c("s3", "ls", s3_dir, "--profile", profile),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+  
+  # Find a matching filename
+  m <- regmatches(
+    lines,
+    regexec("Shadow_(\\d{4}_\\d{1,3})_1200D\\.tif", lines)
+  )
+  
+  stamps <- vapply(m, function(x) if (length(x) >= 2) x[2] else NA_character_, character(1))
+  stamps <- unique(stats::na.omit(stamps))
+  
+  if (length(stamps) == 0) {
+    stop("No Shadow_*_1200D.tif files found in: ", s3_dir)
+  }
+  if (length(stamps) > 1) {
+    stop("Multiple yyyy_dd stamps found in ", s3_dir, ": ", paste(stamps, collapse = ", "))
+  }
+  
+  stamps[[1]]
+}
+

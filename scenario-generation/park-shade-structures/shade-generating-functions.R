@@ -134,31 +134,50 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
     filter(area_sqm >= min_shade_area)
   
   # Compute distance to the nearest shade area or park boundary
-  shade_dist <- if (nrow(shade_areas) != 0) {
-    distance(subst(park_raster_mask, 0, NA), shade_areas) %>% mask(vect(park))
+  shaded_raster <- 1 - unshaded_raster
+  shaded_raster <- subst(shaded_raster, 0, NA)
+  
+  if (nrow(shade_areas) == 0) {
+    # no shade areas -> distance raster should be all NA (within park mask)
+    dist_to_shade_area <- distance(shaded_raster) %>% mask(park)
+    
   } else {
-    distance(subst(terra::extend(park_raster_mask, c(10, 10)), NA, 2), target = 1)
+    shade_area_raster <- rasterize(vect(shade_areas), shaded_raster, field = 1, background = NA)
+    
+    dist_to_shade_area <- distance(shade_area_raster)
+    
+    dist_to_shade_area <- ifel(is.na(shaded_raster), dist_to_shade_area, NA) %>% 
+      mask(park)
   }
+  
+  shade_dist <- global(dist_to_shade_area, "max", na.rm = TRUE)[1, 1]
+  
+  # shade_dist <- if (nrow(shade_areas) != 0) {
+  #   distance(shaded_raster, shade_areas) %>% mask(vect(park))
+  # } else {
+  #   distance(shaded_raster) %>% mask(vect(park))
+  # }
   
   # Compute minimum distances between shade areas
-  compute_min_shade_dist <- function(shade_areas) {
-    if (nrow(shade_areas) == 0) return(Inf)
-    min_distances <- sapply(1:nrow(shade_areas), function(i) {
-      other_polygons <- shade_areas[-i, ]
-      min(st_distance(shade_areas[i, ], other_polygons))
-    })
-    return(max(min_distances))
-  }
-  
-  min_shade_dist <- compute_min_shade_dist(shade_areas)
+  # compute_min_shade_dist <- function(shade_areas) {
+  #   if (nrow(shade_areas) == 0) return(Inf)
+  #   # min_distances <- sapply(1:nrow(shade_areas), function(i) {
+  #   #   other_polygons <- shade_areas[-i, ]
+  #   #   min(st_distance(shade_areas[i, ], other_polygons))
+  #   # })
+  #   min_distances <- cover(shade_dist_raster, shade_areas)
+  #   return(max(min_distances))
+  # }
+  # 
+  # min_shade_dist <- compute_min_shade_dist(shade_areas)
   
   # Create an empty sf object for new shade structures
   squares <- st_sf(geometry = st_sfc(), crs = st_crs(park))
   
   # Add shade structures if necessary
-  while (nrow(shade_areas) == 0 || min_shade_dist > max_dist_to_shade) {
+  while (nrow(shade_areas) == 0 || shade_dist > max_dist_to_shade) {
     # Identify the most distant areas from shade
-    max_dist_rast <- shade_dist > quantile(values(shade_dist), 0.95, na.rm = TRUE)
+    max_dist_rast <- dist_to_shade_area > quantile(values(dist_to_shade_area), 0.95, na.rm = TRUE)
     shade_pt <- subst(max_dist_rast, 0, NA) %>% 
       as.points(na.rm = TRUE) %>% 
       st_as_sf() %>% 
@@ -169,11 +188,20 @@ shade_dist_area <- function(park, unshaded_raster, min_shade_area, max_dist_to_s
       st_buffer((structure_size / 2), endCapStyle = 'SQUARE', joinStyle = 'MITRE') %>% 
       mutate(park_id = park$park_id)
     
-    # Update shade areas and recalculate distances
     squares <- bind_rows(squares, shade_square)
     shade_areas <- bind_rows(shade_areas, squares)
-    shade_dist <- distance(subst(park_raster_mask, 0, NA), shade_areas) %>% mask(vect(park))
-    min_shade_dist <- compute_min_shade_dist(shade_areas)
+    
+    sq_rast <- rasterize(shade_square, dist_to_shade_area, field = 1, background = NA)
+    
+    # Update shade areas and recalculate distances
+    shaded_raster <- cover(shaded_raster, sq_rast) 
+    
+    shade_area_raster <- rasterize(vect(shade_areas), shaded_raster, field = 1, background = NA)
+    dist_to_shade_area <- distance(shade_area_raster)
+    dist_to_shade_area <- ifel(is.na(shaded_raster), dist_to_shade_area, NA) %>% 
+      mask(park)
+    
+    shade_dist <- global(dist_to_shade_area, "max", na.rm = TRUE)[1, 1]
   }
   
   return(squares)

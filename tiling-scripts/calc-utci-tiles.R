@@ -14,7 +14,8 @@ bucket <- "wri-cities-tcm"
 aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 
 # Process baseline tile data ----------------------------------------------
-city <- "MEX-Hermosillo"
+city <- "BRA-Teresina"
+
 aoi_name <- "urban_extent"
 city_folder <- glue("city_projects/{city}/{aoi_name}")
 
@@ -24,7 +25,7 @@ scenario_id <- "baseline"
 baseline_folder <- glue("{city_folder}/scenarios/{infra_id}/{scenario_id}")
 
 source(here("tiling-scripts", "utils.R"))
-tiles <- list_tiles(bucket, baseline_folder)
+tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
 
 if (aoi_name == "urban_extent"){
   met <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"),
@@ -123,7 +124,7 @@ for (t in tiles) {
   }
 }
 
-
+write_s3(tile_stats, glue("{bucket}/{baseline_folder}/utci-tile-statistics.csv"))
 
 # Get list of tiles without UTCI ------------------------------------------
 

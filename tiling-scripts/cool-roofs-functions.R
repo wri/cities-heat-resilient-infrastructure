@@ -17,7 +17,6 @@ update_albedo <- function(area_threshold = 2000){
       country = country,
       baseline_folder = baseline_folder,
       infra = infra,
-      scenario = scenario,
       tiles_aoi = tiles_aoi
     ),
     envir = .GlobalEnv
@@ -31,19 +30,14 @@ update_albedo <- function(area_threshold = 2000){
     st_filter(aoi) %>% 
     mutate(area_m2 = as.numeric(units::set_units(st_area(.), m^2)))
   
-  for (t in tiles_aoi){
+  for (t in tiles_s3){
     
-    tile <- tile_grid %>% 
+    tile <- buffered_tile_grid %>% 
       filter(tile_name == t)
     
     # Filter to buildings in tile
     tile_buildings <- buildings %>% 
       st_filter(tile)
-    
-    if (nrow(tile_buildings) == 0) {
-      print(glue("{t} has no buildings"))
-      next
-    }
     
     # Load data
     albedo <- tryCatch(
@@ -53,6 +47,26 @@ update_albedo <- function(area_threshold = 2000){
     
     if (is.null(albedo)) {
       print(glue("{t} is missing albedo data"))
+      next
+    }
+    
+    if (nrow(tile_buildings) == 0) {
+      
+      for (s in c("all-buildings", "large-buildings")){
+        # Ensure prefix
+        scenario_folder <- glue("{city_folder}/scenarios/{infra}/{s}")
+        ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/ccl_layers"))
+        
+        # Write raster
+        write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}.tif"))
+        
+        diff_albedo <- albedo
+        values(diff_albedo) <- 0
+        write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}__vs-baseline.tif"))
+      }
+      
+      
+      print(glue("{t} has no buildings"))
       next
     }
     
@@ -79,10 +93,12 @@ update_albedo <- function(area_threshold = 2000){
                cool_roof_alb   = if_else(slope == "low", 0.62, 0.28))
     }
     
-    write_s3(tile_buildings, glue("{bucket}/{city_folder}/scenarios/{infra}/all-buildings.geojson"))
-    
     for (s in c("all-buildings", "large-buildings")){
       scenario <- s
+      
+      # Ensure prefix
+      scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+      ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/ccl_layers"))
       
       # Filter based on building size
       if (scenario == "all-buildings"){
@@ -94,10 +110,17 @@ update_albedo <- function(area_threshold = 2000){
       
       # Filter to only buildings with medians below cool roof albedos
       tile_buildings_s <- tile_buildings_s %>% 
-        filter(cool_roof_alb > median_alb)
+        filter(median_alb < cool_roof_alb)
       
       if (nrow(tile_buildings_s) == 0) {
-        print(glue("{t} has no buildings that get cool roofs"))
+        # Write raster
+        write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
+        
+        diff_albedo <- albedo
+        values(diff_albedo) <- 0
+        write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
+        
+        print(glue("{t} albedo rasters saved for {scenario}"))
         next
       }
       
@@ -114,10 +137,6 @@ update_albedo <- function(area_threshold = 2000){
       
       # Albedo difference
       diff_albedo <- updated_albedo - albedo
-      
-      # Ensure prefix
-      scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
-      ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/ccl_layers"))
       
       # Write raster
       write_s3(updated_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))

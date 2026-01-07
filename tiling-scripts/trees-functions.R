@@ -586,6 +586,234 @@ plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
   
 }
 
+plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_dist,
+                                   trees, crowns, tree_structure) {
+  
+  # ---- gridcell selection (avoid dplyr overhead) ----
+  gridcell <- aoi_grid[aoi_grid$ID == grid_index, ]
+  print(gridcell$ID)
+  
+  # Buffer gridcell by 10 meters
+  gridcell_buffered <- sf::st_buffer(gridcell, dist = 10)
+  
+  buffered_tile_names <- sf::st_intersection(gridcell, buffered_tile_grid)$tile_name
+  unbuffered_tile_names <- sf::st_intersection(gridcell, tile_grid)$tile_name
+  
+  # Existing trees
+  existing_tree_points <- sf::st_filter(trees, gridcell_buffered)
+  existing_tree_coords <- sf::st_coordinates(existing_tree_points) # matrix (n x 2)
+  
+  # Existing tree canopy
+  canopy_paths <- glue::glue(
+    "{aws_http}/{baseline_folder}/{unbuffered_tile_names}/raster_files/cif_tree_canopy.tif"
+  )
+  canopy_height_existing <- load_and_merge(canopy_paths)
+  canopy_height_gridcell <- terra::crop(canopy_height_existing, terra::vect(gridcell))
+  
+  # Plantable area for the gridcell
+  plantable_paths <- glue::glue(
+    "{aws_http}/{scenario_folder}/{unbuffered_tile_names}/ccl_layers/plantable-areas__trees__pedestrian-achievable-90pctl.tif"
+  )
+  plantable_area <- load_and_merge(plantable_paths) |>
+    terra::crop(terra::vect(gridcell)) |>
+    terra::subst(from = 0, to = NA)
+  
+  # Pedestrian area for the gridcell
+  ped_area_paths <- glue::glue(
+    "{aws_http}/{baseline_folder}/{unbuffered_tile_names}/ccl_layers/pedestrian-areas__baseline__baseline.tif"
+  )
+  ped_area <- load_and_merge(ped_area_paths) |>
+    terra::crop(terra::vect(gridcell)) |>
+    terra::subst(from = 0, to = NA)
+  
+  # Current tree cover
+  current_tree_cover_paths <- glue::glue(
+    "{aws_http}/{baseline_folder}/{unbuffered_tile_names}/ccl_layers/tree-cover__baseline__baseline.tif"
+  )
+  current_tree_cover <- load_and_merge(current_tree_cover_paths) |>
+    terra::crop(terra::vect(gridcell)) |>
+    terra::subst(from = 0, to = NA) |>
+    terra::mask(ped_area)
+  
+  # ---- precompute cell areas once ----
+  # (same method as before: sum(cellSize * binaryRaster))
+  cell_area_template <- terra::cellSize(current_tree_cover)
+  plantable_area_size <- terra::global(cell_area_template * plantable_area, "sum", na.rm = TRUE)[1, 1] |>
+    tidyr::replace_na(0)
+  ped_area_size <- terra::global(cell_area_template * ped_area, "sum", na.rm = TRUE)[1, 1] |>
+    tidyr::replace_na(0)
+  tree_cover_size <- terra::global(cell_area_template * current_tree_cover, "sum", na.rm = TRUE)[1, 1] |>
+    tidyr::replace_na(0)
+  
+  target_tree_cover_size <- ceiling(ped_area_size * target_coverage)
+  
+  # Same skip logic
+  if (target_tree_cover_size <= tree_cover_size | plantable_area_size <= 0) {
+    print("No trees planted")
+    return(NULL)
+  }
+  
+  # ---- build available planting positions as cell indices (fast) ----
+  # Equivalent to sampling from as.points(plantable_area) uniformly.
+  plant_vals <- terra::values(plantable_area, mat = FALSE)
+  avail_cells <- which(!is.na(plant_vals))
+  rm(plant_vals)
+  
+  if (length(avail_cells) == 0) {
+    print("No trees planted")
+    return(NULL)
+  }
+  
+  # ---- crown lookup optimization ----
+  # Pre-split crowns by height so each draw is O(1) indexing instead of dplyr filter each time.
+  crowns_by_h <- split(crowns, crowns$height)
+  
+  # ---- cache rasters per tile to avoid repeated S3 reads ----
+  tile_cache <- new.env(parent = emptyenv())
+  get_tile_rasters <- function(tile) {
+    key <- as.character(tile)
+    if (exists(key, envir = tile_cache, inherits = FALSE)) {
+      return(get(key, envir = tile_cache, inherits = FALSE))
+    }
+    crowns_r <- terra::rast(glue::glue(
+      "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
+    ))
+    height_r <- terra::rast(glue::glue(
+      "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
+    ))
+    val <- list(crowns_r = crowns_r, height_r = height_r)
+    assign(key, val, envir = tile_cache)
+    val
+  }
+  
+  # ---- collect outputs without rbind-in-loop ----
+  new_pts_list <- vector("list", 0L)
+  new_h_list <- numeric(0)
+  new_type_list <- character(0)
+  
+  # ---- main planting loop ----
+  while (tree_cover_size < target_tree_cover_size && length(avail_cells) > 0) {
+    
+    # sample an available cell index and remove it (same uniform sampling)
+    j <- sample.int(length(avail_cells), 1L)
+    cell <- avail_cells[[j]]
+    avail_cells[[j]] <- avail_cells[[length(avail_cells)]]
+    avail_cells <- avail_cells[-length(avail_cells)]
+    
+    # candidate coordinate at the cell center
+    coord <- terra::xyFromCell(plantable_area, cell)
+    coord <- matrix(coord, nrow = 1)  # for RANN query
+    
+    # Check min distance from existing trees (same as original)
+    if (nrow(existing_tree_coords) > 0) {
+      d <- RANN::nn2(existing_tree_coords, query = coord, k = 1)$nn.dists[1]
+      if (d <= min_dist) next
+    }
+    
+    # Sample tree height
+    tree_height_class <- sample(tree_structure$tree_heights, 1, prob = tree_structure$weights)
+    
+    # Sample crown geometry from that height class
+    crowns_h <- crowns_by_h[[as.character(tree_height_class)]]
+    if (is.null(crowns_h) || nrow(crowns_h) == 0) next
+    crown_geom <- crowns_h[sample.int(nrow(crowns_h), 1L), ]
+    
+    # Create candidate point sf (same CRS expectation as before)
+    # NOTE: this matches the prior approach of an sf point at the sampled location.
+    candidate_pt <- sf::st_sf(
+      height = as.numeric(tree_height_class),
+      type   = "new",
+      geometry = sf::st_sfc(
+        sf::st_point(as.numeric(coord[1, ])),
+        crs = sf::st_crs(gridcell)
+      )
+    )
+    
+    
+    # Record new point
+    new_pts_list[[length(new_pts_list) + 1L]] <- sf::st_point(as.numeric(coord[1, ]))
+    new_h_list   <- c(new_h_list, as.numeric(tree_height_class))
+    new_type_list<- c(new_type_list, "new")
+    
+    # Update existing coords for next iterations (same behavior)
+    existing_tree_coords <- rbind(existing_tree_coords, coord)
+    
+    # ---- rasterize/shift crown the same way, but with cached tile rasters ----
+    tr <- get_tile_rasters(crown_geom$tile)
+    
+    crown_pixels <- terra::crop(tr$crowns_r, terra::vect(crown_geom))
+    crown_pixels <- crown_pixels == crown_geom$treeID
+    crown_pixels <- terra::subst(crown_pixels, from = 0, to = NA)
+    
+    height_pixels <- terra::crop(tr$height_r, terra::vect(crown_geom))
+    tree_pixels <- terra::mask(height_pixels, crown_pixels)
+    
+    px_cells <- which(!is.na(terra::values(tree_pixels, mat = FALSE)))
+    if (length(px_cells) == 0) next
+    px_coords <- terra::xyFromCell(tree_pixels, px_cells)
+    crown_centroid <- colMeans(px_coords)
+    
+    # Candidate point coordinates (as in original via rasterize -> xyFromCell)
+    pt_coords <- coord[1, ]
+    
+    dx <- pt_coords[1] - crown_centroid[1]
+    dy <- pt_coords[2] - crown_centroid[2]
+    
+    shifted <- terra::shift(tree_pixels, dx = dx, dy = dy) |>
+      terra::resample(canopy_height_gridcell, method = "near")
+    
+    # Update cover and re-compute cover size (same method)
+    current_tree_cover <- current_tree_cover | (shifted > 0)
+    current_tree_cover <- current_tree_cover * ped_area
+    
+    tree_cover_size <- terra::global(cell_area_template * current_tree_cover, "sum", na.rm = TRUE)[1, 1] |>
+      tidyr::replace_na(0)
+    
+    # Update canopy heights (same method)
+    if (terra::hasValues(shifted)) {
+      canopy_height_gridcell <- max(canopy_height_gridcell, shifted, na.rm = TRUE)
+    }
+    
+    
+  }
+  
+  # bind new points once
+  if (length(new_pts_list) == 0) {
+    return(NULL)
+  }
+  new_tree_pts <- sf::st_sf(
+    height = new_h_list,
+    type   = new_type_list,
+    geometry = sf::st_sfc(new_pts_list, crs = sf::st_crs(gridcell))
+  )
+  
+  
+  # ---- Update tree canopy for intersecting buffered tiles (don’t mutate canopy_height_gridcell in-place) ----
+  update_paths <- glue::glue(
+    "{aws_http}/{scenario_folder}/{buffered_tile_names}/raster_files/tree_canopy.tif"
+  )
+  
+  for (p in update_paths) {
+    r <- terra::rast(p)
+    
+    canopy_aligned <- canopy_height_gridcell |>
+      terra::extend(r) |>
+      terra::crop(r)
+    
+    updated_canopy <- max(r, canopy_aligned, na.rm = TRUE)
+    
+    updated_p <- stringr::str_replace(
+      p,
+      "https://wri-cities-tcm.s3.us-east-1.amazonaws.com",
+      "wri-cities-tcm"
+    )
+    write_s3(updated_canopy, updated_p)
+  }
+  
+  new_tree_pts
+}
+
+
 # Create city-wide grid ---------------------------------------------------
 
 run_tree_scenario <- function(min_dist = 5) {
@@ -629,10 +857,10 @@ run_tree_scenario <- function(min_dist = 5) {
     mutate(ID = row_number())
   
   # Copy existing tree canopy tiles into scenario folder to be updated
-  tree_canopy_paths <- glue("{baseline_folder}/{tiles_aoi}/raster_files/cif_tree_canopy.tif")
-  scenario_tree_canopy_paths <- glue("{scenario_folder}/{tiles_aoi}/raster_files/tree_canopy.tif")
+  tree_canopy_paths <- glue("{baseline_folder}/{tiles_s3}/raster_files/cif_tree_canopy.tif")
+  scenario_tree_canopy_paths <- glue("{scenario_folder}/{tiles_s3}/raster_files/tree_canopy.tif")
   
-  map(glue("{scenario_folder}/{tiles_aoi}/raster_files/"), ~ ensure_s3_prefix(bucket, .x))
+  map(glue("{scenario_folder}/{tiles_s3}/raster_files/"), ~ ensure_s3_prefix(bucket, .x))
   s3_copy_vec(from = tree_canopy_paths, to = scenario_tree_canopy_paths, 
               from_bucket = bucket, to_bucket = bucket, overwrite = TRUE)
   
@@ -643,7 +871,7 @@ run_tree_scenario <- function(min_dist = 5) {
   tree_structure <- read_csv(glue("{aws_http}/{city_folder}/scenarios/trees/tree-population/tree-structure.csv"))
 
   updated_trees <- map(aoi_grid$ID, 
-                   ~ plant_in_gridcell(.x, aoi_grid, 
+                   ~ plant_in_gridcell_fast(.x, aoi_grid, 
                                        target_coverage = target_coverage, 
                                        min_dist = min_dist,
                                        trees, crowns, tree_structure)) %>% 

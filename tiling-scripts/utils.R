@@ -226,3 +226,28 @@ find_shadow_stamp <- function(bucket, baseline_folder, tile_id, profile = "citie
   stamps[[1]]
 }
 
+list_s3_keys <- function(bucket, prefix) {
+  keys <- character(0)
+  token <- NULL
+  
+  repeat {
+    resp <- s3$list_objects_v2(
+      Bucket = bucket,
+      Prefix = prefix,
+      ContinuationToken = token
+    )
+    
+    if (!is.null(resp$Contents) && length(resp$Contents) > 0) {
+      keys <- c(keys, vapply(resp$Contents, function(x) x$Key, character(1)))
+    }
+    
+    if (isTRUE(resp$IsTruncated)) {
+      token <- resp$NextContinuationToken
+    } else {
+      break
+    }
+  }
+  
+  keys
+}
+

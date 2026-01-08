@@ -251,3 +251,44 @@ list_s3_keys <- function(bucket, prefix) {
   keys
 }
 
+download_s3_files <- function(bucket,
+                              s3_keys,
+                              local_dir,
+                              quiet = TRUE,
+                              overwrite = TRUE) {
+  # bucket: "wri-cities-tcm"
+  # s3_keys: character vector of S3 keys (relative to bucket)
+  # local_dir: local directory to download into
+  # Result:
+  #   local_dir/<filename>
+  
+  stopifnot(length(s3_keys) > 0)
+  
+  dir.create(local_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  for (key in s3_keys) {
+    key <- sub("^s3://", "", key)
+    key <- sub(paste0("^", bucket, "/"), "", key)
+    
+    filename <- basename(key)
+    local_path <- file.path(local_dir, filename)
+    
+    args <- c(
+      "s3", "cp",
+      sprintf("s3://%s/%s", bucket, key),
+      local_path
+    )
+    
+    if (!overwrite) args <- c(args, "--no-clobber")
+    if (quiet)     args <- c(args, "--only-show-errors")
+    
+    res <- system2("aws", args, stdout = TRUE, stderr = TRUE)
+    status <- attr(res, "status")
+    
+    if (!is.null(status) && status != 0) {
+      stop("AWS download failed for ", key, ":\n", paste(res, collapse = "\n"))
+    }
+  }
+  
+  invisible(local_dir)
+}

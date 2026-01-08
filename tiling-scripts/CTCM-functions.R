@@ -15,6 +15,10 @@ download_tree_data <- function(city, infra, scenario, baseline_folder, scenario_
   run_setup_folder <- file.path(ctcm_setup_path, glue("{city}_{infra}_{scenario}"))
   R.utils::copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
+  unlink(file.path(run_setup_folder, "primary_data", "raster_files", "tile_00001"),
+         recursive = TRUE,
+         force = TRUE)
+  
   for (t in tiles){
     
     # copy baseline files
@@ -59,6 +63,66 @@ download_tree_data <- function(city, infra, scenario, baseline_folder, scenario_
     local_dir = glue("{run_setup_folder}/primary_data/met_files")
   )
 }
+
+download_shade_data <- function(city, infra, scenario, baseline_folder, scenario_folder, tiles){
+  
+  # Create folder
+  ctcm_setup_path <- file.path("~", "CTCM_data_setup")
+  template <- file.path(ctcm_setup_path, "ZZZ_template_city")
+  
+  # Create setup folder for new run
+  run_setup_folder <- file.path(ctcm_setup_path, glue("{city}_{infra}_{scenario}"))
+  R.utils::copyDirectory(template, run_setup_folder, overwrite = TRUE)
+  
+  unlink(file.path(run_setup_folder, "primary_data", "raster_files", "tile_00001"),
+         recursive = TRUE,
+         force = TRUE)
+  
+  for (t in tiles){
+    
+    # copy baseline files
+    baseline_tile <- glue("{baseline_folder}/{t}")
+    scenario_tile <- glue("{scenario_folder}/{t}")
+    base_files <- c(
+      # Baseline layers
+      glue("{baseline_tile}/raster_files/cif_albedo_cloud_masked.tif"),
+      glue("{baseline_tile}/raster_files/cif_dem.tif"),
+      glue("{baseline_tile}/raster_files/cif_dsm_ground_build.tif"),
+      glue("{baseline_tile}/raster_files/cif_lulc.tif"),
+      glue("{baseline_tile}/raster_files/cif_open_urban.tif"),
+      
+      # scenario layers
+      glue("{scenario_tile}/ccl_layers/structures-as-trees.tif")
+    )
+    
+    download_s3_files(
+      bucket    = "wri-cities-tcm",
+      s3_keys   = base_files,
+      local_dir = glue("{run_setup_folder}/primary_data/raster_files/{t}")
+    )
+    
+    intermediate_files <- c(
+      # intermediate layers
+      glue("{baseline_tile}/processed_data/ctcm_wallaspect.tif"),
+      glue("{baseline_tile}/processed_data/ctcm_wallheight.tif")
+    )
+    
+    dir.create(glue("{run_setup_folder}/processed_data/{t}"), recursive = TRUE)
+    download_s3_files(
+      bucket    = "wri-cities-tcm",
+      s3_keys   = intermediate_files,
+      local_dir = glue("{run_setup_folder}/processed_data/{t}")
+    )
+  }
+  
+  met_file <- glue("{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv")
+  download_s3_files(
+    bucket    = "wri-cities-tcm",
+    s3_keys   = met_file,
+    local_dir = glue("{run_setup_folder}/primary_data/met_files")
+  )
+}
+
 
 run_tree_CTCM <- function(city, infra, scenario, utc_offset){
   

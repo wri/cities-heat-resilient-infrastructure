@@ -1,0 +1,6 @@
+Rscript run-CTCM.R \
+--city BRA-Florianopolis \
+--aoi_name accelerator_area \
+--aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/BRA-Florianopolis/accelerator_area/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
+--scenarios trees
+

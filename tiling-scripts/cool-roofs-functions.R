@@ -17,7 +17,7 @@ update_albedo <- function(area_threshold = 2000){
       country = country,
       baseline_folder = baseline_folder,
       infra = infra,
-      tiles_aoi = tiles_aoi
+      tiles_s3 = tiles_s3
     ),
     envir = .GlobalEnv
   )

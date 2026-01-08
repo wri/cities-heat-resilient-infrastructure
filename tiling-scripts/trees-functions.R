@@ -93,25 +93,25 @@ process_trees <- function(tree_canopy, city_folder, baseline_folder, t_id){
   }
   
   # segment crowns
-  # crowns <- dalponte2016(tree_canopy, ttops)()
-  # names(crowns) <- "treeID"
-  # 
-  # # crown vectors
-  # crown_vectors <- crowns %>% 
-  #   as.polygons() %>% 
-  #   st_as_sf() %>% 
-  #   left_join(st_drop_geometry(ttops), by = "treeID") %>% 
-  #   rename(height = Z)  %>% 
-  #   mutate(tile = t_id) %>% 
-  #   st_filter(tile_grid, .predicate = st_within)
-  # 
-  # ttops <- ttops %>% 
-  #   rename(height = Z) %>% 
-  #   st_zm(drop = TRUE, what = "ZM")
+  crowns <- dalponte2016(tree_canopy, ttops)()
+  names(crowns) <- "treeID"
+
+  # crown vectors
+  crown_vectors <- crowns %>%
+    as.polygons() %>%
+    st_as_sf() %>%
+    left_join(st_drop_geometry(ttops), by = "treeID") %>%
+    rename(height = Z)  %>%
+    mutate(tile = t_id) %>%
+    st_filter(tile_grid, .predicate = st_within)
+
+  ttops <- ttops %>%
+    rename(height = Z) %>%
+    st_zm(drop = TRUE, what = "ZM")
   
   write_s3(ttops, glue("{bucket}/{baseline_folder}/{t_id}/ccl_layers/tree-points__baseline__baseline.geojson"))
-  # write_s3(crowns, glue("{bucket}/{baseline_folder}/{t_id}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"))
-  # write_s3(crown_vectors, glue("{bucket}/{baseline_folder}/{t_id}/ccl_layers/existing-tree-crowns__baseline__baseline.geojson"))
+  write_s3(crowns, glue("{bucket}/{baseline_folder}/{t_id}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"))
+  write_s3(crown_vectors, glue("{bucket}/{baseline_folder}/{t_id}/ccl_layers/existing-tree-crowns__baseline__baseline.geojson"))
 }
 
 

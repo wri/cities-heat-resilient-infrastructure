@@ -16,11 +16,10 @@ suppressPackageStartupMessages({
   library(sf)
   library(glue)
   library(tidyverse)
-  library(paws)
 })
 
 # ---------------------------------------------------------------------
-# CLI arguments (ALL REQUIRED except copy_from_extent)
+# CLI arguments
 # ---------------------------------------------------------------------
 option_list <- list(
   make_option("--city", type = "character",
@@ -51,9 +50,9 @@ if (length(missing) > 0) {
 # ---------------------------------------------------------------------
 # Assign inputs
 # ---------------------------------------------------------------------
-city        <- opts$city
-aoi_name    <- opts$aoi_name
-aoi_path    <- opts$aoi_path
+city     <- opts$city
+aoi_name <- opts$aoi_name
+aoi_path <- opts$aoi_path
 
 scenarios <- strsplit(opts$scenarios, ",")[[1]] |>
   trimws() |>
@@ -68,8 +67,9 @@ copy_from_extent <- tolower(opts$copy_from_extent) %in%
 bucket   <- "wri-cities-tcm"
 aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 
-open_urban_aws_http <- glue(
-  "https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}"
+open_urban_aws_http <- paste0(
+  "https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/",
+  city
 )
 
 s3 <- paws::s3()
@@ -86,22 +86,24 @@ message("  copy_from_extent = ", copy_from_extent)
 # ---------------------------------------------------------------------
 # Folder structure
 # ---------------------------------------------------------------------
-city_folder     <- glue("city_projects/{city}/{aoi_name}")
-baseline_folder <- glue("{city_folder}/scenarios/baseline/baseline")
+city_folder <- file.path("city_projects", city, aoi_name)
+baseline_folder <- file.path(city_folder, "scenarios", "baseline", "baseline")
 
 # ---------------------------------------------------------------------
 # Get tile ids from S3
 # ---------------------------------------------------------------------
-tiles_s3 <- list_tiles(glue("s3://{bucket}/{baseline_folder}"))
+tiles_s3 <- list_tiles(
+  paste0("s3://", bucket, "/", baseline_folder)
+)
 
 buffered_tile_grid <- st_read(
-  glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/tile_grid.geojson"),
+  paste0(aws_http, "/", baseline_folder, "/metadata/.qgis_data/tile_grid.geojson"),
   quiet = TRUE
 ) |>
   filter(tile_name %in% tiles_s3)
 
 tile_grid <- st_read(
-  glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson"),
+  paste0(aws_http, "/", baseline_folder, "/metadata/.qgis_data/unbuffered_tile_grid.geojson"),
   quiet = TRUE
 ) |>
   filter(tile_name %in% tiles_s3)
@@ -122,8 +124,13 @@ if (copy_from_extent) {
     pull(tile_name)
   
   for (t in tile_ids) {
-    from <- glue("city_projects/{city}/urban_extent/baseline/baseline/{t}")
-    to   <- glue("{baseline_folder}/{t}")
+    
+    from <- file.path(
+      "city_projects", city,
+      "urban_extent", "baseline", "baseline", t
+    )
+    
+    to <- file.path(baseline_folder, t)
     
     ensure_s3_prefix(bucket, to)
     s3_copy_vec(from = from, to = to, bucket = bucket)
@@ -150,12 +157,15 @@ tiles_aoi              <- tile_grid_aoi$tile_name
 # ---------------------------------------------------------------------
 if ("trees" %in% scenarios) {
   
-  source(here("tiling-scripts", "trees-functions.R"))
-  source(here("tiling-scripts", "CTCM-functions.R"))
-  
   infra <- "trees"
   scenario <- "pedestrian-achievable-90pctl"
-  scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+  
+  scenario_folder <- file.path(
+    city_folder, "scenarios", infra, scenario
+  )
+  
+  source(here("tiling-scripts", "trees-functions.R"))
+  source(here("tiling-scripts", "CTCM-functions.R"))
   
   run_tree_scenario()
   
@@ -174,10 +184,10 @@ if ("trees" %in% scenarios) {
 # ---------------------------------------------------------------------
 if ("cool-roofs" %in% scenarios) {
   
-  source(here("tiling-scripts", "cool-roofs-functions.R"))
-  
   infra   <- "cool-roofs"
-  country <- str_split(city, "-")[[1]][1]
+  country <- strsplit(city, "-")[[1]][1]
+  
+  source(here("tiling-scripts", "cool-roofs-functions.R"))
   
   update_albedo()
 }
@@ -187,15 +197,13 @@ if ("cool-roofs" %in% scenarios) {
 # ---------------------------------------------------------------------
 if ("shade-structures" %in% scenarios) {
   
-  source(here("tiling-scripts", "park-shade-functions.R"))
-  source(
-    here("scenario-generation", "park-shade-structures",
-         "shade-generating-functions.R")
-  )
-  
   infra <- "shade-structures"
   scenario <- "all-parks"
-  scenario_folder <- glue("{city_folder}/scenarios/{infra}/{scenario}")
+  
+  scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
+  
+  source(here("tiling-scripts", "park-shade-functions.R"))
+  source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
   
   run_shade_scenario()
 }

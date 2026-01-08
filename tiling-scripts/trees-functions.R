@@ -5,8 +5,6 @@ library(tidyverse)
 library(lidR)
 library(RANN)
 library(glue)
-library(geoarrow)
-library(sfarrow)
 
 
 
@@ -185,7 +183,7 @@ process_trees <- function(tree_canopy, city_folder, baseline_folder, t_id){
 
 # Create plantable area ---------------------------------------------------
 
-create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http){
+create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t){
   
   utm <- st_crs(lulc)
   
@@ -208,7 +206,7 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   
   # Load roads and filter to bbox of tile geometry
   road_vectors <- suppressMessages(
-    st_read_parquet(glue("{open_urban_aws_http}/roads/roads_all.parquet"))) %>% 
+    st_read(glue("{open_urban_aws_http}/roads/roads_all.geojson"))) %>% 
       st_transform(utm) %>% 
       st_filter(tile_geom)
   
@@ -255,7 +253,16 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   
   # Remove major roads
   # Subset to low-traffic volume roads
-  lanes <- suppressMessages(read_csv(glue("{open_urban_aws_http}/roads/average_lanes.csv")))
+  lanes <- suppressMessages(
+    readr::read_csv(glue("{open_urban_aws_http}/roads/average_lanes.csv"))
+  ) %>%
+    dplyr::rename(
+      avg_lanes = dplyr::coalesce(
+        dplyr::any_of("avg_lanes"),
+        dplyr::any_of("avg.lanes")
+      )
+    )
+  
   
   major_roads_list <- c("motorway", "primary")
   
@@ -263,7 +270,7 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
     select(highway, lanes) %>% 
     mutate(lanes = as.integer(lanes)) %>% 
     left_join(lanes, by = "highway") %>% 
-    mutate(lanes = coalesce(lanes, avg.lanes))
+    mutate(lanes = coalesce(lanes, avg_lanes))
   
   major_road_vectors <- road_vectors %>% 
     filter(highway %in% major_roads_list)
@@ -334,7 +341,7 @@ baseline_processing <- function(t){
   pedestrian_area <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
 
   # Create plantable area
-  plantable_street <- create_plantable_area(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http)
+  plantable_street <- create_plantable_area(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t)
   write_s3(plantable_street, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/plantable-areas__trees__{scenario}.tif"))
   
   # Create available points to place trees
@@ -810,6 +817,33 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     write_s3(updated_canopy, updated_p)
   }
   
+  for (t in buffered_tile_names){
+    
+    tile <- buffered_tile_grid %>% 
+      filter(tile_name == t)
+    
+    pts <- new_tree_pts %>% 
+      st_filter(tile)
+    
+    # Skip if nothing to add for this tile (optional)
+    if (is.null(pts) || nrow(pts) == 0) next
+    
+    path <- glue(
+      "{aws_http}/{scenario_folder}/{t}/ccl_layers/new-tree-points__trees__{scenario}.geojson"
+    )
+    
+    # Check existence using your existing helper (returns NULL on missing)
+    existing <- tryCatch(st_read(path, quiet = TRUE), error = function(e) NULL)
+    
+    combined <- if (is.null(existing) || nrow(existing) == 0) {
+      pts
+    } else {
+      rbind(existing, pts)
+    }
+    
+    write_s3(combined, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/new-tree-points__trees__{scenario}.geojson"))
+  }
+  
   new_tree_pts
 }
 
@@ -821,6 +855,7 @@ run_tree_scenario <- function(min_dist = 5) {
   # Make required objects visible to functions that were written expecting globals.
   list2env(
     list(
+      city = city,
       tiles_aoi = tiles_aoi,
       tiles_s3 = tiles_s3,
       bucket = bucket,
@@ -828,16 +863,18 @@ run_tree_scenario <- function(min_dist = 5) {
       baseline_folder = baseline_folder,
       scenario_folder = scenario_folder,
       city_folder = city_folder,
-      aoi = aoi
+      aoi = aoi,
+      open_urban_aws_http = open_urban_aws_http
     ),
     envir = .GlobalEnv
   )
+  
   
   map(tiles_s3, baseline_processing)
   create_tree_population(tiles_s3)
   
   # Achievable potential
-  open_urban_aws_http <- glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
+  
   tree_grid_path <- glue("{open_urban_aws_http}/scenarios/street-trees/{city}-street-tree-pct-1km-grid.csv")
   
   # Get percentile value

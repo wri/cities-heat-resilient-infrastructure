@@ -480,7 +480,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
   scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
-  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
+  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
 
   # MetFiles
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.txt"

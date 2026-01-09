@@ -448,7 +448,7 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   library(withr)
   
   with_dir(run_setup_folder, {
-    system(file.path(run_setup_folder, "b_run_CTCM_processing.sh"), wait = TRUE)
+    system(file.path(run_setup_folder, "run_b_CTCM_processing.sh"), wait = TRUE)
   })
 
   # Then continue with the rest of your R script
@@ -518,7 +518,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   library(withr)
   
   with_dir(run_setup_folder, {
-    system(file.path(run_setup_folder, "b_run_CTCM_processing.sh"), wait = TRUE)
+    system(file.path(run_setup_folder, "run_b_CTCM_processing.sh"), wait = TRUE)
   })
   
   # Then continue with the rest of your R script
@@ -593,7 +593,7 @@ run_shade_structures_CTCM <- function(transmissivity){
   library(withr)
   
   with_dir(run_setup_folder, {
-    system(file.path(run_setup_folder, "b_run_CTCM_processing.sh"), wait = TRUE)
+    system(file.path(run_setup_folder, "run_b_CTCM_processing.sh"), wait = TRUE)
   })
   
   # Then continue with the rest of your R script

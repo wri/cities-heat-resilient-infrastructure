@@ -22,7 +22,6 @@ suppressPackageStartupMessages({
   library(sf)
   library(tidyverse)
   library(glue)
-  library(paws)
 })
 
 # -----------------------------

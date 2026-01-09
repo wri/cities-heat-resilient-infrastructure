@@ -205,8 +205,7 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   # no trees within 9-m of intersection
   
   # Load roads and filter to bbox of tile geometry
-  road_vectors <- suppressMessages(
-    st_read(glue("{open_urban_aws_http}/roads/roads_all.geojson"))) %>% 
+  road_vectors <- st_read(glue("{open_urban_aws_http}/roads/roads_all.geojson"), quiet = TRUE) %>% 
       st_transform(utm) %>% 
       st_filter(tile_geom)
   

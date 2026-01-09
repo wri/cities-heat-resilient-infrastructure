@@ -135,6 +135,8 @@ for (city in names(plan)) {
   message("CITY: ", city)
   message("============================================================\n")
   
+  open_urban_aws_http <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city)
+  
   # derive aoi path
   aoi_path <- build_aoi_path(city)
   

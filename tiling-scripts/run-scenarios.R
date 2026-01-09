@@ -166,6 +166,13 @@ for (city in names(plan)) {
   aoi <- st_read(aoi_path, quiet = TRUE) |>
     st_transform(st_crs(tile_grid))
   
+  # Tiles intersecting AOI (kept, though you still use tiles_s3 downstream) 
+  buffered_tile_grid_aoi <- buffered_tile_grid |> 
+    st_filter(aoi) 
+  tile_grid_aoi <- tile_grid |> 
+    st_filter(aoi) 
+  tiles_aoi <- buffered_tile_grid_aoi$tile_name
+  
   # optional baseline copy
   if (copy_from_extent) {
     tile_ids <- tile_grid |> st_filter(aoi) |> pull(tile_name)

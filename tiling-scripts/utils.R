@@ -1,3 +1,24 @@
+rast_retry <- function(path, attempts = 6, base_sleep = 0.5, quiet = FALSE) {
+  last_err <- NULL
+  
+  for (i in seq_len(attempts)) {
+    r <- tryCatch(
+      terra::rast(path),
+      error = function(e) { last_err <<- e; NULL }
+    )
+    
+    if (!is.null(r)) return(r)
+    
+    # exponential-ish backoff with jitter
+    sleep <- base_sleep * (1.6 ^ (i - 1)) + stats::runif(1, 0, 0.25)
+    if (!quiet) message(sprintf("rast() failed (%d/%d). Retrying in %.2fs: %s", i, attempts, sleep, path))
+    Sys.sleep(sleep)
+  }
+  
+  stop(sprintf("[rast_retry] Failed after %d attempts:\n%s\n%s",
+               attempts, path, conditionMessage(last_err)), call. = FALSE)
+}
+
 # Write to s3 
 write_s3 <- function(obj, file_path) {
   s3_uri <- glue("s3://{file_path}")
@@ -26,6 +47,12 @@ write_s3 <- function(obj, file_path) {
   } else if (ext == "csv") {                  
     write_csv(obj, file = tmp)
     ctype <- "application/octet-stream"
+    
+  } else if (ext == "txt") {
+    # Save exactly like write_delim() output, then upload tmp to S3
+    # Choose your delimiter; \t is typical for .txt tab-delimited tables
+    readr::write_delim(obj, file = tmp, delim = "\t")
+    ctype <- "text/plain"
     
   } else {
     stop("Unsupported extension: ", ext)
@@ -128,7 +155,7 @@ load_and_merge <- function(paths) {
     stop("No raster paths provided in plantable_paths")
   }
   
-  rasters <- lapply(paths, rast)
+  rasters <- lapply(paths, rast_retry)
   
   if (length(rasters) == 1) {
     return(rasters[[1]])   # just return the single raster

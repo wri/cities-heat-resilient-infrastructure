@@ -7,6 +7,7 @@ library(RANN)
 library(glue)
 
 
+source(here("tiling-scripts", "utils.R"))
 
 # Make binary tree cover --------------------------------------------------
 
@@ -36,7 +37,7 @@ process_trees_staged_extent <- function(city){
     tile_name <- basename(p) %>% 
       str_remove(".tif")
     
-    tree_canopy <- rast(p)
+    tree_canopy <- rast_retry(p)
     tree_canopy[tree_canopy < 3] <- 0
     
     # locate trees
@@ -324,8 +325,8 @@ baseline_processing <- function(t){
   )
 
   # Load data
-  tree_canopy <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))
-  lulc <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
+  tree_canopy <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))
+  lulc <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
 
   # Create and save binary tree cover
   # binary_tree_cover <- make_binary_tree_cover(tree_canopy)
@@ -336,8 +337,8 @@ baseline_processing <- function(t){
   # Create pedestrian area
   # pedestrian_area <- create_pedestrian_area(lulc, open_urban_aws_http)
   # write_s3(pedestrian_area, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas.tif"))
-  binary_tree_cover <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-cover__baseline__baseline.tif"))
-  pedestrian_area <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
+  binary_tree_cover <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-cover__baseline__baseline.tif"))
+  pedestrian_area <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
 
   # Create plantable area
   plantable_street <- create_plantable_area(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t)
@@ -534,12 +535,12 @@ plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
     available_pts <- available_pts %>% filter(pt_id != candidate$pt_id)
     
     # Rasterize crown
-    crown_pixels <- rast(glue("{aws_http}/{baseline_folder}/{crown_geom$tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif")) %>% 
+    crown_pixels <- rast_retry(glue("{aws_http}/{baseline_folder}/{crown_geom$tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif")) %>% 
       crop(crown_geom)
     crown_pixels <- crown_pixels == crown_geom$treeID
     crown_pixels <- subst(crown_pixels, from = 0, to = NA)
     
-    height_pixels <- rast(glue("{aws_http}/{baseline_folder}/{crown_geom$tile}/raster_files/cif_tree_canopy.tif")) %>% 
+    height_pixels <- rast_retry(glue("{aws_http}/{baseline_folder}/{crown_geom$tile}/raster_files/cif_tree_canopy.tif")) %>% 
       crop(crown_geom) 
     tree_pixels <- mask(height_pixels, crown_pixels)
     
@@ -576,7 +577,7 @@ plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
   update_paths <- glue("{aws_http}/{scenario_folder}/{buffered_tile_names}/raster_files/tree_canopy.tif")
   
   for (p in update_paths) {
-    r <- rast(p)
+    r <- rast_retry(p)
     # Make canopy_height_gridcell the same extent as r
     canopy_height_gridcell <- canopy_height_gridcell %>% 
       extend(r) %>% 
@@ -681,10 +682,10 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     if (exists(key, envir = tile_cache, inherits = FALSE)) {
       return(get(key, envir = tile_cache, inherits = FALSE))
     }
-    crowns_r <- terra::rast(glue::glue(
+    crowns_r <- terra::rast_retry(glue::glue(
       "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
     ))
-    height_r <- terra::rast(glue::glue(
+    height_r <- terra::rast_retry(glue::glue(
       "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
     ))
     val <- list(crowns_r = crowns_r, height_r = height_r)
@@ -800,7 +801,7 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   )
   
   for (p in update_paths) {
-    r <- terra::rast(p)
+    r <- terra::rast_retry(p)
     
     canopy_aligned <- canopy_height_gridcell |>
       terra::extend(r) |>
@@ -921,12 +922,12 @@ run_tree_scenario <- function(min_dist = 5) {
   # Copy final canopy to scenario folder
   for (t in tiles_aoi){
     # updated tree cover
-    updated_tree <- rast(glue("{aws_http}/{scenario_folder}/{t}/raster_files/tree_canopy.tif"))
+    updated_tree <- rast_retry(glue("{aws_http}/{scenario_folder}/{t}/raster_files/tree_canopy.tif"))
     updated_tree_cover <- updated_tree >= 3
     write_s3(updated_tree_cover, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/tree-cover__trees__pedestrian-achievable-90pctl.tif"))
     
     # new tree cover
-    existing_tree <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-cover__baseline__baseline.tif"))
+    existing_tree <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-cover__baseline__baseline.tif"))
     new_tree <- updated_tree_cover - existing_tree
     write_s3(new_tree, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/new-tree-cover__trees__pedestrian-achievable-90pctl.tif"))
   }

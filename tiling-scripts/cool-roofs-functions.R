@@ -191,6 +191,6 @@ calc_air_temp_delta <- function(city, scenario, aoi){
     select(-reduction)
   
   write_s3(met,
-           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/reduced_temps.txt"))
+           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/reduced_temps.csv"))
   
 }

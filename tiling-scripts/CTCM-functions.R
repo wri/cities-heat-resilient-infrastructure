@@ -131,7 +131,7 @@ download_cool_roof_data <- function(city, aoi_name, scenario, baseline_folder, t
     
   }
   
-  met_file <- glue("{scenario_folder}/reduced_temps.txt")
+  met_file <- glue("{scenario_folder}/reduced_temps.csv")
   download_s3_files(
     bucket    = "wri-cities-tcm",
     s3_keys   = met_file,
@@ -414,7 +414,7 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
   
   # MetFiles
-  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.txt"
+  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
   
   # CustomTiffFilenames
   scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
@@ -483,7 +483,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
 
   # MetFiles
-  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.txt"
+  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.csv"
   
   # CustomTiffFilenames
   scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
@@ -553,7 +553,7 @@ run_shade_structures_CTCM <- function(transmissivity){
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
   
   # MetFiles
-  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.txt"
+  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
   
   # CustomTiffFilenames
   scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"

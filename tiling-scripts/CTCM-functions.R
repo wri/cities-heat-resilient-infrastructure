@@ -486,7 +486,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.csv"
   
   # CustomTiffFilenames
-  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
+  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "albedo__cool-roofs__{scenario}.tif"
   scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
   scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
   scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"

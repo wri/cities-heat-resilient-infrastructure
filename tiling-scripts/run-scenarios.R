@@ -43,7 +43,7 @@ option_list <- list(
   make_option("--copy_from_extent", type = "character",
               default = "false",
               help = "true/false. Copy baseline tiles from urban_extent (default: false)"),
-  make_option("--ctcm_only", type = "character",
+  make_option("--generate_scenario_data", type = "character",
               default = "false",
               help = "true/false. If true, only run CTCM step for trees (default: false)")
 )
@@ -74,7 +74,7 @@ scenarios <- strsplit(opts$scenarios, ",")[[1]] |>
   (\(x) x[nzchar(x)])()
 
 copy_from_extent <- tolower(opts$copy_from_extent) %in% c("true", "t", "1", "yes", "y")
-ctcm_only        <- tolower(opts$ctcm_only)        %in% c("true", "t", "1", "yes", "y")
+generate_scenario_data <- tolower(opts$generate_scenario_data) %in% c("true", "t", "1", "yes", "y")
 
 # ---------------------------------------------------------------------
 # Constants / setup
@@ -91,7 +91,7 @@ message("  aoi_name = ", aoi_name)
 message("  aoi_path template = ", aoi_path_template)
 message("  scenarios = ", paste(scenarios, collapse = ", "))
 message("  copy_from_extent = ", copy_from_extent)
-message("  ctcm_only = ", ctcm_only)
+message("  generate_scenario_data = ", generate_scenario_data)
 
 # ---------------------------------------------------------------------
 # Run serially per city
@@ -170,7 +170,7 @@ for (city in cities) {
   # Tiles intersecting AOI (kept, though you still use tiles_s3 downstream)
   buffered_tile_grid_aoi <- buffered_tile_grid |> st_filter(aoi)
   tile_grid_aoi          <- tile_grid |> st_filter(aoi)
-  tiles_aoi              <- tile_grid_aoi$tile_name
+  tiles_aoi              <- buffered_tile_grid_aoi$tile_name
   
   # Trees scenario
   if ("trees" %in% scenarios) {
@@ -182,25 +182,25 @@ for (city in cities) {
     source(here("tiling-scripts", "trees-functions.R"))
     source(here("tiling-scripts", "CTCM-functions.R"))
     
-    if (ctcm_only) {
-      
-      run_tree_CTCM(city, infra, scenario)
-      
-    } else {
-      
+    if (generate_scenario_data) {
       run_tree_scenario()
-      
-      download_tree_data(
-        city            = city,
-        infra           = infra,
-        scenario        = scenario,
-        baseline_folder = baseline_folder,
-        scenario_folder = scenario_folder,
-        tiles           = tiles_s3
-      )
-      
-      run_tree_CTCM(city, infra, scenario)
-    }
+    } 
+    
+    download_tree_data(
+      city            = city,
+      infra           = infra,
+      scenario        = scenario,
+      baseline_folder = baseline_folder,
+      scenario_folder = scenario_folder,
+      tiles           = tiles_s3
+    )
+    
+    # Run the CTCM
+    run_tree_CTCM(city, infra, scenario)
+    
+    # Upload the data to s3
+    upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+    
   }
   
   # Cool roofs scenario
@@ -210,8 +210,24 @@ for (city in cities) {
     country <- strsplit(city, "-")[[1]][1]
     
     source(here("tiling-scripts", "cool-roofs-functions.R"))
+    source(here("tiling-scripts", "CTCM-functions.R"))
     
-    update_albedo()
+    # Generate scenario data
+    if (generate_scenario_data) {
+      update_albedo()
+    }
+    
+    # Calculate air temperature change
+    for (s in c("all-buildings", "large-buildings")){
+      calc_air_temp_delta(city, s, aoi)
+    }
+    
+    download_cool_roof_data(city, aoi_name, scenario = "all-buildings", baseline_folder, tiles_s3)
+    # Run CTCM
+    
+    # Upload the data to s3
+    upload_CTCM_results_to_s3(city, infra, scenario, aoi_name) 
+    
   }
   
   # Shade structures scenario
@@ -221,11 +237,19 @@ for (city in cities) {
     scenario <- "all-parks"
     scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
     
-    # important: scenario_folder exists before source() if those scripts use it at top level
     source(here("tiling-scripts", "park-shade-functions.R"))
     source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
     
-    run_shade_scenario()
+    # Generate scenario data
+    if (generate_scenario_data) {
+      run_shade_scenario()
+    }
+    
+    # Run CTCM
+    
+    # Upload the data to s3
+    upload_CTCM_results_to_s3(city, infra, scenario, aoi_name) 
+    
   }
   
   message("\nFinished city: ", city)

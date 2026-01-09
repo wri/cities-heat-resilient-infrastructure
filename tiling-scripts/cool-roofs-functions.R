@@ -150,4 +150,47 @@ update_albedo <- function(area_threshold = 2000){
   
 }
 
-
+calc_air_temp_delta <- function(city, scenario, aoi){
+  
+  # list tiles
+  scenario_path <- glue("city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}")
+  tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_path}"))
+                      
+  # load and merge scenario
+  scenario_alb_diff <- load_and_merge(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{scenario_path}/{tiles}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
+  
+  # Calculate albedo delta
+  alb_delta <- global(mask(scenario_alb_diff, aoi), fun = "mean", na.rm = TRUE)$mean
+  
+  ###### CALCULATE TEMP CHAGE ######
+  # from Krayenhoff et al. 2021 DOI 10.1088/1748-9326/abdcf1
+  
+  # 0.1 increase in albedo results in a 0.6 C reduction in air temp for midday clear-sky conditiosn
+  
+  ###### ADJUST TO 12:00, 15:00, 18:00 TEMP CHANGE ######
+  
+  dT_12 <- round(alb_delta * 6, 2)
+  dT_15 <- round(0.935315 * dT_12, 2)
+  dT_18 <- round(0.646853 * dT_12, 2)
+  
+  air_temp_reductions <- tribble(
+    ~ Hour, ~ reduction,
+    12, dT_12,
+    15, dT_15,
+    18, dT_18
+  )
+  
+  write_s3(air_temp_reductions, 
+           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/air_temp_reductions.csv"))
+  
+  # Modify the met file with the updated air temperatures
+  met <- read_delim(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/accelerator_area/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv"),
+                    skip = 2) %>% 
+    left_join(air_temp_reductions, by = "Hour") %>%
+    mutate(Temperature = Temperature - reduction) %>%
+    select(-reduction)
+  
+  write_s3(met,
+           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/reduced_temps.txt"))
+  
+}

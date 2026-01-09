@@ -140,19 +140,23 @@ download_cool_roof_data <- function(city, aoi_name, scenario, baseline_folder, t
 }
 
 
-download_shade_data <- function(city, infra, scenario, baseline_folder, scenario_folder, tiles){
+download_shade_data <- function(city, infra, scenario, baseline_folder, scenario_folder, tiles, transmissivity){
   
   # Create folder
   ctcm_setup_path <- file.path("~", "CTCM_data_setup")
   template <- file.path(ctcm_setup_path, "ZZZ_template_city")
   
   # Create setup folder for new run
-  run_setup_folder <- file.path(ctcm_setup_path, glue("{city}_{infra}_{scenario}"))
+  run_setup_folder <- file.path(ctcm_setup_path, glue("{city}_{infra}_{scenario}_t{transmissivity}"))
   R.utils::copyDirectory(template, run_setup_folder, overwrite = TRUE)
   
   unlink(file.path(run_setup_folder, "primary_data", "raster_files", "tile_00001"),
          recursive = TRUE,
          force = TRUE)
+  
+  name <- glue("{city}_{infra}_{scenario}_{transmissivity}")
+  results_dir <- file.path("~", "CTCM_outcome",
+                           name, glue("{name}_{scenario}_{infra}_t{transmissivity}"))
   
   for (t in tiles){
     
@@ -189,6 +193,23 @@ download_shade_data <- function(city, infra, scenario, baseline_folder, scenario
       s3_keys   = intermediate_files,
       local_dir = glue("{run_setup_folder}/processed_data/{t}")
     )
+    
+    # If transmissivity = 0, reuse SVFs from transmissivity = 3
+    svf_t3 <- file.path(results_dir, "processed_data", t, "ctcm_svfs", "svf.tif")
+    if (file.exists(svf_t3) & transmissivity == 0){
+      svf_files  <- c("svf.tif","svfaveg.tif","svfE.tif","svfEaveg.tif","svfEveg.tif",
+                      "svfN.tif","svfNaveg.tif","svfNveg.tif","svfS.tif","svfSaveg.tif",
+                      "svfSveg.tif","svfveg.tif","svfW.tif","svfWaveg.tif","svfWveg.tif")
+      svf_files  <- glue("{baseline_tile}/processed_data/ctcm_svfs/{svf_files}")
+      
+      dir.create(glue("{run_setup_folder}/processed_data/{t}/ctcm_svfs"), recursive = TRUE)
+      download_s3_files(
+        bucket    = "wri-cities-tcm",
+        s3_keys   = svf_files,
+        local_dir = glue("{run_setup_folder}/processed_data/{t}/ctcm_svfs")
+      )
+    }
+    
   }
   
   met_file <- glue("{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv")
@@ -204,17 +225,27 @@ upload_CTCM_results_to_s3 <- function(
     infra,
     scenario,
     aoi_name,
+    transmissivty = NULL,
     quiet           = FALSE
 ) {
   
   source(here("utils", "utci.R"))
+  
+  if (is.null(transmissivity)){
+    name <- glue("{city}_{infra}_{scenario}")
+    results_dir <- file.path("~", "CTCM_outcome", 
+                             name, glue("{name}_{scenario}_{infra}"))
+  } else {
+    name <- glue("{city}_{infra}_{scenario}_{transmissivity}")
+    results_dir <- file.path("~", "CTCM_outcome", 
+                             name, glue("{name}_{scenario}_{infra}_{transmissivity}"))
+  }
   
   tcm_results_dir <-  "tcm_results/met_era5_hottest_days"
   primary_dir     <-  "primary_data/raster_files"
   processed_dir   <-  "processed_data"
   
   scenario_folder <- file.path("city_projects", city, aoi_name, "scenarios", infra, scenario)
-  name <- glue("{city}_{infra}_{scenario}")
   
   bucket_prefix <- glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
   
@@ -247,9 +278,6 @@ upload_CTCM_results_to_s3 <- function(
   date_doy <- yday(date_ymd)
   
   date <- glue("{year}_{date_doy}")
-  
-  results_dir <- file.path("~", "CTCM_outcome", 
-                           name, glue("{name}_{scenario}_{infra}"))
   
   # Find tile directories (e.g., tile_00001/)
   tile_dirs <- list.dirs(path.expand(file.path(results_dir, tcm_results_dir)),
@@ -363,6 +391,7 @@ upload_CTCM_results_to_s3 <- function(
 
 run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
   baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
   
   run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}"))
@@ -429,7 +458,9 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   
 }
 
-run_cool_roof_CTCM <- function(){
+run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
+  
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
   baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
   
   run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}"))
@@ -497,10 +528,12 @@ run_cool_roof_CTCM <- function(){
   
 }
 
-run_shade_structures_CTCM <- function(){
+run_shade_structures_CTCM <- function(transmissivity){
+  
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
   baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
   
-  run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}"))
+  run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}_t{transmissivity}"))
   
   # Modify yaml file
   yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
@@ -528,14 +561,20 @@ run_shade_structures_CTCM <- function(){
   scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
   scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
   scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
-  scenario_yaml[[4]]$tree_canopy_tif_filename <- "trees_as_structures.tif"
+  scenario_yaml[[4]]$tree_canopy_tif_filename <- "structures-as-trees.tif"
   
   # PreparedIntermediateFilenames
   scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
   scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
   
+  # SVFs
+  if (transmissivity == 0) {
+    scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs"
+  }
+  
   # MethodAttributes
   # Set sampling_local_hours as a verbatim string
+  scenario_yaml[[6]]$skyview_factor$transmissivity_of_light_through_vegetation <- transmissivity
   if (!is.null(scenario_yaml[[6]]$utci_output)) {
     scenario_yaml[[6]]$utci_output <- TRUE
   }
@@ -560,6 +599,6 @@ run_shade_structures_CTCM <- function(){
   # Then continue with the rest of your R script
   message("CTCM processing complete. Copying ouput files to scenario folders...")
   
-  upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+  upload_CTCM_results_to_s3(city, infra, scenario, aoi_name, transmissivity = transmissivity)
   
 }

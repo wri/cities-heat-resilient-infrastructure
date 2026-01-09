@@ -196,10 +196,7 @@ for (city in cities) {
     )
     
     # Run the CTCM
-    run_tree_CTCM(city, infra, scenario)
-    
-    # Upload the data to s3
-    upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+    run_tree_CTCM(city, infra, scenario, aoi_name)
     
   }
   
@@ -223,10 +220,9 @@ for (city in cities) {
     }
     
     download_cool_roof_data(city, aoi_name, scenario = "all-buildings", baseline_folder, tiles_s3)
-    # Run CTCM
     
-    # Upload the data to s3
-    upload_CTCM_results_to_s3(city, infra, scenario, aoi_name) 
+    # Run CTCM
+    run_cool_roof_CTCM(city, infra, scenario, aoi_name)
     
   }
   
@@ -245,7 +241,22 @@ for (city in cities) {
       run_shade_scenario()
     }
     
+    scenario_tiles <- list_tiles(paste0("s3://", bucket, "/", scenario_folder))
+      
+    # Download data
+    download_shade_data(city, 
+                        infra, 
+                        scenario, 
+                        baseline_folder, 
+                        scenario_folder, 
+                        tiles = scenario_tiles, transmissivity = 3)
+    
     # Run CTCM
+    run_CTCM_shade_structures(city_folder, author, utc_offset, transmissivity = 3, 
+                                   scenario_name = "program-potential", buffer)
+    
+    run_CTCM_shade_structures(city_folder, author, utc_offset, transmissivity = 0, 
+                                   scenario_name = "program-potential", buffer)
     
     # Upload the data to s3
     upload_CTCM_results_to_s3(city, infra, scenario, aoi_name) 

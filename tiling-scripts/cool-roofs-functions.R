@@ -184,13 +184,41 @@ calc_air_temp_delta <- function(city, scenario, aoi){
            glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/air_temp_reductions.csv"))
   
   # Modify the met file with the updated air temperatures
-  met <- read_delim(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/accelerator_area/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv"),
-                    skip = 2) %>% 
+  met_path <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/accelerator_area/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv")
+  lines <- readLines(met_path, warn = FALSE)
+  
+  line1 <- lines[1]  # keep as-is
+  line2 <- lines[2]  # keep as-is
+  line3 <- lines[3]  # keep as-is (true header)
+  
+  # --- parse only the tabular portion (header + data) ---
+  # Use the exact header line3, plus the data rows
+  tab_lines <- lines[3:length(lines)]
+  
+  dat <- read_csv(I(tab_lines), show_col_types = FALSE) %>% 
     left_join(air_temp_reductions, by = "Hour") %>%
     mutate(Temperature = Temperature - reduction) %>%
     select(-reduction)
   
-  write_s3(met,
-           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/reduced_temps.csv"))
+  tmp_rows <- tempfile(fileext = ".csv")
+  write_csv(dat, tmp_rows, col_names = FALSE)
+  
+  tmp_out <- tempfile(fileext = ".csv")
+  new_lines <- c(line1, line2, line3, readLines(tmp_rows, warn = FALSE))
+  writeLines(new_lines, tmp_out, useBytes = TRUE)
+  
+  out_s3 <- glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/reduced_temps.csv")
+  
+  # ---- upload to S3 ----
+  res <- system2(
+    "aws",
+    c("s3", "cp", tmp_out, out_s3, "--only-show-errors"),
+    stdout = TRUE, stderr = TRUE
+  )
+  status <- attr(res, "status")
+  if (!is.null(status) && status != 0) {
+    stop("aws s3 cp failed:\n", paste(res, collapse = "\n"))
+  }
+  
   
 }

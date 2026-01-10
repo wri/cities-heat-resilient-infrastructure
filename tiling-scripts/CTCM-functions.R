@@ -464,7 +464,7 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   
   with_dir(run_setup_folder, {
     system(
-      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "run_b_CTCM_processing.sh"))),
+      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "./run_b_CTCM_processing.sh"))),
       wait = TRUE
     )
   })
@@ -537,7 +537,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   
   with_dir(run_setup_folder, {
     system(
-      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "run_b_CTCM_processing.sh"))),
+      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "./run_b_CTCM_processing.sh"))),
       wait = TRUE
     )
   })
@@ -616,7 +616,7 @@ run_shade_structures_CTCM <- function(transmissivity){
   
   with_dir(run_setup_folder, {
     system(
-      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "run_b_CTCM_processing.sh"))),
+      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "./run_b_CTCM_processing.sh"))),
       wait = TRUE
     )
   })

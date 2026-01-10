@@ -244,8 +244,12 @@ upload_CTCM_results_to_s3 <- function(
   #   results_dir <- file.path("~", "CTCM_outcome", 
   #                            name, glue("{name}_{scenario}_{infra}_{transmissivity}"))
   # }
+  if (infra == "cool-roofs"){
+    tcm_results_dir <-  "tcm_results/reduced_temps"
+  } else {
+    tcm_results_dir <-  "tcm_results/met_era5_hottest_days"
+  }
   
-  tcm_results_dir <-  "tcm_results/met_era5_hottest_days"
   primary_dir     <-  "primary_data/raster_files"
   processed_dir   <-  "processed_data"
   
@@ -271,9 +275,16 @@ upload_CTCM_results_to_s3 <- function(
     message("  (no ", met_dir, ", skipping)")
   }
   
+  if (infra == "cool-roofs"){
+    met_file_name <- "reduced_temps.csv"
+  } else {
+    met_file_name <- "met_era5_hottest_days.csv"
+  }
+  
   met <- read_csv(
-    glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/metadata/met_files/met_era5_hottest_days.csv"),
+    glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/metadata/{met_file_name}"),
     skip = 2)
+  
   year <- met$Year %>% unique()
   month <- met$Month %>% as.integer() %>% str_pad(2, pad = "0") %>% unique()
   day <- met$Day %>% as.integer() %>% str_pad(2, pad = "0") %>% unique()

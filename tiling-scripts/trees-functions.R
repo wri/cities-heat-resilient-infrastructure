@@ -682,10 +682,10 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     if (exists(key, envir = tile_cache, inherits = FALSE)) {
       return(get(key, envir = tile_cache, inherits = FALSE))
     }
-    crowns_r <- terra::rast_retry(glue::glue(
+    crowns_r <- rast_retry(glue::glue(
       "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
     ))
-    height_r <- terra::rast_retry(glue::glue(
+    height_r <- rast_retry(glue::glue(
       "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
     ))
     val <- list(crowns_r = crowns_r, height_r = height_r)
@@ -801,7 +801,7 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   )
   
   for (p in update_paths) {
-    r <- terra::rast_retry(p)
+    r <- rast_retry(p)
     
     canopy_aligned <- canopy_height_gridcell |>
       terra::extend(r) |>

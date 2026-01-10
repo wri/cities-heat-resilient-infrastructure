@@ -225,21 +225,25 @@ upload_CTCM_results_to_s3 <- function(
     infra,
     scenario,
     aoi_name,
-    transmissivty = NULL,
+    # transmissivty = NULL,
     quiet           = FALSE
 ) {
   
   source(here("utils", "utci.R"))
   
-  if (is.null(transmissivity)){
-    name <- glue("{city}_{infra}_{scenario}")
-    results_dir <- file.path("~", "CTCM_outcome", 
-                             name, glue("{name}_{scenario}_{infra}"))
-  } else {
-    name <- glue("{city}_{infra}_{scenario}_{transmissivity}")
-    results_dir <- file.path("~", "CTCM_outcome", 
-                             name, glue("{name}_{scenario}_{infra}_{transmissivity}"))
-  }
+  name <- glue("{city}_{infra}_{scenario}")
+  results_dir <- file.path("~", "CTCM_outcome", 
+                           name, glue("{name}_{scenario}_{infra}"))
+  
+  # if (is.null(transmissivity)){
+  #   name <- glue("{city}_{infra}_{scenario}")
+  #   results_dir <- file.path("~", "CTCM_outcome", 
+  #                            name, glue("{name}_{scenario}_{infra}"))
+  # } else {
+  #   name <- glue("{city}_{infra}_{scenario}_{transmissivity}")
+  #   results_dir <- file.path("~", "CTCM_outcome", 
+  #                            name, glue("{name}_{scenario}_{infra}_{transmissivity}"))
+  # }
   
   tcm_results_dir <-  "tcm_results/met_era5_hottest_days"
   primary_dir     <-  "primary_data/raster_files"
@@ -448,7 +452,10 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   library(withr)
   
   with_dir(run_setup_folder, {
-    system(file.path(run_setup_folder, "run_b_CTCM_processing.sh"), wait = TRUE)
+    system(
+      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "run_b_CTCM_processing.sh"))),
+      wait = TRUE
+    )
   })
 
   # Then continue with the rest of your R script
@@ -518,8 +525,12 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   library(withr)
   
   with_dir(run_setup_folder, {
-    system(file.path(run_setup_folder, "run_b_CTCM_processing.sh"), wait = TRUE)
+    system(
+      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "run_b_CTCM_processing.sh"))),
+      wait = TRUE
+    )
   })
+  
   
   # Then continue with the rest of your R script
   message("CTCM processing complete. Copying ouput files to scenario folders...")
@@ -593,8 +604,12 @@ run_shade_structures_CTCM <- function(transmissivity){
   library(withr)
   
   with_dir(run_setup_folder, {
-    system(file.path(run_setup_folder, "run_b_CTCM_processing.sh"), wait = TRUE)
+    system(
+      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "run_b_CTCM_processing.sh"))),
+      wait = TRUE
+    )
   })
+  
   
   # Then continue with the rest of your R script
   message("CTCM processing complete. Copying ouput files to scenario folders...")

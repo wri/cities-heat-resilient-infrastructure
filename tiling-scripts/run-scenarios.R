@@ -211,6 +211,7 @@ for (city in names(plan)) {
       
       source(here("tiling-scripts", "trees-functions.R"))
       source(here("tiling-scripts", "CTCM-functions.R"))
+      source(here("tiling-scripts", "post-processing-functions.R"))
       
       if (steps$generate) run_tree_scenario()
       if (steps$download) {
@@ -223,7 +224,10 @@ for (city in names(plan)) {
           tiles           = tiles_s3
         )
       }
-      if (steps$ctcm) run_tree_CTCM(city, infra, scenario, aoi_name)
+      if (steps$ctcm) {
+        run_tree_CTCM(city, infra, scenario, aoi_name)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+      }
       
       next
     }
@@ -235,6 +239,7 @@ for (city in names(plan)) {
       
       source(here("tiling-scripts", "cool-roofs-functions.R"))
       source(here("tiling-scripts", "CTCM-functions.R"))
+      source(here("tiling-scripts", "post-processing-functions.R"))
       
       if (steps$generate) update_albedo()
       
@@ -248,8 +253,11 @@ for (city in names(plan)) {
       }
       
       if (steps$ctcm) {
-        # choose correct args you use in your function
-        run_cool_roof_CTCM(city, infra, scenario = "all-buildings", aoi_name = aoi_name)
+        scenario <- "all-buildings"
+        scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
+        
+        run_cool_roof_CTCM(city, infra, scenario, aoi_name = aoi_name)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
       }
       
       next
@@ -287,6 +295,7 @@ for (city in names(plan)) {
                                   scenario_name = "program-potential", buffer)
         
         upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
       }
       
       next

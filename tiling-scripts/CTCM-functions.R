@@ -426,7 +426,7 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
   scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
-  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
+  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
   
   # MetFiles
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
@@ -464,7 +464,7 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   
   with_dir(run_setup_folder, {
     system(
-      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "./run_b_CTCM_processing.sh"))),
+      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
       wait = TRUE
     )
   })
@@ -537,7 +537,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   
   with_dir(run_setup_folder, {
     system(
-      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "./run_b_CTCM_processing.sh"))),
+      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
       wait = TRUE
     )
   })
@@ -572,7 +572,7 @@ run_shade_structures_CTCM <- function(transmissivity){
   scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
   scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
-  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
+  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
   
   # MetFiles
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
@@ -616,7 +616,7 @@ run_shade_structures_CTCM <- function(transmissivity){
   
   with_dir(run_setup_folder, {
     system(
-      paste("printf '\\n' |", shQuote(file.path(run_setup_folder, "./run_b_CTCM_processing.sh"))),
+      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
       wait = TRUE
     )
   })

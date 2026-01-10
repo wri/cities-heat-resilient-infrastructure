@@ -1,6 +1,15 @@
-Rscript run-CTCM.R \
---city BRA-Florianopolis \
---aoi_name accelerator_area \
---aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/BRA-Florianopolis/accelerator_area/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
---scenarios trees
+Ruth desktop:
+EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
+  --plan "BRA-Recife:trees[gdc],cool-roofs[dc];BRA-Campinas:cool-roofs[dc];BRA-Florianopolis:trees[dc],cool-roofs[dc]" \
+  --aoi_name accelerator_area \
+  --aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
+  --copy_from_extent false
+  
+Investigations:
+EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
+  --plan "BRA-Fortaleza:trees[c],cool-roofs[dc]" \
+  --aoi_name accelerator_area \
+  --aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
+  --copy_from_extent false
+
 

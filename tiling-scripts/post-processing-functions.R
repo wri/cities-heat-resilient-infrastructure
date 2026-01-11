@@ -21,9 +21,9 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
       
       diff_utci <- crop(utci, base_utci) - base_utci
 
-      write_s3(utci, glue("wri-cities-tcm/{scenario_folder}/{tile}/ccl_layers/utci-{h}__{infra}__{scenario}.tif"))
-      write_s3(utci_cat, glue("wri-cities-tcm/{scenario_folder}/{tile}/ccl_layers/utci-cat-{h}__{infra}__{scenario}.tif"))
-      write_s3(diff_utci, glue("wri-cities-tcm/{scenario_folder}/{tile}/ccl_layers/utci-{h}__{infra}__{scenario}__vs-baseline.tif"))
+      write_s3(utci, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/utci-{h}__{infra}__{scenario}.tif"))
+      write_s3(utci_cat, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/utci-cat-{h}__{infra}__{scenario}.tif"))
+      write_s3(diff_utci, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/utci-{h}__{infra}__{scenario}__vs-baseline.tif"))
       
       if (scenario != "cool-roofs"){
         shade_key   <- files[grepl(paste0("/Shadow_.*_", h, "D\\.tif$"), files)]
@@ -31,8 +31,8 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
           crop(base_utci)
         diff_shade <- crop(shade, base_shade) - base_shade
         
-        write_s3(shade, glue("wri-cities-tcm/{scenario_folder}/{tile}/ccl_layers/shade-{h}__{infra}__{scenario}.tif"))
-        write_s3(diff_shade, glue("wri-cities-tcm/{scenario_folder}/{tile}/ccl_layers/shade-{h}__{infra}__{scenario}__vs-baseline.tif"))
+        write_s3(shade, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif"))
+        write_s3(diff_shade, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}__vs-baseline.tif"))
       }
     }
     

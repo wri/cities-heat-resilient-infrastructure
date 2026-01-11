@@ -7,10 +7,11 @@
 #   g = generate scenario data
 #   d = download data
 #   c = run CTCM
+#   u = upload CTCM data 
 #
 # Example:
 # EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
-#   --plan "BRA-Recife:trees[gdc],cool-roofs[dc],shade-structures[gdc];BRA-Campinas:trees[c]" \
+#   --plan "BRA-Recife:trees[gdcu],cool-roofs[dcu],shade-structures[gdcu];BRA-Campinas:trees[cu]" \
 #   --aoi_name accelerator_area \
 #   --aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
 #   --copy_from_extent false
@@ -29,7 +30,7 @@ suppressPackageStartupMessages({
 # -----------------------------
 option_list <- list(
   make_option("--plan", type = "character",
-              help = "Per-city plan: CITY:scenario[gdc],scenario[dc];CITY2:scenario[c] (required)"),
+              help = "Per-city plan: CITY:scenario[gdcu],scenario[dcu];CITY2:scenario[cu] (required)"),
   make_option("--aoi_name", type = "character",
               help = "AOI name, e.g. accelerator_area (required)"),
   make_option("--aoi_path", type = "character",
@@ -64,7 +65,7 @@ source(here("tiling-scripts", "utils.R"))
 parse_plan <- function(plan_str) {
   # returns: list(city = list(scenario = list(generate=, download=, ctcm=), ...), ...)
   # plan_str example:
-  # "BRA-Recife:trees[gdc],cool-roofs[dc];BRA-Campinas:trees[c]"
+  # "BRA-Recife:trees[gdcu],cool-roofs[dcu];BRA-Campinas:trees[cu]"
   plan_str <- trimws(plan_str)
   if (!nzchar(plan_str)) stop("--plan is empty")
   
@@ -100,7 +101,8 @@ parse_plan <- function(plan_str) {
       scen_list[[scenario]] <- list(
         generate = grepl("g", flags, fixed = TRUE),
         download = grepl("d", flags, fixed = TRUE),
-        ctcm     = grepl("c", flags, fixed = TRUE)
+        ctcm     = grepl("c", flags, fixed = TRUE),
+        upload  = grepl("u", flags, fixed = TRUE)
       )
     }
     
@@ -192,7 +194,8 @@ for (city in names(plan)) {
     message("Scenario: ", scenario_name,
             "  [generate=", steps$generate,
             ", download=", steps$download,
-            ", ctcm=", steps$ctcm, "]")
+            ", ctcm=", steps$ctcm, 
+            ", ctcm=", steps$upload, "]")
     
     # ------------------ baseline ------------------
     if (scenario_name == "baseline") {
@@ -226,6 +229,9 @@ for (city in names(plan)) {
       }
       if (steps$ctcm) {
         run_tree_CTCM(city, infra, scenario, aoi_name)
+      }
+      if (steps$upload){
+        upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
       }
       
@@ -257,6 +263,9 @@ for (city in names(plan)) {
         scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
         
         run_cool_roof_CTCM(city, infra, scenario, aoi_name = aoi_name)
+      }
+      if (steps$upload){
+        upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
       }
       
@@ -293,8 +302,9 @@ for (city in names(plan)) {
                                   scenario_name = "program-potential", buffer)
         run_CTCM_shade_structures(city_folder, author, utc_offset, transmissivity = 0,
                                   scenario_name = "program-potential", buffer)
-        
-        upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+      }
+      if (steps$upload){
+        upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
       }
       

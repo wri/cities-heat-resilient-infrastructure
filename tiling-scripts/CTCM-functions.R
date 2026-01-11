@@ -220,7 +220,7 @@ download_shade_data <- function(city, infra, scenario, baseline_folder, scenario
   )
 }
 
-upload_CTCM_results_to_s3 <- function(
+upload_tcm_layers <- function(
     city,
     infra,
     scenario,

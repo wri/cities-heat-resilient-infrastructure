@@ -378,7 +378,7 @@ upload_CTCM_results_to_s3 <- function(
         full.names = TRUE
       )
       
-      mrt_files <- tile_files[grepl("mrt", mrt_files, ignore.case = TRUE)]
+      mrt_files <- tile_files[grepl("mrt", tile_files, ignore.case = TRUE)]
       
       for (f in mrt_files){
         

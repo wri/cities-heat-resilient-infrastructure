@@ -47,7 +47,8 @@ missing <- required[!nzchar(unlist(opts[required]))]
 if (length(missing) > 0) stop("Missing required argument(s): ", paste(missing, collapse = ", "))
 
 aoi_name <- opts$aoi_name
-aoi_path_template <- opts$aoi_path
+aoi_path <- opts$aoi_path
+# aoi_path_template <- opts$aoi_path
 copy_from_extent <- tolower(opts$copy_from_extent) %in% c("true", "t", "1", "yes", "y")
 
 # -----------------------------
@@ -120,12 +121,12 @@ print(plan)
 # -----------------------------
 # Helpers
 # -----------------------------
-build_aoi_path <- function(city) {
-  p <- aoi_path_template
-  p <- gsub("\\{city\\}", city, p)
-  p <- gsub("\\{aoi_name\\}", aoi_name, p)
-  p
-}
+# build_aoi_path <- function(city) {
+#   p <- aoi_path_template
+#   p <- gsub("\\{city\\}", city, p)
+#   p <- gsub("\\{aoi_name\\}", aoi_name, p)
+#   p
+# }
 
 # -----------------------------
 # Main loop: city -> scenarios
@@ -139,7 +140,7 @@ for (city in names(plan)) {
   open_urban_aws_http <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city)
   
   # derive aoi path
-  aoi_path <- build_aoi_path(city)
+  # aoi_path <- build_aoi_path(city)
   
   # folder structure
   city_folder     <- file.path("city_projects", city, aoi_name)
@@ -165,9 +166,11 @@ for (city in names(plan)) {
   ) |>
     filter(tile_name %in% tiles_s3)
   
+  utm <- st_crs(tile_grid)
+  
   # AOI
   aoi <- st_read(aoi_path, quiet = TRUE) |>
-    st_transform(st_crs(tile_grid))
+    st_transform(st_crs(utm))
   
   # Tiles intersecting AOI (kept, though you still use tiles_s3 downstream) 
   buffered_tile_grid_aoi <- buffered_tile_grid |> 
@@ -201,7 +204,7 @@ for (city in names(plan)) {
     if (scenario_name == "baseline") {
       if (steps$generate) {
         source(here("tiling-scripts", "baseline-layers.R"))
-        save_baseline_layers()
+        save_baseline_layers(utm)
       }
       next
     }
@@ -250,11 +253,6 @@ for (city in names(plan)) {
       if (steps$generate) update_albedo()
       
       if (steps$download) {
-        # whatever your “download” means for cool roofs:
-        # - calc delta rasters (if needed)
-        for (s in c("all-buildings", "large-buildings")) {
-          calc_air_temp_delta(city, s, aoi)
-        }
         download_cool_roof_data(city, aoi_name, scenario = "all-buildings", baseline_folder, tiles_s3)
       }
       
@@ -265,6 +263,9 @@ for (city in names(plan)) {
         run_cool_roof_CTCM(city, infra, scenario, aoi_name = aoi_name)
       }
       if (steps$upload){
+        scenario <- "all-buildings"
+        scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
+        
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
       }

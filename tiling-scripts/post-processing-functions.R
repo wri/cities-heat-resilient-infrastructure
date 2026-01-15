@@ -29,6 +29,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
         shade_key   <- files[grepl(paste0("/Shadow_.*_", h, "D\\.tif$"), files)]
         shade   <- terra::rast(glue("{aws_http}/{shade_key}")) %>% 
           crop(base_utci)
+        shade <- shade < 1
         diff_shade <- crop(shade, base_shade) - base_shade
         
         write_s3(shade, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif"))

@@ -357,13 +357,13 @@ baseline_processing <- function(t){
 
 create_tree_population <- function(tiles_s3){
   
-  keys <- list_s3_keys(
-    bucket = "wri-cities-tcm",
-    prefix = glue("{bucket}/{city_folder}/scenarios/trees/tree-population/")
-  )
-  
-  tif_files <- keys[grepl("\\.tif$", keys, ignore.case = TRUE)]
-  tree_paths <- paste0("s3://wri-cities-tcm/", tif_files)
+  # keys <- list_s3_keys(
+  #   bucket = "wri-cities-tcm",
+  #   prefix = glue("{bucket}/{city_folder}/scenarios/trees/tree-population/")
+  # )
+  # 
+  # tif_files <- keys[grepl("\\.tif$", keys, ignore.case = TRUE)]
+  # tree_paths <- paste0("s3://wri-cities-tcm/", tif_files)
 
   tree_paths <- glue("{aws_http}/{baseline_folder}/{tiles_s3}/ccl_layers/tree-points__baseline__baseline.geojson")
   
@@ -377,9 +377,9 @@ create_tree_population <- function(tiles_s3){
   # Probabilities for tree height classes
   tree_structure <- tibble(
     tree_classes = c("small", "medium", "large"),
-    tree_heights = c(ceiling(quantile(trees$height, 0.25)),
-                     ceiling(quantile(trees$height, 0.50)),
-                     ceiling(quantile(trees$height, 0.75))),
+    tree_heights = c(ceiling(quantile(trees$height, 0.25, na.rm = TRUE)),
+                     ceiling(quantile(trees$height, 0.50, na.rm = TRUE)),
+                     ceiling(quantile(trees$height, 0.75, na.rm = TRUE))),
     weights = c(0.25, 0.50, 0.25)
   )
   
@@ -608,7 +608,17 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   
   # Existing trees
   existing_tree_points <- sf::st_filter(trees, gridcell_buffered)
-  existing_tree_coords <- sf::st_coordinates(existing_tree_points) # matrix (n x 2)
+  existing_tree_coords <- sf::st_coordinates(existing_tree_points) 
+  
+  # Robustly coerce to an n x 2 matrix with colnames, even when 0 rows
+  if (is.null(existing_tree_coords) || length(existing_tree_coords) == 0) {
+    existing_tree_coords <- matrix(numeric(0), ncol = 2)
+    colnames(existing_tree_coords) <- c("X", "Y")
+  } else {
+    existing_tree_coords <- as.matrix(existing_tree_coords)
+    existing_tree_coords <- existing_tree_coords[, 1:2, drop = FALSE]  # XY only
+    colnames(existing_tree_coords) <- c("X", "Y")                      # ensure names
+  }
   
   # Existing tree canopy
   canopy_paths <- glue::glue(
@@ -710,6 +720,7 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     # candidate coordinate at the cell center
     coord <- terra::xyFromCell(plantable_area, cell)
     coord <- matrix(coord, nrow = 1)  # for RANN query
+    colnames(coord) <- c("X", "Y") 
     
     # Check min distance from existing trees (same as original)
     if (nrow(existing_tree_coords) > 0) {
@@ -743,7 +754,8 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     new_type_list<- c(new_type_list, "new")
     
     # Update existing coords for next iterations (same behavior)
-    existing_tree_coords <- rbind(existing_tree_coords, coord)
+    existing_tree_coords <- rbind(existing_tree_coords, coord[, c("X","Y"), drop = FALSE])
+    
     
     # ---- rasterize/shift crown the same way, but with cached tile rasters ----
     tr <- get_tile_rasters(crown_geom$tile)
@@ -870,8 +882,8 @@ run_tree_scenario <- function(min_dist = 5) {
   )
   
   
-  map(tiles_s3, baseline_processing)
-  create_tree_population(tiles_s3)
+  # map(tiles_s3, baseline_processing)
+  # create_tree_population(tiles_s3)
   
   # Achievable potential
   

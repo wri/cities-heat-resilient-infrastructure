@@ -22,7 +22,7 @@ library(glue)
 source(here("tiling-scripts", "utils.R"))
 source(here("tiling-scripts", "trees-functions.R"))
 
-save_baseline_layers <- function(){
+save_baseline_layers <- function(utm){
   
   list2env(
     list(
@@ -38,7 +38,8 @@ save_baseline_layers <- function(){
   )
   
   # AOI
-  aoi <- st_read(aoi_path)
+  aoi <- st_read(aoi_path) %>% 
+    st_transform(utm)
   write_s3(aoi, glue("{bucket}/{baseline_folder}/aoi__baseline__baseline.geojson"))
   
   # Parks

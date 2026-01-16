@@ -34,7 +34,8 @@ option_list <- list(
   make_option("--aoi_name", type = "character",
               help = "AOI name, e.g. accelerator_area (required)"),
   make_option("--aoi_path", type = "character",
-              help = "AOI GeoJSON URL template. Use {city} and {aoi_name} (required)"),
+              default = "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson",
+              help = "AOI GeoJSON URL. If not specified uses {city} and {aoi_name} to get aoi__baseline__baseline.geojson"),
   make_option("--copy_from_extent", type = "character",
               default = "false",
               help = "true/false. Copy baseline tiles from urban_extent (default: false)")
@@ -42,13 +43,13 @@ option_list <- list(
 
 opts <- parse_args(OptionParser(option_list = option_list))
 
-required <- c("plan", "aoi_name", "aoi_path")
+required <- c("plan", "aoi_name")
 missing <- required[!nzchar(unlist(opts[required]))]
 if (length(missing) > 0) stop("Missing required argument(s): ", paste(missing, collapse = ", "))
 
 aoi_name <- opts$aoi_name
-aoi_path <- opts$aoi_path
-# aoi_path_template <- opts$aoi_path
+# aoi_path <- opts$aoi_path
+aoi_path_template <- opts$aoi_path
 copy_from_extent <- tolower(opts$copy_from_extent) %in% c("true", "t", "1", "yes", "y")
 
 # -----------------------------
@@ -121,12 +122,12 @@ print(plan)
 # -----------------------------
 # Helpers
 # -----------------------------
-# build_aoi_path <- function(city) {
-#   p <- aoi_path_template
-#   p <- gsub("\\{city\\}", city, p)
-#   p <- gsub("\\{aoi_name\\}", aoi_name, p)
-#   p
-# }
+build_aoi_path <- function(city) {
+  p <- aoi_path_template
+  p <- gsub("\\{city\\}", city, p)
+  p <- gsub("\\{aoi_name\\}", aoi_name, p)
+  p
+}
 
 # -----------------------------
 # Main loop: city -> scenarios
@@ -140,7 +141,7 @@ for (city in names(plan)) {
   open_urban_aws_http <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city)
   
   # derive aoi path
-  # aoi_path <- build_aoi_path(city)
+  aoi_path <- build_aoi_path(city)
   
   # folder structure
   city_folder     <- file.path("city_projects", city, aoi_name)

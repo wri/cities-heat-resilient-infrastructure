@@ -178,7 +178,7 @@ for (city in names(plan)) {
     st_filter(aoi) 
   tile_grid_aoi <- tile_grid |> 
     st_filter(aoi) 
-  tiles_aoi <- buffered_tile_grid_aoi$tile_name
+  tiles_aoi <- tile_grid_aoi$tile_name
   
   # optional baseline copy
   if (copy_from_extent) {

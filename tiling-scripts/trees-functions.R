@@ -312,6 +312,93 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   return(plantable_street)
 }
 
+create_plantable_area_all_roads <- function(
+    lulc,
+    pedestrian_area,
+    binary_tree_cover,
+    open_urban_aws_http,
+    t,
+    intersection_buff = 9
+) {
+  
+  utm <- st_crs(lulc)
+  
+  # tile bounds
+  tile_geom <- st_as_sf(as.polygons(ext(lulc)))
+  st_crs(tile_geom) <- utm
+  
+  ## Buildings buffer ####
+  # buildings buffer 5-m
+  builds <- floor(lulc / 100) == 6
+  
+  builds_buff <- builds %>%
+    subst(0, NA) %>%
+    buffer(5)
+  
+  builds_buff <- abs(builds_buff - builds - 1)
+  
+  ## intersections buffer ####
+  # no trees within 9-m of intersection
+  # Load roads and filter to bbox of tile geometry
+  road_vectors <- st_read(
+    glue("{open_urban_aws_http}/roads/roads_all.geojson"),
+    quiet = TRUE
+  ) %>%
+    st_transform(utm) %>%
+    st_filter(tile_geom)
+  
+  if (nrow(road_vectors) == 0) {
+    plantable_street <- lulc
+    values(plantable_street) <- 0
+    return(plantable_street)
+  }
+  
+  # Dissolve road segments
+  dissolved_roads <- st_union(road_vectors)
+  
+  # Convert the dissolved result back into an sf object
+  dissolved_roads_sf <- st_as_sf(
+    data.frame(geometry = dissolved_roads)
+  ) %>%
+    st_cast("LINESTRING")
+  
+  # Find intersections of the dissolved roads
+  intersections <- st_intersection(dissolved_roads_sf)
+  
+  # Keep only the points where roads intersect
+  intersection_points <- intersections[
+    st_geometry_type(intersections) == "POINT",
+  ] %>%
+    st_union() %>%
+    st_as_sf() %>%
+    st_cast("POINT")
+  
+  intersection_buffer <- intersection_points %>%
+    st_buffer(dist = intersection_buff) %>%
+    rasterize(lulc, field = 0, background = 1)
+  
+  ## Plantable area ####
+  # green space, built up other, barren, open space can be planted
+  # water, roads, building, parking cannot
+  plantable_lulc <- floor(lulc / 100) %in% c(1, 2)
+  
+  # remove building buffer ####
+  plantable_lulc <- plantable_lulc * builds_buff
+  
+  # remove intersections buffer ####
+  plantable_lulc <- plantable_lulc * intersection_buffer
+  
+  # Street plantable area
+  plantable_street <- plantable_lulc * pedestrian_area
+  
+  # Remove areas of existing tree cover
+  plantable_street <- plantable_street * (binary_tree_cover < 1)
+}
+
+
+
+
+
 
 # Baseline tree processing per tile ---------------------------------------
 

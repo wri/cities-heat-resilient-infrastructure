@@ -6,6 +6,7 @@ library(glue)
 
 source(here("tiling-scripts", "utils.R"))
 source(here("tiling-scripts", "n-trees-uniform.R"))
+source(here("tiling-scripts", "trees-functions.R"))
 
 city <- "ZAF-Durban"
 aoi_name <- "inner_city_lap"

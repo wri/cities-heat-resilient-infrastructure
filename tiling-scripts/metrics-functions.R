@@ -166,7 +166,8 @@ baseline_metrics <- function(city, aoi_name, tiles_aoi){
            areas_of_interest_id = str_replace(aoi_name, "-", "_"),
            interventions_id = "baseline",
            scenarios_id = glue("baseline__baseline"),
-           date = date)
+           date = date,
+           value = round(value, 2))
   
   # Save results
   ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
@@ -410,7 +411,8 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
            areas_of_interest_id = str_replace(aoi_name, "-", "_"),
            interventions_id = "trees",
            scenarios_id = glue("trees__{scenario}"),
-           date = date)
+           date = date,
+           value = round(value, 2))
   
   # Save results
   ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))

@@ -103,7 +103,7 @@ plant_in_gridcell_n <- function(grid_index,
   
   # ---- plantable area raster for gridcell (placement constraint) ----
   plantable_paths <- glue::glue(
-    "{aws_http}/{scenario_folder}/{unbuffered_tile_names}/ccl_layers/plantable-areas__trees__{scenario}.tif"
+    "{aws_http}/{scenario_folder}/{buffered_tile_names}/ccl_layers/plantable-areas__trees__{scenario}.tif"
   )
   plantable_area <- load_and_merge(plantable_paths) |>
     terra::crop(terra::vect(gridcell)) |>

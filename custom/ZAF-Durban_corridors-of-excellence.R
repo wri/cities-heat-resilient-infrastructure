@@ -32,7 +32,7 @@ utm <- st_crs(buffered_tile_grid)
 aoi <- st_read(glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/{city}/{city}__{aoi_name}.geojson")) %>% 
   st_transform(utm)
 
-roads <- st_read(here("data", city, project_name, "corridors_of_excellence.geojson")) %>% 
+roads <- st_read(glue("{aws_http}/city_projects/{city}/{project_name}/scenarios/baseline/baseline/corridors_of_excellence.geojson")) %>%
   st_transform(utm)
 
 roads_buff <- roads %>% 

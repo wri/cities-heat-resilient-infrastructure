@@ -969,8 +969,8 @@ run_tree_scenario <- function(min_dist = 5) {
   )
   
   
-  # map(tiles_s3, baseline_processing)
-  # create_tree_population(tiles_s3)
+  map(tiles_s3, baseline_processing)
+  create_tree_population(tiles_s3)
   
   # Achievable potential
   

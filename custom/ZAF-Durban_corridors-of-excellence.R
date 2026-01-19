@@ -35,17 +35,20 @@ aoi <- st_read(glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/{city}/{
 roads <- st_read(here("data", city, project_name, "corridors_of_excellence.geojson")) %>% 
   st_transform(utm)
 
-roads_bb <- st_as_sfc(st_bbox(roads)) %>%  
-  st_as_sf(crs = utm)
+roads_buff <- roads %>% 
+  st_buffer(dist = 5, endCapStyle = 'SQUARE') %>% 
+  st_union()
+
+write_s3(roads_buff, glue("{bucket}/city_projects/{city}/{project_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson"))
 
 buffered_tile_grid <- buffered_tile_grid %>% 
-  st_filter(roads_bb)
+  st_filter(roads_buff)
 
 tile_grid <- st_read(
   paste0(aws_http, "/", glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/.qgis_data/unbuffered_tile_grid.geojson")),
   quiet = TRUE
 ) |>
-  st_filter(roads_bb)
+  st_filter(roads_buff)
 
 tiles <- buffered_tile_grid$tile_name
 

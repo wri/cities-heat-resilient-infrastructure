@@ -29,8 +29,7 @@
 #             shade-structures:all-parks[gdcu];
 #           ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
 #             trees:custom-scenario[gdcu]' \
-#   --default_aoi_path_template "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
-#   --copy_from_extent false
+#   --copy_baseline false
 
 suppressPackageStartupMessages({
   library(optparse)
@@ -50,19 +49,23 @@ option_list <- list(
   make_option("--default_aoi_path_template", type = "character",
               default = "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson",
               help = "Template used when a block specifies aoi=DEFAULT. Supports {CITY} and {AOI}. (required)"),
-  make_option("--copy_from_extent", type = "character",
+  make_option("--copy_baseline", type = "character",
               default = "false",
               help = "true/false. Copy baseline tiles from urban_extent (default: false)")
 )
 
 opts <- parse_args(OptionParser(option_list = option_list))
 
-required <- c("plan", "default_aoi_path_template")
+required <- c("plan")
 missing <- required[!nzchar(unlist(opts[required]))]
 if (length(missing) > 0) stop("Missing required argument(s): ", paste(missing, collapse = ", "))
 
 default_aoi_path_template <- opts$default_aoi_path_template
-copy_from_extent <- tolower(opts$copy_from_extent) %in% c("true", "t", "1", "yes", "y")
+
+copy_baseline_raw <- trimws(opts$copy_baseline)
+copy_baseline <- !tolower(copy_baseline_raw) %in% c("false", "f", "0", "no", "n")
+baseline_aoi_name <- if (copy_baseline) copy_baseline_raw else NULL
+
 
 # -----------------------------
 # Constants / deps
@@ -112,7 +115,7 @@ parse_plan_blocks <- function(plan_str) {
     
     # Expect: CITY@AOI|aoi=SPEC: <tasks>
     # Allow whitespace/newlines in tasks.
-    m <- regexec("^([^@\\s]+)@([^|\\s:]+)\\s*\\|\\s*aoi\\s*=\\s*([^:]+)\\s*:\\s*(.*)$", b)
+    m <- regexec("^([^@\\s]+)@([^|\\s:]+)\\s*\\|\\s*aoi\\s*=\\s*([^:]+)\\s*:\\s*([\\s\\S]*)$", b, perl = TRUE)
     r <- regmatches(b, m)[[1]]
     if (length(r) == 0) {
       stop(
@@ -203,6 +206,62 @@ for (g in groups) {
   city_folder     <- file.path("city_projects", city, aoi_name)
   baseline_folder <- file.path(city_folder, "scenarios", "baseline", "baseline")
   
+  # optional baseline copy
+  if (copy_baseline) {
+    
+    # read tile grid from the BASELINE AOI you are copying from
+    buffered_tile_grid <- st_read(
+      paste0(
+        aws_http, "/city_projects/", city, "/", baseline_aoi_name,
+        "/scenarios/baseline/baseline/metadata/.qgis_data/tile_grid.geojson"
+      ),
+      quiet = TRUE
+    )
+    
+    aoi <- st_read(aoi_path, quiet = TRUE) %>%
+      st_transform(st_crs(buffered_tile_grid))
+    
+    tile_ids <- buffered_tile_grid %>% st_filter(aoi) %>% dplyr::pull(tile_name)
+    
+    from_base <- file.path("city_projects", city, baseline_aoi_name, "scenarios", "baseline", "baseline")
+    to_base   <- file.path("city_projects", city, aoi_name,         "scenarios", "baseline", "baseline")
+    
+    ensure_s3_prefix(bucket, to_base)
+    
+    src_base <- sprintf("s3://%s/%s/", bucket, sub("^/+", "", from_base))
+    dst_base <- sprintf("s3://%s/%s/", bucket, sub("^/+", "", to_base))
+    
+    # 1) Copy everything EXCEPT the AOI geojson and EXCEPT all tiles
+    message("SYNC (non-tile baseline) ", src_base, " -> ", dst_base)
+    system2("aws", c(
+      "s3", "sync",
+      src_base, dst_base,
+      "--exclude", "aoi__baseline__baseline.geojson",
+      "--exclude", "tile_*/*",
+      "--only-show-errors"
+    ))
+    
+    # 2) Copy only the tiles we want
+    tile_ids <- unique(as.character(tile_ids))
+    for (t in tile_ids) {
+      from_prefix <- file.path(from_base, t)
+      to_prefix   <- file.path(to_base,   t)
+      
+      ensure_s3_prefix(bucket, to_prefix)
+      
+      src <- sprintf("s3://%s/%s/", bucket, sub("^/+", "", from_prefix))
+      dst <- sprintf("s3://%s/%s/", bucket, sub("^/+", "", to_prefix))
+      
+      message("SYNC (tile) ", src, " -> ", dst)
+      system2("aws", c(
+        "s3", "sync",
+        src, dst,
+        "--only-show-errors"
+      ))
+    }
+  }
+  
+  
   # tiles
   tiles_s3 <- list_tiles(paste0("s3://", bucket, "/", baseline_folder))
   if (length(tiles_s3) == 0) {
@@ -235,17 +294,6 @@ for (g in groups) {
   tile_grid_aoi <- tile_grid %>%
     st_filter(aoi)
   tiles_aoi <- buffered_tile_grid_aoi$tile_name
-  
-  # optional baseline copy
-  if (copy_from_extent) {
-    tile_ids <- buffered_tile_grid %>% st_filter(aoi) %>% dplyr::pull(tile_name)
-    for (t in tile_ids) {
-      from <- file.path("city_projects", city, "urban_extent", "baseline", "baseline", t)
-      to   <- file.path("city_projects", city, aoi_name, "baseline", "baseline", t)
-      ensure_s3_prefix(bucket, to)
-      s3_copy_vec(from = from, to = to, bucket = bucket)
-    }
-  }
   
   # run each task requested for this (city,aoi)
   for (i in seq_len(nrow(g))) {

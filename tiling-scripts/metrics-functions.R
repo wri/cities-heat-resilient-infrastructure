@@ -8,7 +8,7 @@ source(here("tiling-scripts", "utils.R"))
 
 
 # baseline
-baseline_metrics <- function(city, aoi_name, tiles_aoi){
+calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   
   baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
   met_file <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv")
@@ -422,3 +422,6 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
 
 # cool roofs
 # shade
+
+calc_baseline_metrics("ZAF-Durban", "corridors_of_excellence", tiles_aoi)
+calc_street_tree_metrics("ZAF-Durban", "corridors_of_excellence", tiles_aoi, scenario)

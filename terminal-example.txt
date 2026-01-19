@@ -1,15 +1,4 @@
-Ruth desktop:
-EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
-  --plan "BRA-Recife:cool-roofs[cu];BRA-Campinas:cool-roofs[dcu]" \
-  --aoi_name accelerator_area \
-  --aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
-  --copy_from_extent false
-  
-Investigations:
-EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
-  --plan "BRA-Fortaleza:cool-roofs[dc];BRA-Florianopolis:trees[dc],cool-roofs[dc]" \
-  --aoi_name accelerator_area \
-  --aoi_path "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson" \
-  --copy_from_extent false
-
-
+EC2_TERMINATE_ON_COMPLETE=false Rscript run-scenarios.R \
+  --plan 'ZAF-Durban@corridors_of_excellence|aoi=DEFAULT:
+            trees:custom-n_trees_uniform[u]' \
+  --copy_baseline false

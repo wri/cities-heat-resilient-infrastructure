@@ -58,7 +58,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
     baseline_shade_paths <- glue("{s3_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
     baseline_shade_rast <- load_and_merge(baseline_shade_paths) 
     baseline_shade_rast <- baseline_shade_rast %>% 
-      mask(aoi)
+      mask(aoi) > 0
     
     # Mask UTCI to AOI
     baseline_utci_paths <- glue("{s3_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
@@ -229,12 +229,12 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     baseline_shade_paths <- glue("{s3_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
     baseline_shade_rast <- load_and_merge(baseline_shade_paths) 
     baseline_shade_rast <- baseline_shade_rast %>% 
-      mask(aoi)
+      mask(aoi) > 0
     
     scenario_shade_paths <- glue("{s3_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/shade-{time}__trees__{scenario}.tif")
     scenario_shade_rast <- load_and_merge(scenario_shade_paths) 
     scenario_shade_rast <- scenario_shade_rast %>% 
-      mask(aoi)
+      mask(aoi) > 0
     
     # Mask UTCI to AOI
     baseline_utci_paths <- glue("{s3_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")

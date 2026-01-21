@@ -318,6 +318,7 @@ for (g in groups) {
       if (steps$generate) {
         source(here("tiling-scripts", "baseline-layers.R"))
         save_baseline_layers(utm)
+        calc_baseline_metrics(city, aoi_name, tiles_aoi)
       }
       next
     }
@@ -351,6 +352,7 @@ for (g in groups) {
       if (steps$upload) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+        calc_street_tree_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       
       next

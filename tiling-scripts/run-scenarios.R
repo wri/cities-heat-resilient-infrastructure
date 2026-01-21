@@ -112,9 +112,11 @@ parse_plan_blocks <- function(plan_str) {
   if (length(blocks) == 0) stop("No CITY@AOI blocks found in --plan")
   
   out <- list()
+  block_id <- 0L
   
   for (b in blocks) {
     b <- trimws(b)
+    block_id <- block_id + 1L
     
     # Expect: CITY@AOI|aoi=SPEC: <tasks>
     # Allow whitespace/newlines in tasks.
@@ -156,6 +158,7 @@ parse_plan_blocks <- function(plan_str) {
       flags    <- tolower(r2[4])
       
       out[[length(out) + 1]] <- tibble::tibble(
+        block_id = block_id,
         city     = city,
         aoi_name = aoi_name,
         aoi_spec = aoi_spec,
@@ -183,10 +186,15 @@ tasks_df <- parse_plan_blocks(opts$plan) %>%
 message("Run tasks:")
 print(tasks_df)
 
-# Group by CITY@AOI (and resolved AOI path, though you said there will be one per CITY@AOI)
+# Group by CITY@AOI and keep plan order
 groups <- tasks_df %>%
-  group_by(city, aoi_name, aoi_path) %>%
+  arrange(block_id) %>%
+  group_by(block_id, city, aoi_name, aoi_path) %>%
   group_split()
+
+message("Group execution order:")
+for (g in groups) message("  ", g$block_id[[1]], ": ", g$city[[1]], " @ ", g$aoi_name[[1]])
+
 
 # -----------------------------
 # Main loop: (city,aoi) -> tasks

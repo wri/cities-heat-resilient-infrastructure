@@ -319,3 +319,14 @@ download_s3_files <- function(bucket,
   
   invisible(local_dir)
 }
+
+s3_exists <- function(bucket, key) {
+  system2(
+    "aws",
+    c("s3api", "head-object",
+      "--bucket", bucket,
+      "--key", key),
+    stdout = FALSE,
+    stderr = FALSE
+  ) == 0
+}

@@ -75,6 +75,9 @@ aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 s3 <- paws::s3()
 
 source(here("tiling-scripts", "utils.R"))
+source(here("tiling-scripts", "CTCM-functions.R"))
+source(here("tiling-scripts", "post-processing-functions.R"))
+source(here("tiling-scripts", "metrics-functions.R"))
 
 # -----------------------------
 # Helpers
@@ -293,7 +296,7 @@ for (g in groups) {
     st_filter(aoi)
   tile_grid_aoi <- tile_grid %>%
     st_filter(aoi)
-  tiles_aoi <- buffered_tile_grid_aoi$tile_name
+  tiles_aoi <- tile_grid_aoi$tile_name
   
   # run each task requested for this (city,aoi)
   for (i in seq_len(nrow(g))) {
@@ -318,7 +321,7 @@ for (g in groups) {
       if (steps$generate) {
         source(here("tiling-scripts", "baseline-layers.R"))
         save_baseline_layers(utm)
-        calc_baseline_metrics(city, aoi_name, tiles_aoi)
+        calc_baseline_metrics(city, aoi_name, tiles_aoi = tiles_aoi)
       }
       next
     }
@@ -329,8 +332,6 @@ for (g in groups) {
       scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
       
       source(here("tiling-scripts", "trees-functions.R"))
-      source(here("tiling-scripts", "CTCM-functions.R"))
-      source(here("tiling-scripts", "post-processing-functions.R"))
       
       if (steps$generate) run_tree_scenario()
       
@@ -366,8 +367,6 @@ for (g in groups) {
       scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
       
       source(here("tiling-scripts", "cool-roofs-functions.R"))
-      source(here("tiling-scripts", "CTCM-functions.R"))
-      source(here("tiling-scripts", "post-processing-functions.R"))
       
       if (steps$generate) update_albedo()
       
@@ -400,8 +399,6 @@ for (g in groups) {
       
       source(here("tiling-scripts", "park-shade-functions.R"))
       source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
-      source(here("tiling-scripts", "CTCM-functions.R"))
-      source(here("tiling-scripts", "post-processing-functions.R"))
       
       if (steps$generate) run_shade_scenario()
       

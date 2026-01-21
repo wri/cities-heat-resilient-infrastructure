@@ -32,29 +32,29 @@ save_baseline_layers <- function(utm){
       aws_http = aws_http,
       baseline_folder = baseline_folder,
       aoi_path = aoi_path,
-      tiles_s3 = tiles_s3
+      tiles_s3 = tiles_aoi
     ),
     envir = .GlobalEnv
   )
   
   # AOI
-  aoi <- st_read(aoi_path) %>% 
-    st_transform(utm)
-  write_s3(aoi, glue("{bucket}/{baseline_folder}/aoi__baseline__baseline.geojson"))
-  
-  # Parks
-  from_park <- glue("OpenUrban/{city}/open_space/open_space_all.parquet")
-  to_park <- glue("{baseline_folder}/parks-polygons__baseline__baseline.parquet")
-  s3_copy_vec(from_park, to_park, 
-              from_bucket = "wri-cities-heat", to_bucket = "wri-cities-tcm",
-              overwrite = TRUE) 
-  
-  # Building polygons
-  from_build <- glue("OpenUrban/{city}/buildings/buildings_all.parquet")
-  to_build <- glue("{baseline_folder}/building-polygons__baseline__baseline.parquet")
-  s3_copy_vec(from_build, to_build, 
-              from_bucket = "wri-cities-heat", to_bucket = "wri-cities-tcm",
-              overwrite = TRUE) 
+  # aoi <- st_read(aoi_path) %>% 
+  #   st_transform(utm)
+  # write_s3(aoi, glue("{bucket}/{baseline_folder}/aoi__baseline__baseline.geojson"))
+  # 
+  # # Parks
+  # from_park <- glue("OpenUrban/{city}/open_space/open_space_all.parquet")
+  # to_park <- glue("{baseline_folder}/parks-polygons__baseline__baseline.parquet")
+  # s3_copy_vec(from_park, to_park, 
+  #             from_bucket = "wri-cities-heat", to_bucket = "wri-cities-tcm",
+  #             overwrite = TRUE) 
+  # 
+  # # Building polygons
+  # from_build <- glue("OpenUrban/{city}/buildings/buildings_all.parquet")
+  # to_build <- glue("{baseline_folder}/building-polygons__baseline__baseline.parquet")
+  # s3_copy_vec(from_build, to_build, 
+  #             from_bucket = "wri-cities-heat", to_bucket = "wri-cities-tcm",
+  #             overwrite = TRUE) 
   
   # Get date stamp
   stamp <- find_shadow_stamp(bucket, baseline_folder, tiles_s3[[1]])
@@ -87,19 +87,48 @@ save_baseline_layers <- function(utm){
     
     # Shade 
     shade_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1200D.tif"))
-    shade_1200 <- shade_1200 < 1
-    
+    shade_1200 <- ifel(
+      is.na(shade_1200), NA,
+      ifel(shade_1200 == 0, 1,
+           ifel(shade_1200 == 1, 0, 2))
+    )
     write_s3(shade_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1200__baseline__baseline.tif"))
     
     shade_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1500D.tif"))
-    shade_1500 <- shade_1500 < 1
-    
+    shade_1500 <- ifel(
+      is.na(shade_1500), NA,
+      ifel(shade_1500 == 0, 1,
+           ifel(shade_1500 == 1, 0, 2))
+    )
     write_s3(shade_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1500__baseline__baseline.tif"))
     
     shade_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1800D.tif"))
-    shade_1800 <- shade_1800 < 1
+    shade_1800 <- ifel(
+      is.na(shade_1800), NA,
+      ifel(shade_1800 == 0, 1,
+           ifel(shade_1800 == 1, 0, 2))
+    )
     
     write_s3(shade_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1800__baseline__baseline.tif"))
+    
+    # UTCI
+    utci_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1200D.tif"))
+    utci_1200cat <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1200D.tif"))
+    
+    write_s3(utci_1200, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1200__{infra}__{scenario}.tif"))
+    write_s3(utci_1200cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1200__{infra}__{scenario}.tif"))
+    
+    utci_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1500D.tif"))
+    utci_1500cat <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1500D.tif"))
+    
+    write_s3(utci_1500, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1500__{infra}__{scenario}.tif"))
+    write_s3(utci_1500cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1500__{infra}__{scenario}.tif"))
+    
+    utci_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1800D.tif"))
+    utci_1800cat <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1800D.tif"))
+    
+    write_s3(utci_1800, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1800__{infra}__{scenario}.tif"))
+    write_s3(utci_1800cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1800__{infra}__{scenario}.tif"))
     
     # Trees
     tree_canopy <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))

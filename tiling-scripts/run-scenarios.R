@@ -340,7 +340,7 @@ for (g in groups) {
           scenario        = scenario,
           baseline_folder = baseline_folder,
           scenario_folder = scenario_folder,
-          tiles           = tiles_s3
+          tiles           = tiles_aoi
         )
       }
       
@@ -375,7 +375,7 @@ for (g in groups) {
           aoi_name        = aoi_name,
           scenario        = scenario,
           baseline_folder = baseline_folder,
-          tiles           = tiles_s3
+          tiles           = tiles_aoi
         )
       }
       

@@ -142,20 +142,20 @@ save_baseline_layers <- function(utm){
     utci_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1200D.tif"))
     utci_1200cat <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1200D.tif"))
     
-    write_s3(utci_1200, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1200__{infra}__{scenario}.tif"))
-    write_s3(utci_1200cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1200__{infra}__{scenario}.tif"))
+    write_s3(utci_1200, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1200__baseline__baseline.tif"))
+    write_s3(utci_1200cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1200__baseline__baseline.tif"))
     
     utci_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1500D.tif"))
     utci_1500cat <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1500D.tif"))
     
-    write_s3(utci_1500, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1500__{infra}__{scenario}.tif"))
-    write_s3(utci_1500cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1500__{infra}__{scenario}.tif"))
+    write_s3(utci_1500, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1500__baseline__baseline.tif"))
+    write_s3(utci_1500cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1500__baseline__baseline.tif"))
     
     utci_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1800D.tif"))
     utci_1800cat <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1800D.tif"))
     
-    write_s3(utci_1800, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1800__{infra}__{scenario}.tif"))
-    write_s3(utci_1800cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1800__{infra}__{scenario}.tif"))
+    write_s3(utci_1800, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-1800__baseline__baseline.tif"))
+    write_s3(utci_1800cat, glue("wri-cities-tcm/{baseline_folder}/{t}/ccl_layers/utci-cat-1800__baseline__baseline.tif"))
     
     # Trees
     tree_canopy <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))

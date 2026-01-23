@@ -246,10 +246,13 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
+  
   scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
   scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
   scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
+  
+  scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
   
   # MetFiles
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
@@ -324,10 +327,13 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
+  
   scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
   scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
   scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
+  
+  scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
 
   # MetFiles
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.csv"
@@ -404,10 +410,13 @@ run_shade_structures_CTCM <- function(transmissivity){
   scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
+  
   scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
   scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
   scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
   scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
+  
+  scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
   
   # MetFiles
   scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"

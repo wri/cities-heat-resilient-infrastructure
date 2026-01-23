@@ -1,4 +1,18 @@
-EC2_TERMINATE_ON_COMPLETE=false Rscript run-scenarios.R \
-  --plan 'ZAF-Durban@corridors_of_excellence|aoi=DEFAULT:
-            trees:custom-n_trees_uniform[u]' \
+EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
+  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT:
+            trees:pedestrian-achievable-90pctl[gdcu],
+            cool-roofs:all-buildings[dcu],
+            shade-structures:all-parks[gdcu];
+          ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
+            trees:custom-scenario[gdcu]' \
   --copy_baseline false
+  
+EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
+  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT:
+            baseline:[g],
+            trees:pedestrian-achievable-90pctl[gdcu],
+            cool-roofs:all-buildings[dcu],
+            shade-structures:all-parks[gdcu];
+          ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
+            trees:custom-scenario[gdcu]' \
+  --copy_baseline urban_extent

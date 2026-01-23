@@ -220,6 +220,250 @@ download_shade_data <- function(city, infra, scenario, baseline_folder, scenario
   )
 }
 
+
+run_tree_CTCM <- function(city, infra, scenario, aoi_name){
+  
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
+  baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
+  
+  name <- glue("{city}_{infra}_{scenario}")
+  run_setup_folder <- file.path("~", "CTCM_data_setup", name)
+  
+  # If there is an output folder with the same name, delete it
+  results_dir <- file.path("~", "CTCM_outcome", 
+                           name, glue("{name}_{scenario}_{infra}"))
+  unlink(results_dir, recursive = TRUE)
+  
+  # Modify yaml file
+  yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
+  scenario_yaml <- read_yaml(yaml_path)
+  
+  # Scenario
+  scenario_yaml[[1]]$scenario_id <- scenario
+  scenario_yaml[[1]]$infra_id <- infra
+  
+  # Processing AOI
+  scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
+  scenario_yaml[[2]]$city <- "None"
+  scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
+  scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
+  scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
+  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
+  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
+  
+  # MetFiles
+  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
+  
+  # CustomTiffFilenames
+  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
+  scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
+  scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
+  scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
+  scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
+  scenario_yaml[[4]]$tree_canopy_tif_filename <- "tree_canopy.tif"
+  
+  # PreparedIntermediateFilenames
+  scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
+  scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
+  
+  # MethodAttributes
+  # Set sampling_local_hours as a verbatim string
+  if (!is.null(scenario_yaml[[6]]$utci_output)) {
+    scenario_yaml[[6]]$utci_output <- TRUE
+  }
+  scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
+  class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
+  
+  # Define custom handler to write without quotes
+  verbatim_handler <- function(x) {
+    x  # return string directly with no quotes
+  }
+  
+  # Write YAML with custom handler
+  write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
+  
+  # Run CTCM bat script
+  library(withr)
+  
+  with_dir(run_setup_folder, {
+    system(
+      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
+      wait = TRUE
+    )
+  })
+
+  # Then continue with the rest of your R script
+  message("CTCM processing complete. Copying ouput files to scenario folders...")
+  
+  # upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+  
+}
+
+run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
+  
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
+  baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
+  
+  name <- glue("{city}_{infra}_{scenario}")
+  run_setup_folder <- file.path("~", "CTCM_data_setup", name)
+  
+  # If there is an output folder with the same name, delete it
+  results_dir <- file.path("~", "CTCM_outcome", 
+                           name, glue("{name}_{scenario}_{infra}"))
+  unlink(results_dir, recursive = TRUE)
+  
+  # Modify yaml file
+  yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
+  scenario_yaml <- read_yaml(yaml_path)
+  
+  # Scenario
+  scenario_yaml[[1]]$scenario_id <- scenario
+  scenario_yaml[[1]]$infra_id <- infra
+  
+  # Processing AOI
+  scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
+  scenario_yaml[[2]]$city <- "None"
+  scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
+  scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
+  scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
+  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
+  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
+
+  # MetFiles
+  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.csv"
+  
+  # CustomTiffFilenames
+  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- glue("albedo__cool-roofs__{scenario}.tif")
+  scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
+  scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
+  scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
+  scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
+  scenario_yaml[[4]]$tree_canopy_tif_filename <- "cif_tree_canopy.tif"
+  
+  # PreparedIntermediateFilenames
+  scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs"
+  scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
+  scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
+  
+  # MethodAttributes
+  # Set sampling_local_hours as a verbatim string
+  if (!is.null(scenario_yaml[[6]]$utci_output)) {
+    scenario_yaml[[6]]$utci_output <- TRUE
+  }
+  scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
+  class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
+  
+  # Define custom handler to write without quotes
+  verbatim_handler <- function(x) {
+    x  # return string directly with no quotes
+  }
+  
+  # Write YAML with custom handler
+  write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
+  
+  # Run CTCM bat script
+  library(withr)
+  
+  with_dir(run_setup_folder, {
+    system(
+      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
+      wait = TRUE
+    )
+  })
+  
+  
+  # Then continue with the rest of your R script
+  message("CTCM processing complete. Copying ouput files to scenario folders...")
+  
+  # upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
+  
+}
+
+run_shade_structures_CTCM <- function(transmissivity){
+  
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
+  baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
+  
+  name <- glue("{city}_{infra}_{scenario}_t{transmissivity}")
+  run_setup_folder <- file.path("~", "CTCM_data_setup", name)
+  
+  # If there is an output folder with the same name, delete it
+  results_dir <- file.path("~", "CTCM_outcome", 
+                           name, glue("{name}_{scenario}_{infra}"))
+  unlink(results_dir, recursive = TRUE)
+  
+  # Modify yaml file
+  yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
+  scenario_yaml <- read_yaml(yaml_path)
+  
+  # Scenario
+  scenario_yaml[[1]]$scenario_id <- scenario
+  scenario_yaml[[1]]$infra_id <- infra
+  
+  # Processing AOI
+  scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
+  scenario_yaml[[2]]$city <- "None"
+  scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
+  scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
+  scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
+  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
+  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
+  
+  # MetFiles
+  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
+  
+  # CustomTiffFilenames
+  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
+  scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
+  scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
+  scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
+  scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
+  scenario_yaml[[4]]$tree_canopy_tif_filename <- "structures-as-trees.tif"
+  
+  # PreparedIntermediateFilenames
+  scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
+  scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
+  
+  # SVFs
+  if (transmissivity == 0) {
+    scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs"
+  }
+  
+  # MethodAttributes
+  # Set sampling_local_hours as a verbatim string
+  scenario_yaml[[6]]$skyview_factor$transmissivity_of_light_through_vegetation <- transmissivity
+  if (!is.null(scenario_yaml[[6]]$utci_output)) {
+    scenario_yaml[[6]]$utci_output <- TRUE
+  }
+  scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
+  class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
+  
+  # Define custom handler to write without quotes
+  verbatim_handler <- function(x) {
+    x  # return string directly with no quotes
+  }
+  
+  # Write YAML with custom handler
+  write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
+  
+  # Run CTCM bat script
+  library(withr)
+  
+  with_dir(run_setup_folder, {
+    system(
+      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
+      wait = TRUE
+    )
+  })
+  
+  
+  # Then continue with the rest of your R script
+  message("CTCM processing complete. Copying ouput files to scenario folders...")
+  
+  # upload_CTCM_results_to_s3(city, infra, scenario, aoi_name, transmissivity = transmissivity)
+  
+}
+
 upload_tcm_layers <- function(
     city,
     infra,
@@ -401,230 +645,4 @@ upload_tcm_layers <- function(
   }
   
   invisible(TRUE)
-}
-
-
-run_tree_CTCM <- function(city, infra, scenario, aoi_name){
-  
-  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
-  
-  run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}"))
-  
-  # Modify yaml file
-  yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
-  scenario_yaml <- read_yaml(yaml_path)
-  
-  # Scenario
-  scenario_yaml[[1]]$scenario_id <- scenario
-  scenario_yaml[[1]]$infra_id <- infra
-  
-  # Processing AOI
-  scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
-  scenario_yaml[[2]]$city <- "None"
-  scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
-  scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
-  scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
-  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
-  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
-  
-  # MetFiles
-  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
-  
-  # CustomTiffFilenames
-  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
-  scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
-  scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
-  scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
-  scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
-  scenario_yaml[[4]]$tree_canopy_tif_filename <- "tree_canopy.tif"
-  
-  # PreparedIntermediateFilenames
-  scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
-  scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
-  
-  # MethodAttributes
-  # Set sampling_local_hours as a verbatim string
-  if (!is.null(scenario_yaml[[6]]$utci_output)) {
-    scenario_yaml[[6]]$utci_output <- TRUE
-  }
-  scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
-  class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
-  
-  # Define custom handler to write without quotes
-  verbatim_handler <- function(x) {
-    x  # return string directly with no quotes
-  }
-  
-  # Write YAML with custom handler
-  write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
-  
-  # Run CTCM bat script
-  library(withr)
-  
-  with_dir(run_setup_folder, {
-    system(
-      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
-      wait = TRUE
-    )
-  })
-
-  # Then continue with the rest of your R script
-  message("CTCM processing complete. Copying ouput files to scenario folders...")
-  
-  upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
-  
-}
-
-run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
-  
-  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
-  
-  run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}"))
-  
-  # Modify yaml file
-  yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
-  scenario_yaml <- read_yaml(yaml_path)
-  
-  # Scenario
-  scenario_yaml[[1]]$scenario_id <- scenario
-  scenario_yaml[[1]]$infra_id <- infra
-  
-  # Processing AOI
-  scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
-  scenario_yaml[[2]]$city <- "None"
-  scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
-  scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
-  scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
-  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
-  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
-
-  # MetFiles
-  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "reduced_temps.csv"
-  
-  # CustomTiffFilenames
-  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- glue("albedo__cool-roofs__{scenario}.tif")
-  scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
-  scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
-  scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
-  scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
-  scenario_yaml[[4]]$tree_canopy_tif_filename <- "cif_tree_canopy.tif"
-  
-  # PreparedIntermediateFilenames
-  scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs"
-  scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
-  scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
-  
-  # MethodAttributes
-  # Set sampling_local_hours as a verbatim string
-  if (!is.null(scenario_yaml[[6]]$utci_output)) {
-    scenario_yaml[[6]]$utci_output <- TRUE
-  }
-  scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
-  class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
-  
-  # Define custom handler to write without quotes
-  verbatim_handler <- function(x) {
-    x  # return string directly with no quotes
-  }
-  
-  # Write YAML with custom handler
-  write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
-  
-  # Run CTCM bat script
-  library(withr)
-  
-  with_dir(run_setup_folder, {
-    system(
-      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
-      wait = TRUE
-    )
-  })
-  
-  
-  # Then continue with the rest of your R script
-  message("CTCM processing complete. Copying ouput files to scenario folders...")
-  
-  upload_CTCM_results_to_s3(city, infra, scenario, aoi_name)
-  
-}
-
-run_shade_structures_CTCM <- function(transmissivity){
-  
-  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  baseline_yaml <- read_yaml(glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/config_method_parameters.yml"))
-  
-  run_setup_folder <- file.path("~", "CTCM_data_setup", glue("{city}_{infra}_{scenario}_t{transmissivity}"))
-  
-  # Modify yaml file
-  yaml_path <- file.path(run_setup_folder, "config_method_parameters.yml")
-  scenario_yaml <- read_yaml(yaml_path)
-  
-  # Scenario
-  scenario_yaml[[1]]$scenario_id <- scenario
-  scenario_yaml[[1]]$infra_id <- infra
-  
-  # Processing AOI
-  scenario_yaml[[2]]$seasonal_utc_offset <- baseline_yaml[[2]]$seasonal_utc_offset
-  scenario_yaml[[2]]$city <- "None"
-  scenario_yaml[[2]]$aoi_bounds$epsg_code <- baseline_yaml[[2]]$aoi_bounds$epsg_code
-  scenario_yaml[[2]]$aoi_bounds$west <- baseline_yaml[[2]]$aoi_bounds$west
-  scenario_yaml[[2]]$aoi_bounds$south <- baseline_yaml[[2]]$aoi_bounds$south
-  scenario_yaml[[2]]$aoi_bounds$east <- baseline_yaml[[2]]$aoi_bounds$east
-  scenario_yaml[[2]]$aoi_bounds$north <- baseline_yaml[[2]]$aoi_bounds$north
-  
-  # MetFiles
-  scenario_yaml[[3]]$MetFiles[[1]]$filename <- "met_era5_hottest_days.csv"
-  
-  # CustomTiffFilenames
-  scenario_yaml[[4]]$albedo_cloud_masked_tif_filename <- "cif_albedo_cloud_masked.tif"
-  scenario_yaml[[4]]$dem_tif_filename <- "cif_dem.tif"
-  scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
-  scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
-  scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
-  scenario_yaml[[4]]$tree_canopy_tif_filename <- "structures-as-trees.tif"
-  
-  # PreparedIntermediateFilenames
-  scenario_yaml[[5]]$wall_aspect_filename <- "ctcm_wallaspect.tif"
-  scenario_yaml[[5]]$wall_height_filename <- "ctcm_wallheight.tif"
-  
-  # SVFs
-  if (transmissivity == 0) {
-    scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs"
-  }
-  
-  # MethodAttributes
-  # Set sampling_local_hours as a verbatim string
-  scenario_yaml[[6]]$skyview_factor$transmissivity_of_light_through_vegetation <- transmissivity
-  if (!is.null(scenario_yaml[[6]]$utci_output)) {
-    scenario_yaml[[6]]$utci_output <- TRUE
-  }
-  scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
-  class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"
-  
-  # Define custom handler to write without quotes
-  verbatim_handler <- function(x) {
-    x  # return string directly with no quotes
-  }
-  
-  # Write YAML with custom handler
-  write_yaml(scenario_yaml, yaml_path, handlers = list(verbatim = verbatim_handler))
-  
-  # Run CTCM bat script
-  library(withr)
-  
-  with_dir(run_setup_folder, {
-    system(
-      paste("printf '\\n' |", shQuote("./run_b_CTCM_processing.sh")),
-      wait = TRUE
-    )
-  })
-  
-  
-  # Then continue with the rest of your R script
-  message("CTCM processing complete. Copying ouput files to scenario folders...")
-  
-  upload_CTCM_results_to_s3(city, infra, scenario, aoi_name, transmissivity = transmissivity)
-  
 }

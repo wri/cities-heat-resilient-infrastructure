@@ -186,6 +186,8 @@ update_albedo <- function(area_threshold = 2000){
       tile_buildings_s <- tile_buildings_s %>% 
         filter(median_alb < cool_roof_alb)
       
+      write_s3(tile_buildings_s, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/updated-buildings__cool-roofs__{scenario}.geojson"))
+      
       if (nrow(tile_buildings_s) == 0) {
         # Write raster
         write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))

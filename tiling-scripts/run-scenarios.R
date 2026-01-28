@@ -211,7 +211,7 @@ for (g in groups) {
   message("AOI PATH: ", aoi_path)
   message("============================================================\n")
   
-  open_urban_aws_http <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city)
+  open_urban_aws_http <- paste0("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/", city)
   
   # folder structure
   city_folder     <- file.path("city_projects", city, aoi_name)

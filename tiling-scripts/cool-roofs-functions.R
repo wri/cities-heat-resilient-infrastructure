@@ -78,31 +78,28 @@ calc_air_temp_delta <- function(city, scenario, aoi, aoi_name){
   
 }
 
-update_albedo <- function(area_threshold = 2000){
+update_albedo <- function(city = city,
+                          aoi = aoi,
+                          aoi_name = aoi_name,
+                          bucket = bucket,
+                          aws_http = aws_http,
+                          city_folder = city_folder,
+                          baseline_folder = baseline_folder,
+                          infra = "cool-roofs",
+                          tiles_s3 = tiles_s3,
+                          buffered_tile_grid = buffered_tile_grid,
+                          area_threshold = 2000){
   
-  list2env(
-    list(
-      city = city,
-      aoi = aoi,
-      aoi_name = aoi_name,
-      bucket = bucket,
-      aws_http = aws_http,
-      city_folder = city_folder,
-      country = country,
-      baseline_folder = baseline_folder,
-      infra = infra,
-      tiles_s3 = tiles_s3
-    ),
-    envir = .GlobalEnv
-  )
+  country <- strsplit(city, "-")[[1]][1]
   
   # Get buildings
-  open_urban_aws_http <- glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
+  open_urban_aws_http <- glue("{aws_http}/OpenUrban/{city}")
   buildings_path <- glue("{open_urban_aws_http}/buildings/buildings_all.parquet")
   buildings <- st_read_parquet(buildings_path, quiet = TRUE) %>% 
     # Filter to only buildings within AOI
     st_filter(aoi) %>% 
-    mutate(area_m2 = as.numeric(units::set_units(st_area(.), m^2)))
+    select(id) %>% 
+    mutate(area_m2 = as.numeric(units::set_units(st_area(.), m^2))) 
   
   for (t in tiles_s3){
     
@@ -125,21 +122,21 @@ update_albedo <- function(area_threshold = 2000){
     }
     
     if (nrow(tile_buildings) == 0) {
-      
+
       for (s in c("all-buildings", "large-buildings")){
         # Ensure prefix
         scenario_folder <- glue("{city_folder}/scenarios/{infra}/{s}")
         ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/ccl_layers"))
-        
+
         # Write raster
         write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}.tif"))
-        
+
         diff_albedo <- albedo
         values(diff_albedo) <- 0
         write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}__vs-baseline.tif"))
       }
-      
-      
+
+
       print(glue("{t} has no buildings"))
       next
     }
@@ -176,50 +173,59 @@ update_albedo <- function(area_threshold = 2000){
       
       # Filter based on building size
       if (scenario == "all-buildings"){
-        tile_buildings_s <- tile_buildings
-      } else if (scenario == "large-buildings"){
+        tile_buildings <- tile_buildings %>% 
+          mutate(updated = case_when(median_alb < cool_roof_alb ~ TRUE,
+                                     .default = FALSE))
+  
         tile_buildings_s <- tile_buildings %>% 
-          filter(area_m2 >= area_threshold)
+          filter(updated == TRUE)
+
+      } else if (scenario == "large-buildings"){
+        tile_buildings <- tile_buildings %>% 
+          mutate(updated = case_when(area_m2 >= area_threshold & median_alb < cool_roof_alb ~ TRUE,
+                                     .default = FALSE))
+        
+        tile_buildings_s <- tile_buildings %>% 
+          filter(updated == TRUE)
       }
       
       # Filter to only buildings with medians below cool roof albedos
-      tile_buildings_s <- tile_buildings_s %>% 
-        filter(median_alb < cool_roof_alb)
       
-      write_s3(tile_buildings_s, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/updated-buildings__cool-roofs__{scenario}.geojson"))
+      
+      write_s3(tile_buildings, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/buildings__cool-roofs__{scenario}.geojson"))
       
       if (nrow(tile_buildings_s) == 0) {
         # Write raster
         write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
-        
+
         diff_albedo <- albedo
         values(diff_albedo) <- 0
         write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
-        
+
         print(glue("{t} albedo rasters saved for {scenario}"))
         next
       }
-      
+
       # Rasterize buildings
       build_rast <- rasterize(tile_buildings_s, albedo, field = "cool_roof_alb",
                               touches = TRUE, background = NA)
-      
+
       # Mask albedo
       updated_albedo <- terra::ifel(
         is.na(build_rast),
         albedo,
         build_rast
       )
-      
+
       # Albedo difference
       diff_albedo <- updated_albedo - albedo
-      
+
       # Write raster
       write_s3(updated_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
       write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
-      
+
       print(glue("{t} albedo rasters saved for {scenario}"))
-      
+
       calc_air_temp_delta(city, scenario, aoi, aoi_name)
     }
     

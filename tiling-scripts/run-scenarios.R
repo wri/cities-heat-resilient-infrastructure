@@ -376,7 +376,17 @@ for (g in groups) {
       
       source(here("tiling-scripts", "cool-roofs-functions.R"))
       
-      if (steps$generate) update_albedo()
+      if (steps$generate) update_albedo(city = city,
+                                        aoi = aoi,
+                                        aoi_name = aoi_name,
+                                        bucket = bucket,
+                                        aws_http = aws_http,
+                                        city_folder = city_folder,
+                                        baseline_folder = baseline_folder,
+                                        infra = "cool-roofs",
+                                        tiles_s3 = tiles_s3,
+                                        buffered_tile_grid = buffered_tile_grid,
+                                        area_threshold = 2000)
       
       if (steps$download) {
         download_cool_roof_data(
@@ -395,6 +405,7 @@ for (g in groups) {
       if (steps$upload) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+        calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       
       next

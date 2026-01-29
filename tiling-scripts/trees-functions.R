@@ -116,72 +116,6 @@ process_trees <- function(tree_canopy, city_folder, baseline_folder, t_id){
 }
 
 
-# Create pedestrian area --------------------------------------------------
-
-# create_pedestrian_area <- function(lulc, open_urban_aws_http){
-#   
-#   utm <- st_crs(lulc)
-#   
-#   # tile bounds
-#   tile_geom <- st_as_sf(as.polygons(ext(lulc)))
-#   st_crs(tile_geom) <- utm
-#   
-#   # Load roads and filter to tile geometry
-#   road_vectors <- sfarrow::st_read_parquet(
-#     glue("{open_urban_aws_http}/roads/roads_all.parquet"),
-#     wkt_filter = st_as_text(tile_geom),   
-#     quiet = TRUE) %>% 
-#     st_transform(utm) %>% 
-#     st_filter(tile_geom)
-#   
-#   # Subset to low-traffic volume roads
-#   lanes <- read_csv(glue("{open_urban_aws_http}/roads/average_lanes.csv"))
-#   
-#   ped_roads_list <- c("tertiary",
-#                       "tertiary_link",
-#                       "residential",
-#                       "living_street")
-#   
-#   road_vectors <- road_vectors %>% 
-#     select(highway, lanes) %>% 
-#     mutate(lanes = as.integer(lanes)) %>% 
-#     left_join(lanes, by = "highway") %>% 
-#     mutate(lanes = coalesce(lanes, avg_lanes))
-#   
-#   ped_road_vectors <- road_vectors %>% 
-#     filter(highway %in% ped_roads_list)
-#   
-#   # Buffer roads by lanes * 10 ft (3.048 m) 
-#   # https://nacto.org/publication/urban-street-design-guide/street-design-elements/lane-width/#:~:text=wider%20lane%20widths.-,Lane%20widths%20of%2010%20feet%20are%20appropriate%20in%20urban%20areas,be%20used%20in%20each%20direction
-#   # cap is flat to the terminus of the road
-#   # join style is mitred so intersections are squared
-#   if (utm$units == "us-ft"){
-#     width = 10
-#   } else if (utm$units == "ft"){
-#     width = 10
-#   } else if (utm$units == "m"){
-#     width = 3.048
-#   } 
-#   
-#   ped_roads_buff <- ped_road_vectors %>% 
-#     st_buffer(dist = ped_road_vectors$lanes * (width / 2),
-#               endCapStyle = "FLAT",
-#               joinStyle = "MITRE") 
-#   
-#   ped_roads_area <- rasterize(ped_roads_buff, lulc, field = 1, background = 0)
-#   
-#   # 5-meter buffer 
-#   pedestrian_area <- ped_roads_area %>% 
-#     subst(0, NA) %>% 
-#     buffer(5) %>% 
-#     as.numeric()
-#   
-#   # Remove roads and water
-#   pedestrian_area <- pedestrian_area * abs((floor(lulc / 100) %in% c(3, 5)) - 1)
-#   return(pedestrian_area)
-# }
-# 
-
 # Create plantable area ---------------------------------------------------
 
 create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t){
@@ -415,12 +349,6 @@ baseline_processing <- function(t){
   tree_canopy <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))
   lulc <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
 
-  # Create and save binary tree cover
-  # binary_tree_cover <- make_binary_tree_cover(tree_canopy)
-  # write_s3(binary_tree_cover, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/tree-cover.tif"))
-
-  # process_trees(tree_canopy, city_folder, baseline_folder, t)
-
   # Create pedestrian area
   # pedestrian_area <- create_pedestrian_area(lulc, open_urban_aws_http)
   # write_s3(pedestrian_area, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas.tif"))
@@ -443,14 +371,6 @@ baseline_processing <- function(t){
 # Create city-wide tree population ----------------------------------------
 
 create_tree_population <- function(tiles_s3){
-  
-  # keys <- list_s3_keys(
-  #   bucket = "wri-cities-tcm",
-  #   prefix = glue("{bucket}/{city_folder}/scenarios/trees/tree-population/")
-  # )
-  # 
-  # tif_files <- keys[grepl("\\.tif$", keys, ignore.case = TRUE)]
-  # tree_paths <- paste0("s3://wri-cities-tcm/", tif_files)
 
   tree_paths <- glue("{aws_http}/{baseline_folder}/{tiles_s3}/ccl_layers/tree-points__baseline__baseline.geojson")
   
@@ -680,6 +600,22 @@ plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
   
 }
 
+get_tile_rasters <- function(tile) {
+  key <- as.character(tile)
+  if (exists(key, envir = tile_cache, inherits = FALSE)) {
+    return(get(key, envir = tile_cache, inherits = FALSE))
+  }
+  crowns_r <- rast_retry(glue::glue(
+    "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
+  ))
+  height_r <- rast_retry(glue::glue(
+    "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
+  ))
+  val <- list(crowns_r = crowns_r, height_r = height_r)
+  assign(key, val, envir = tile_cache)
+  val
+}
+
 plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_dist,
                                    trees, crowns, tree_structure) {
   
@@ -774,21 +710,6 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   
   # ---- cache rasters per tile to avoid repeated S3 reads ----
   tile_cache <- new.env(parent = emptyenv())
-  get_tile_rasters <- function(tile) {
-    key <- as.character(tile)
-    if (exists(key, envir = tile_cache, inherits = FALSE)) {
-      return(get(key, envir = tile_cache, inherits = FALSE))
-    }
-    crowns_r <- rast_retry(glue::glue(
-      "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
-    ))
-    height_r <- rast_retry(glue::glue(
-      "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
-    ))
-    val <- list(crowns_r = crowns_r, height_r = height_r)
-    assign(key, val, envir = tile_cache)
-    val
-  }
   
   # ---- collect outputs without rbind-in-loop ----
   new_pts_list <- vector("list", 0L)
@@ -949,25 +870,17 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
 
 # Create city-wide grid ---------------------------------------------------
 
-run_tree_scenario <- function(min_dist = 5) {
-  
-  # Make required objects visible to functions that were written expecting globals.
-  list2env(
-    list(
-      city = city,
-      tiles_aoi = tiles_aoi,
-      tiles_s3 = tiles_s3,
-      bucket = bucket,
-      aws_http = aws_http,
-      baseline_folder = baseline_folder,
-      scenario_folder = scenario_folder,
-      city_folder = city_folder,
-      aoi = aoi,
-      open_urban_aws_http = open_urban_aws_http
-    ),
-    envir = .GlobalEnv
-  )
-  
+generate_tree_scenario <- function(city = city,
+                                   tiles_aoi = tiles_aoi,
+                                   tiles_s3 = tiles_s3,
+                                   bucket = bucket,
+                                   aws_http = aws_http,
+                                   baseline_folder = baseline_folder,
+                                   scenario_folder = scenario_folder,
+                                   city_folder = city_folder,
+                                   aoi = aoi,
+                                   open_urban_aws_http = open_urban_aws_http,
+                                   min_dist = 5) {
   
   map(tiles_s3, baseline_processing)
   create_tree_population(tiles_s3)

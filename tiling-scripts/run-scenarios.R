@@ -328,8 +328,17 @@ for (g in groups) {
     if (infra == "baseline" && scenario == "baseline") {
       if (steps$generate) {
         source(here("tiling-scripts", "baseline-layers.R"))
-        save_baseline_layers(utm)
-        calc_baseline_metrics(city, aoi_name, tiles_aoi = tiles_aoi)
+        save_baseline_layers(city = city,
+                             aoi_name = aoi_name,
+                             bucket = bucket,
+                             aws_http = aws_http,
+                             baseline_folder = baseline_folder,
+                             aoi_path = aoi_path,
+                             tiles_s3 = tiles_s3,
+                             utm = utm)
+        calc_baseline_metrics(city = city, 
+                              aoi_name = aoi_name, 
+                              tiles_aoi = tiles_aoi)
       }
       next
     }
@@ -341,7 +350,17 @@ for (g in groups) {
       
       source(here("tiling-scripts", "trees-functions.R"))
       
-      if (steps$generate) run_tree_scenario()
+      if (steps$generate) generate_tree_scenario(city = city,
+                                                 tiles_aoi = tiles_aoi,
+                                                 tiles_s3 = tiles_s3,
+                                                 bucket = bucket,
+                                                 aws_http = aws_http,
+                                                 baseline_folder = baseline_folder,
+                                                 scenario_folder = scenario_folder,
+                                                 city_folder = city_folder,
+                                                 aoi = aoi,
+                                                 open_urban_aws_http = open_urban_aws_http,
+                                                 min_dist = 5)
       
       if (steps$download) {
         download_tree_data(

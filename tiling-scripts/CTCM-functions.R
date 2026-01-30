@@ -353,8 +353,8 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name){
   
   # MethodAttributes
   # Set sampling_local_hours as a verbatim string
-  if (!is.null(scenario_yaml[[6]]$utci_output)) {
-    scenario_yaml[[6]]$utci_output <- TRUE
+  if (!is.null(scenario_yaml[[6]]$output_utci)) {
+    scenario_yaml[[6]]$output_utci <- TRUE
   }
   scenario_yaml[[6]]$solweig$sampling_local_hours <- "12,15,18"
   class(scenario_yaml[[6]]$solweig$sampling_local_hours) <- "verbatim"

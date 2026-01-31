@@ -59,7 +59,7 @@ def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   
   
   road_paths = [
-      f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/roads/roads_{tile}.geojson"
+      f"https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/{city}/roads/roads_{tile}.geojson"
       for tile in tiles
   ]
   
@@ -73,7 +73,7 @@ def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   ######################
   # Get lanes
   ######################
-  lanes = pd.read_csv(f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/roads/average_lanes.csv")
+  lanes = pd.read_csv(f"https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/{city}/roads/average_lanes.csv")
   
   # Save to csv file
   lanes.to_csv(os.path.join(city_dir, "average-lanes.csv"), index=False)
@@ -83,7 +83,7 @@ def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   # Get buildings
   ######################
   build_paths = [
-      f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/buildings/buildings_{tile}.geojson"
+      f"https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/{city}/buildings/buildings_{tile}.geojson"
       for tile in tiles
   ]
   
@@ -117,7 +117,7 @@ def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   # Get parks
   ######################
   openspace_paths = [
-      f"https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}/openspace/openspace_{tile}.geojson"
+      f"https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/{city}/openspace/openspace_{tile}.geojson"
       for tile in tiles
   ]
   
@@ -135,3 +135,4 @@ def get_data(city, city_folder, aoi_file, buffer, year, output_base="."):
   ######################
   import os
   os.makedirs(os.path.join(city_dir, "scenarios"), exist_ok=True)
+

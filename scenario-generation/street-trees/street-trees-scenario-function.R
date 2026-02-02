@@ -73,7 +73,7 @@ street_trees_scenario_function <- function(city_folder, scenario, percentile = N
   source(here("scenario-generation", "street-trees", "tree-generating-functions.R"))
   
   # Achievable potential ----------------------------------------------------
-  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", 
+  aws_path <- paste0("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/", 
                      city, "/scenarios/street-trees/", 
                      city, "-street-tree-pct-1km-grid.csv")
     

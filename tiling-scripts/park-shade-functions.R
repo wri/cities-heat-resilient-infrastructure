@@ -142,7 +142,7 @@ run_shade_scenario <- function() {
   aoi <- sf::st_read(aoi_path, quiet = TRUE) %>%
     sf::st_transform(sf::st_crs(buffered_tile_grid))
   
-  open_urban_aws_http <- glue::glue("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
+  open_urban_aws_http <- glue::glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
   
   parks <- st_read(glue("{open_urban_aws_http}/open_space/open_space_all.geojson"), quiet = TRUE) %>%
     st_filter(aoi, .predicate = sf::st_within)

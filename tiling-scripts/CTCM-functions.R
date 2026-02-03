@@ -131,7 +131,7 @@ download_cool_roof_data <- function(city, aoi_name, scenario, baseline_folder, t
     
   }
   
-  met_file <- glue("{scenario_folder}/reduced_temps.csv")
+  met_file <- glue("{scenario_folder}/metadata/met_files/reduced_temps.csv")
   download_s3_files(
     bucket    = "wri-cities-tcm",
     s3_keys   = met_file,
@@ -534,7 +534,7 @@ upload_tcm_layers <- function(
   }
   
   met <- read_csv(
-    glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/metadata/{met_file_name}"),
+    glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/metadata/met_files/{met_file_name}"),
     skip = 2)
   
   year <- met$Year %>% unique()

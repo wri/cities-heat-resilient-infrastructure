@@ -348,10 +348,6 @@ baseline_processing <- function(t){
   # Load data
   tree_canopy <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))
   lulc <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
-
-  # Create pedestrian area
-  # pedestrian_area <- create_pedestrian_area(lulc, open_urban_aws_http)
-  # write_s3(pedestrian_area, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas.tif"))
   binary_tree_cover <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-cover__baseline__baseline.tif"))
   pedestrian_area <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
 
@@ -882,7 +878,7 @@ generate_tree_scenario <- function(city = city,
                                    open_urban_aws_http = open_urban_aws_http,
                                    min_dist = 5) {
   
-  map(tiles_s3, baseline_processing)
+  map(tiles_aoi, baseline_processing)
   create_tree_population(tiles_s3)
   
   # Achievable potential
@@ -906,10 +902,10 @@ generate_tree_scenario <- function(city = city,
     mutate(ID = row_number())
   
   # Copy existing tree canopy tiles into scenario folder to be updated
-  tree_canopy_paths <- glue("{baseline_folder}/{tiles_s3}/raster_files/cif_tree_canopy.tif")
-  scenario_tree_canopy_paths <- glue("{scenario_folder}/{tiles_s3}/raster_files/tree_canopy.tif")
+  tree_canopy_paths <- glue("{baseline_folder}/{tiles_aoi}/raster_files/cif_tree_canopy.tif")
+  scenario_tree_canopy_paths <- glue("{scenario_folder}/{tiles_aoi}/raster_files/tree_canopy.tif")
   
-  map(glue("{scenario_folder}/{tiles_s3}/raster_files/"), ~ ensure_s3_prefix(bucket, .x))
+  map(glue("{scenario_folder}/{tiles_aoi}/raster_files/"), ~ ensure_s3_prefix(bucket, .x))
   s3_copy_vec(from = tree_canopy_paths, to = scenario_tree_canopy_paths, 
               from_bucket = bucket, to_bucket = bucket, overwrite = TRUE)
   

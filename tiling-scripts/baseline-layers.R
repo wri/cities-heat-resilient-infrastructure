@@ -78,7 +78,7 @@ save_baseline_layers <- function(city = city,
 
     # Parks
     parks <- lulc == 200
-    write_s3(ped_area, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/parks__baseline__baseline.tif"))
+    write_s3(parks, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/parks__baseline__baseline.tif"))
     
     # Shade 
     shade_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1200D.tif"))

@@ -513,7 +513,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   baseline_Ta <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"),
                           skip = 2)
-  scenario_Ta <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/reduced_temps.csv"),
+  scenario_Ta <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/met_files/reduced_temps.csv"),
                           skip = 2)
   
   date <- baseline_Ta %>%

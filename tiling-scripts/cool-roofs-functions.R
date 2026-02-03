@@ -36,7 +36,7 @@ calc_air_temp_delta <- function(city, scenario, aoi, aoi_name){
   )
   
   write_s3(air_temp_reductions, 
-           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/air_temp_reductions.csv"))
+           glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/metadata/met_files/air_temp_reductions.csv"))
   
   # Modify the met file with the updated air temperatures
   met_path <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv")
@@ -62,7 +62,7 @@ calc_air_temp_delta <- function(city, scenario, aoi, aoi_name){
   new_lines <- c(line1, line2, line3, readLines(tmp_rows, warn = FALSE))
   writeLines(new_lines, tmp_out, useBytes = TRUE)
   
-  out_s3 <- glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/reduced_temps.csv")
+  out_s3 <- glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/cool-roofs/{scenario}/metadata/met_files/reduced_temps.csv")
   
   # ---- upload to S3 ----
   res <- system2(
@@ -86,7 +86,7 @@ update_albedo <- function(city = city,
                           city_folder = city_folder,
                           baseline_folder = baseline_folder,
                           infra = "cool-roofs",
-                          tiles_s3 = tiles_s3,
+                          tiles_aoi = tiles_aoi,
                           buffered_tile_grid = buffered_tile_grid,
                           area_threshold = 2000){
   
@@ -96,12 +96,12 @@ update_albedo <- function(city = city,
   open_urban_aws_http <- glue("{aws_http}/OpenUrban/{city}")
   buildings_path <- glue("{open_urban_aws_http}/buildings/buildings_all.parquet")
   buildings <- st_read_parquet(buildings_path, quiet = TRUE) %>% 
-    # Filter to only buildings within AOI
+    # Filter to only buildings that intersect the aoi
     st_filter(aoi) %>% 
     select(id) %>% 
     mutate(area_m2 = as.numeric(units::set_units(st_area(.), m^2))) 
   
-  for (t in tiles_s3){
+  for (t in tiles_aoi){
     
     tile <- buffered_tile_grid %>% 
       filter(tile_name == t)

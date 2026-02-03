@@ -485,8 +485,7 @@ upload_tcm_layers <- function(
   source(here("utils", "utci.R"))
   
   name <- glue("{city}_{infra}_{scenario}")
-  results_dir <- file.path("~", "CTCM_outcome", 
-                           name, glue("{name}_{scenario}_{infra}"))
+  results_dir <- file.path("~", "CTCM_outcome", name, glue("{name}_{scenario}_{infra}"))
   
   # if (is.null(transmissivity)){
   #   name <- glue("{city}_{infra}_{scenario}")
@@ -503,29 +502,29 @@ upload_tcm_layers <- function(
     tcm_results_dir <-  "tcm_results/met_era5_hottest_days"
   }
   
-  primary_dir     <-  "primary_data/raster_files"
+  primary_dir     <-  "raster_files"
   processed_dir   <-  "processed_data"
   
   scenario_folder <- file.path("city_projects", city, aoi_name, "scenarios", infra, scenario)
   
   bucket_prefix <- glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
   
-  # Met data for UTCI (if needed)
-  met_dir <- file.path(results_dir, "primary_data/met_files")
+  # Metadata 
+  meta_dir <- file.path(results_dir, "metadata")
   
-  if (dir.exists(met_dir)) {
+  if (dir.exists(meta_dir)) {
     system2(
       "aws",
       c(
         "s3", "sync",
-        paste0(met_dir, "/"),
-        paste0(bucket_prefix, "/metadata/")
+        paste0(meta_dir, "/"),
+        paste0(bucket_prefix, "/metadata")
       ),
-      stdout = if (quiet) FALSE else "",
+      stdout = "",
       stderr = ""
     )
   } else {
-    message("  (no ", met_dir, ", skipping)")
+    message("  (no ", meta_dir, ", skipping)")
   }
   
   if (infra == "cool-roofs"){
@@ -548,8 +547,9 @@ upload_tcm_layers <- function(
   date <- glue("{year}_{date_doy}")
   
   # Find tile directories (e.g., tile_00001/)
-  tile_dirs <- list.dirs(path.expand(file.path(results_dir, tcm_results_dir)),
-                         recursive = FALSE, full.names = TRUE)
+  tile_dirs <- list.dirs(path.expand(file.path(results_dir)),
+                         recursive = FALSE, full.names = TRUE) 
+  tile_dirs <- tile_dirs[grepl("tile", basename(tile_dirs))]
   
   if (length(tile_dirs) == 0) {
     stop("No tile directories found in ", tcm_results_dir)
@@ -560,65 +560,18 @@ upload_tcm_layers <- function(
     tile <- basename(tile_dir)
     message("Processing tile: ", tile)
     
-    # ---- raster_files ----
-    src_primary <- file.path(results_dir, primary_dir, tile)
-    if (dir.exists(src_primary)) {
-      message("  Copying ", src_primary, " -> ",
-              file.path(bucket_prefix, tile, "raster_files"))
-      
-      system2(
-        "aws",
-        c(
-          "s3", "sync",
-          paste0(src_primary, "/"),
-          paste0(bucket_prefix, "/", tile, "/raster_files/")
-        ),
-        stdout = if (quiet) FALSE else "",
-        stderr = ""
-      )
-    } else {
-      message("  (no ", src_primary, ", skipping)")
-    }
-    
-    # ---- processed_data ----
-    src_processed <- file.path(results_dir, processed_dir, tile)
-    if (dir.exists(src_processed)) {
-      message("  Copying ", src_processed, " -> ",
-              file.path(bucket_prefix, tile, "processed_data"))
-      
-      system2(
-        "aws",
-        c(
-          "s3", "sync",
-          paste0(src_processed, "/"),
-          paste0(bucket_prefix, "/", tile, "/processed_data/")
-        ),
-        stdout = if (quiet) FALSE else "",
-        stderr = ""
-      )
-    } else {
-      message("  (no ", src_processed, ", skipping)")
-    }
-    
-    # ---- tcm_results ----
-    message("  Copying ", tile_dir, " -> ",
-            file.path(bucket_prefix, tile, "tcm_results/met_era5_hottest_days"))
-    
     system2(
       "aws",
       c(
         "s3", "sync",
         paste0(tile_dir, "/"),
-        paste0(
-          bucket_prefix, "/", tile,
-          "/tcm_results/met_era5_hottest_days/"
-        )
+        paste0(bucket_prefix, glue("/{tile}"))
       ),
-      stdout = if (quiet) FALSE else "",
+      stdout = "",
       stderr = ""
     )
     
-    files <- list.files(tile_dir, recursive = TRUE, full.names = FALSE)
+    files <- list.files(file.path(tile_dir, "tcm_results"), recursive = TRUE, full.names = FALSE)
     
     has_utci <- any(grepl("utci", files, ignore.case = TRUE))
     
@@ -640,10 +593,10 @@ upload_tcm_layers <- function(
         utci <- create_utci(mrt, time, met)
         utci_class <- utci_risk_cat(utci)
         
-        out_path <- glue("wri-cities-tcm/{scenario_folder}/{tile}/tcm_results/met_era5_hottest_days/UTCI_{date}_{time}D.tif")
+        out_path <- glue("wri-cities-tcm/{scenario_folder}/{tile}/{tcm_results_dir}/UTCI_{date}_{time}D.tif")
         write_s3(utci, out_path)
         
-        out_path2 <- glue("wri-cities-tcm/{scenario_folder}/{tile}/tcm_results/met_era5_hottest_days/UTCIcat_{date}_{time}D.tif")
+        out_path2 <- glue("wri-cities-tcm/{scenario_folder}/{tile}/{tcm_results_dir}/UTCIcat_{date}_{time}D.tif")
         write_s3(utci_class, out_path2)
         
       }

@@ -221,18 +221,19 @@ for (g in groups) {
   if (copy_baseline) {
     
     # read tile grid from the BASELINE AOI you are copying from
-    buffered_tile_grid <- st_read(
+    tile_grid <- st_read(
       paste0(
         aws_http, "/city_projects/", city, "/", baseline_aoi_name,
-        "/scenarios/baseline/baseline/metadata/.qgis_data/tile_grid.geojson"
+        "/scenarios/baseline/baseline/metadata/.qgis_data/unbuffered_tile_grid.geojson"
       ),
       quiet = TRUE
     )
     
     aoi <- st_read(aoi_path, quiet = TRUE) %>%
-      st_transform(st_crs(buffered_tile_grid))
+      st_transform(st_crs(tile_grid)) %>% 
+      st_buffer(50)
     
-    tile_ids <- buffered_tile_grid %>% st_filter(aoi) %>% dplyr::pull(tile_name)
+    tile_ids <- tile_grid %>% st_filter(aoi) %>% dplyr::pull(tile_name)
     
     from_base <- file.path("city_projects", city, baseline_aoi_name, "scenarios", "baseline", "baseline")
     to_base   <- file.path("city_projects", city, aoi_name,         "scenarios", "baseline", "baseline")
@@ -297,7 +298,8 @@ for (g in groups) {
   
   # AOI
   aoi <- st_read(aoi_path, quiet = TRUE) %>%
-    st_transform(utm)
+    st_transform(utm) %>% 
+    st_buffer(50)
   
   # Tiles intersecting AOI
   buffered_tile_grid_aoi <- buffered_tile_grid %>%
@@ -379,7 +381,7 @@ for (g in groups) {
       
       if (steps$upload) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
-        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder, tiles_aoi)
         calc_street_tree_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       
@@ -403,7 +405,7 @@ for (g in groups) {
                                         city_folder = city_folder,
                                         baseline_folder = baseline_folder,
                                         infra = "cool-roofs",
-                                        tiles_s3 = tiles_s3,
+                                        tiles_aoi = tiles_aoi,
                                         buffered_tile_grid = buffered_tile_grid,
                                         area_threshold = 2000)
       
@@ -423,7 +425,7 @@ for (g in groups) {
       
       if (steps$upload) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
-        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder, tiles_aoi)
         calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       

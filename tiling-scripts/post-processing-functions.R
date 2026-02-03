@@ -3,14 +3,20 @@ library(glue)
 library(tidyverse)
 library(terra)
 
-process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder){
+process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder, tiles_aoi){
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
-  tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
+  # tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
   
-  for (t in tiles){
+  if (infra == "cool-roofs") {
+    results_dir <- "reduced_temps"
+  } else {
+    results_dir <- "met_era5_hottest_days"
+  }
+  
+  for (t in tiles_aoi){
     
-    files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/met_era5_hottest_days"))
+    files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/{results_dir}"))
     
     for (h in c("1200", "1500", "1800")){
       base_utci <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{h}__baseline__baseline.tif"))

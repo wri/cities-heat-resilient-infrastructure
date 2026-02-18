@@ -376,7 +376,7 @@ for (g in groups) {
       }
       
       if (steps$ctcm) {
-        run_tree_CTCM(city, infra, scenario, aoi_name)
+        run_tree_CTCM(city, infra, scenario, aoi_name, aoi)
       }
       
       if (steps$upload) {
@@ -420,7 +420,7 @@ for (g in groups) {
       }
       
       if (steps$ctcm) {
-        run_cool_roof_CTCM(city, infra, scenario, aoi_name = aoi_name)
+        run_cool_roof_CTCM(city, infra, scenario, aoi_name = aoi_name, aoi)
       }
       
       if (steps$upload) {

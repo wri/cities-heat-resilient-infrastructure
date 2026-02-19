@@ -3,18 +3,18 @@
 #
 # Plan syntax (block-style):
 #
-#   CITY@AOI|aoi=DEFAULT_OR_URL|copy_baseline=AOI_NAME_OR_BOOL:
+#   CITY@AOI|aoi_path=DEFAULT_OR_URL|copy_baseline=AOI_NAME_OR_BOOL:
 #     infra:scenario[flags],
 #     infra:scenario[flags];
-#   CITY2@AOI2|aoi="https://.../aoi.geojson"|copy_baseline=false:
+#   CITY2@AOI2|aoi_path="https://.../aoi.geojson"|copy_baseline=false:
 #     infra:scenario[flags]
 #
 # Notes:
-# - Each CITY@AOI block has exactly ONE AOI path spec (aoi=...).
+# - Each CITY@AOI block has exactly ONE AOI path spec (aoi_path=...).
 # - Each block can optionally set copy_baseline=... (false/true/AOI_NAME).
 # - If copy_baseline is omitted in a block, --copy_baseline is used as fallback.
-# - aoi=DEFAULT uses --default_aoi_path_template (required).
-# - aoi can be quoted with "..." or '...' to make it shell-friendly.
+# - aoi_path=DEFAULT uses --default_aoi_path_template (required).
+# - aoi_path can be quoted with "..." or '...' to make it shell-friendly.
 # - {CITY} and {AOI} placeholders are supported in BOTH DEFAULT template and custom aoi URLs.
 #
 # Flags:
@@ -25,11 +25,11 @@
 #
 # Example:
 # EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
-#   --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT|copy_baseline=urban_extent:
+#   --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
 #             trees:pedestrian-achievable-90pctl[gdcu],
 #             cool-roofs:all-buildings[dcu],
 #             shade-structures:all-parks[gdcu];
-#           ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT"|copy_baseline=false:
+#           ZAF-Cape_Town@corridors-of-excellence|aoi_path="DEFAULT"|copy_baseline=false:
 #             trees:custom-scenario[gdcu]' \
 #   --copy_baseline false
 
@@ -50,7 +50,7 @@ option_list <- list(
               help = "Block-style plan (required). See header in script."),
   make_option("--default_aoi_path_template", type = "character",
               default = "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson",
-              help = "Template used when a block specifies aoi=DEFAULT. Supports {CITY} and {AOI}. (required)"),
+              help = "Template used when a block specifies aoi_path=DEFAULT. Supports {CITY} and {AOI}. (required)"),
   make_option("--copy_baseline", type = "character",
               default = "false",
               help = "Global fallback when a block omits copy_baseline. Accepts false/true or AOI name; true maps to urban_extent. (default: false)")
@@ -164,10 +164,10 @@ parse_plan_blocks <- function(plan_str) {
     b <- trimws(b)
     block_id <- block_id + 1L
     
-    # Expect: CITY@AOI|aoi=SPEC[|copy_baseline=SPEC]: <tasks>
+    # Expect: CITY@AOI|aoi_path=SPEC[|copy_baseline=SPEC]: <tasks>
     split_idx <- find_block_header_split(b)
     if (is.na(split_idx)) {
-      stop("Bad block format. Expected CITY@AOI|aoi=...[:tasks]. Got:\n", b)
+      stop("Bad block format. Expected CITY@AOI|aoi_path=...[:tasks]. Got:\n", b)
     }
     header <- trimws(substr(b, 1, split_idx - 1))
     body <- trimws(substr(b, split_idx + 1, nchar(b)))
@@ -177,7 +177,7 @@ parse_plan_blocks <- function(plan_str) {
     header_parts <- strsplit(header, "|", fixed = TRUE)[[1]] %>% trimws()
     header_parts <- header_parts[nzchar(header_parts)]
     if (length(header_parts) < 2) {
-      stop("Bad block header. Expected CITY@AOI|aoi=... [|copy_baseline=...]. Got:\n", b)
+      stop("Bad block header. Expected CITY@AOI|aoi_path=... [|copy_baseline=...]. Got:\n", b)
     }
     
     city_aoi <- header_parts[[1]]
@@ -199,10 +199,10 @@ parse_plan_blocks <- function(plan_str) {
       params[[key]] <- strip_outer_quotes(val)
     }
     
-    if (!"aoi" %in% names(params) || !nzchar(params[["aoi"]])) {
-      stop("Missing required aoi=... in block header:\n", b)
+    if (!"aoi_path" %in% names(params) || !nzchar(params[["aoi_path"]])) {
+      stop("Missing required aoi_path=... in block header:\n", b)
     }
-    aoi_spec <- params[["aoi"]]
+    aoi_spec <- params[["aoi_path"]]
     copy_baseline_spec <- if ("copy_baseline" %in% names(params)) params[["copy_baseline"]] else NA_character_
     
     # Remove newlines to simplify comma splitting

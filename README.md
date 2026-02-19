@@ -65,10 +65,10 @@ Example:
 
 ```bash
 Rscript run-scenarios.R \
-  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT|copy_baseline=urban_extent:
+  --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
             trees:pedestrian-achievable-90pctl[gdcu],
             cool-roofs:all-buildings[dcu];
-          ZAF-Cape_Town@business_district|aoi=DEFAULT|copy_baseline=false:
+          ZAF-Cape_Town@business_district|aoi_path=DEFAULT|copy_baseline=false:
             cool-roofs:all-buildings[dcu]'
 ```
 
@@ -77,15 +77,40 @@ To automatically terminate the EC2 instance after all groups finish add
 
 ```bash
 EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
-  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT|copy_baseline=urban_extent:
+  --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
             trees:pedestrian-achievable-90pctl[gdcu],
             cool-roofs:all-buildings[dcu],
             shade-structures:all-parks[gdcu];
-          ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
+          ZAF-Cape_Town@corridors-of-excellence|aoi_path="DEFAULT":
             trees:custom-scenario[gdcu]'
 ```
+The plan syntax is: 
+```bash
+{city_id}@{aoi_id}|aoi_path={s3_object_url}|copy_baseline={baseline_aoi_id}:
+  {infrastructure_id}:{scenario_id}[flags]
+```
+Flags inside `[ ]`:
+- `g`: generate scenario data
+- `d`: download data
+- `c`: run CTCM
+- `u`: upload outputs
 
-* `aoi` can be provided as an S3 object URL. If not specified, the default is:
+Currently available infrastructures and scenarios are:
+
+| infra_id | scenario_id |
+| ----- | ----- |
+| baseline | baseline\* |
+| trees | pedestrian-achievable-90pctl |
+| cool-roofs | all-buildings |
+| | large-buildings |
+
+\* Current behavior if baseline is specified is to process existing baseline data
+to the necessary CCL layers and calculate metrics. This **does not** run the baseline
+CTCM.
+
+Notes:
+
+* `aoi_path` can be provided as an S3 object URL. If not specified, the default is:
 `city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson` 
 in the `wri-cities-tcm` bucket where `{CITY}` is the city name and `{AOI}` is the AOI name
 specified in the script invocation.
@@ -94,11 +119,7 @@ specified in the script invocation.
   Use `false` to disable, `true` (maps to `urban_extent`), or an AOI name such as `business_district`. If 
   omitted, `copy_baseline` is disabled.
   
-Flags inside `[ ]`:
-- `g`: generate scenario data
-- `d`: download data
-- `c`: run CTCM
-- `u`: upload outputs
+
 
 
 ## 🖥 Running Long-Running Jobs on EC2

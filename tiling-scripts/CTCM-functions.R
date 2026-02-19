@@ -250,10 +250,10 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name, aoi){
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- crs
   
-  scenario_yaml[[2]]$aoi_bounds$west <- bbox[[1]]
-  scenario_yaml[[2]]$aoi_bounds$south <- bbox[[2]]
-  scenario_yaml[[2]]$aoi_bounds$east <- bbox[[3]]
-  scenario_yaml[[2]]$aoi_bounds$north <- bbox[[4]]
+  scenario_yaml[[2]]$aoi_bounds$west <- round(bbox[[1]])
+  scenario_yaml[[2]]$aoi_bounds$south <- round(bbox[[2]])
+  scenario_yaml[[2]]$aoi_bounds$east <- round(bbox[[3]])
+  scenario_yaml[[2]]$aoi_bounds$north <- round(bbox[[4]])
   
   scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
   
@@ -334,10 +334,10 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name, aoi){
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- crs
   
-  scenario_yaml[[2]]$aoi_bounds$west <- bbox[[1]]
-  scenario_yaml[[2]]$aoi_bounds$south <- bbox[[2]]
-  scenario_yaml[[2]]$aoi_bounds$east <- bbox[[3]]
-  scenario_yaml[[2]]$aoi_bounds$north <- bbox[[4]]
+  scenario_yaml[[2]]$aoi_bounds$west <- round(bbox[[1]])
+  scenario_yaml[[2]]$aoi_bounds$south <- round(bbox[[2]])
+  scenario_yaml[[2]]$aoi_bounds$east <- round(bbox[[3]])
+  scenario_yaml[[2]]$aoi_bounds$north <- round(bbox[[4]])
   
   scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
 
@@ -420,10 +420,10 @@ run_shade_structures_CTCM <- function(transmissivity){
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- crs
   
-  scenario_yaml[[2]]$aoi_bounds$west <- bbox[[1]]
-  scenario_yaml[[2]]$aoi_bounds$south <- bbox[[2]]
-  scenario_yaml[[2]]$aoi_bounds$east <- bbox[[3]]
-  scenario_yaml[[2]]$aoi_bounds$north <- bbox[[4]]
+  scenario_yaml[[2]]$aoi_bounds$west <- round(bbox[[1]])
+  scenario_yaml[[2]]$aoi_bounds$south <- round(bbox[[2]])
+  scenario_yaml[[2]]$aoi_bounds$east <- round(bbox[[3]])
+  scenario_yaml[[2]]$aoi_bounds$north <- round(bbox[[4]])
   
   scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
   

@@ -3,14 +3,16 @@
 #
 # Plan syntax (block-style):
 #
-#   CITY@AOI|aoi=DEFAULT_OR_URL:
+#   CITY@AOI|aoi=DEFAULT_OR_URL|copy_baseline=AOI_NAME_OR_BOOL:
 #     infra:scenario[flags],
 #     infra:scenario[flags];
-#   CITY2@AOI2|aoi="https://.../aoi.geojson":
+#   CITY2@AOI2|aoi="https://.../aoi.geojson"|copy_baseline=false:
 #     infra:scenario[flags]
 #
 # Notes:
 # - Each CITY@AOI block has exactly ONE AOI path spec (aoi=...).
+# - Each block can optionally set copy_baseline=... (false/true/AOI_NAME).
+# - If copy_baseline is omitted in a block, --copy_baseline is used as fallback.
 # - aoi=DEFAULT uses --default_aoi_path_template (required).
 # - aoi can be quoted with "..." or '...' to make it shell-friendly.
 # - {CITY} and {AOI} placeholders are supported in BOTH DEFAULT template and custom aoi URLs.
@@ -23,11 +25,11 @@
 #
 # Example:
 # EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
-#   --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT:
+#   --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT|copy_baseline=urban_extent:
 #             trees:pedestrian-achievable-90pctl[gdcu],
 #             cool-roofs:all-buildings[dcu],
 #             shade-structures:all-parks[gdcu];
-#           ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
+#           ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT"|copy_baseline=false:
 #             trees:custom-scenario[gdcu]' \
 #   --copy_baseline false
 
@@ -51,7 +53,7 @@ option_list <- list(
               help = "Template used when a block specifies aoi=DEFAULT. Supports {CITY} and {AOI}. (required)"),
   make_option("--copy_baseline", type = "character",
               default = "false",
-              help = "true/false. Copy baseline tiles from urban_extent (default: false)")
+              help = "Global fallback when a block omits copy_baseline. Accepts false/true or AOI name; true maps to urban_extent. (default: false)")
 )
 
 opts <- parse_args(OptionParser(option_list = option_list))
@@ -62,9 +64,7 @@ if (length(missing) > 0) stop("Missing required argument(s): ", paste(missing, c
 
 default_aoi_path_template <- opts$default_aoi_path_template
 
-copy_baseline_raw <- trimws(opts$copy_baseline)
-copy_baseline <- !tolower(copy_baseline_raw) %in% c("false", "f", "0", "no", "n")
-baseline_aoi_name <- if (copy_baseline) copy_baseline_raw else NULL
+global_copy_baseline_raw <- trimws(opts$copy_baseline)
 
 
 # -----------------------------
@@ -97,12 +97,58 @@ resolve_aoi_path <- function(city, aoi_name, aoi_spec, default_template) {
   tpl
 }
 
+parse_copy_baseline_setting <- function(raw, default_aoi_name = "urban_extent") {
+  raw <- strip_outer_quotes(raw)
+  raw <- trimws(raw)
+  if (!nzchar(raw)) {
+    return(list(enabled = FALSE, aoi_name = NULL, raw = raw))
+  }
+  low <- tolower(raw)
+  if (low %in% c("false", "f", "0", "no", "n")) {
+    return(list(enabled = FALSE, aoi_name = NULL, raw = raw))
+  }
+  if (low %in% c("true", "t", "1", "yes", "y")) {
+    return(list(enabled = TRUE, aoi_name = default_aoi_name, raw = raw))
+  }
+  list(enabled = TRUE, aoi_name = raw, raw = raw)
+}
+
+find_block_header_split <- function(block_text) {
+  chars <- strsplit(block_text, "", fixed = TRUE)[[1]]
+  in_quote <- FALSE
+  quote_char <- ""
+  
+  for (i in seq_along(chars)) {
+    ch <- chars[[i]]
+    if (ch %in% c("'", "\"")) {
+      if (!in_quote) {
+        in_quote <- TRUE
+        quote_char <- ch
+      } else if (quote_char == ch) {
+        in_quote <- FALSE
+        quote_char <- ""
+      }
+    }
+    
+    if (!in_quote && ch == ":") {
+      rest <- if (i < length(chars)) paste(chars[(i + 1):length(chars)], collapse = "") else ""
+      if (grepl("^\\s*[A-Za-z0-9_-]+\\s*:\\s*[^\\[]+\\[[A-Za-z]+\\]", rest, perl = TRUE)) {
+        return(i)
+      }
+    }
+  }
+  
+  NA_integer_
+}
+
+global_copy_baseline <- parse_copy_baseline_setting(global_copy_baseline_raw)
+
 # -----------------------------
 # Plan parser (block-style)
 # -----------------------------
 parse_plan_blocks <- function(plan_str) {
   # Returns a tibble with one row per task:
-  # city, aoi_name, aoi_spec, infra, scenario, generate, download, ctcm, upload
+  # city, aoi_name, aoi_spec, copy_baseline_spec, infra, scenario, generate, download, ctcm, upload
   plan_str <- trimws(plan_str)
   if (!nzchar(plan_str)) stop("--plan is empty")
   
@@ -118,25 +164,46 @@ parse_plan_blocks <- function(plan_str) {
     b <- trimws(b)
     block_id <- block_id + 1L
     
-    # Expect: CITY@AOI|aoi=SPEC: <tasks>
-    # Allow whitespace/newlines in tasks.
-    m <- regexec("^([^@\\s]+)@([^|\\s:]+)\\s*\\|\\s*aoi\\s*=\\s*([^:]+)\\s*:\\s*([\\s\\S]*)$", b, perl = TRUE)
-    r <- regmatches(b, m)[[1]]
-    if (length(r) == 0) {
-      stop(
-        "Bad block header. Expected CITY@AOI|aoi=DEFAULT_OR_URL: ...\nGot:\n", b
-      )
+    # Expect: CITY@AOI|aoi=SPEC[|copy_baseline=SPEC]: <tasks>
+    split_idx <- find_block_header_split(b)
+    if (is.na(split_idx)) {
+      stop("Bad block format. Expected CITY@AOI|aoi=...[:tasks]. Got:\n", b)
+    }
+    header <- trimws(substr(b, 1, split_idx - 1))
+    body <- trimws(substr(b, split_idx + 1, nchar(b)))
+    
+    if (!nzchar(body)) stop("No tasks found under block header:\n", header)
+    
+    header_parts <- strsplit(header, "|", fixed = TRUE)[[1]] %>% trimws()
+    header_parts <- header_parts[nzchar(header_parts)]
+    if (length(header_parts) < 2) {
+      stop("Bad block header. Expected CITY@AOI|aoi=... [|copy_baseline=...]. Got:\n", b)
     }
     
-    city     <- trimws(r[2])
-    aoi_name <- trimws(r[3])
-    aoi_spec <- trimws(r[4])
-    body     <- trimws(r[5])
-    
-    if (!nzchar(city) || !nzchar(aoi_name) || !nzchar(aoi_spec)) {
-      stop("Empty city/aoi/aoi= in block:\n", b)
+    city_aoi <- header_parts[[1]]
+    m_city <- regexec("^([^@\\s]+)@([^|\\s:]+)$", city_aoi, perl = TRUE)
+    r_city <- regmatches(city_aoi, m_city)[[1]]
+    if (length(r_city) == 0) {
+      stop("Bad CITY@AOI in block header: ", city_aoi)
     }
-    if (!nzchar(body)) stop("No tasks found under block header for ", city, "@", aoi_name)
+    city <- trimws(r_city[2])
+    aoi_name <- trimws(r_city[3])
+    
+    params <- list()
+    for (p in header_parts[-1]) {
+      if (!grepl("=", p, fixed = TRUE)) {
+        stop("Bad block param (expected key=value): ", p, "\nIn block:\n", b)
+      }
+      key <- tolower(trimws(sub("=.*$", "", p)))
+      val <- trimws(sub("^[^=]+=", "", p))
+      params[[key]] <- strip_outer_quotes(val)
+    }
+    
+    if (!"aoi" %in% names(params) || !nzchar(params[["aoi"]])) {
+      stop("Missing required aoi=... in block header:\n", b)
+    }
+    aoi_spec <- params[["aoi"]]
+    copy_baseline_spec <- if ("copy_baseline" %in% names(params)) params[["copy_baseline"]] else NA_character_
     
     # Remove newlines to simplify comma splitting
     body_one_line <- gsub("[\r\n]+", " ", body)
@@ -162,6 +229,7 @@ parse_plan_blocks <- function(plan_str) {
         city     = city,
         aoi_name = aoi_name,
         aoi_spec = aoi_spec,
+        copy_baseline_spec = copy_baseline_spec,
         infra    = infra,
         scenario = scenario,
         generate = grepl("g", flags, fixed = TRUE),
@@ -218,7 +286,16 @@ for (g in groups) {
   baseline_folder <- file.path(city_folder, "scenarios", "baseline", "baseline")
   
   # optional baseline copy
-  if (copy_baseline) {
+  block_copy_baseline_raw <- unique(g$copy_baseline_spec)[[1]]
+  copy_baseline_setting <- if (is.na(block_copy_baseline_raw) || !nzchar(trimws(block_copy_baseline_raw))) {
+    global_copy_baseline
+  } else {
+    parse_copy_baseline_setting(block_copy_baseline_raw)
+  }
+  
+  if (isTRUE(copy_baseline_setting$enabled)) {
+    baseline_aoi_name <- copy_baseline_setting$aoi_name
+    message("copy_baseline enabled for this block (source AOI: ", baseline_aoi_name, ")")
     
     # read tile grid from the BASELINE AOI you are copying from
     tile_grid <- st_read(

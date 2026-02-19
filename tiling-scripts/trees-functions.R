@@ -191,13 +191,11 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   # Subset to low-traffic volume roads
   lanes <- suppressMessages(
     readr::read_csv(glue("{open_urban_aws_http}/roads/average_lanes.csv"))
-  ) %>%
-    dplyr::rename(
-      avg_lanes = dplyr::coalesce(
-        dplyr::any_of("avg_lanes"),
-        dplyr::any_of("avg.lanes")
-      )
-    )
+  ) 
+  
+  if ("avg.lanes" %in% names(lanes)) {
+    lanes <- dplyr::rename(lanes, avg_lanes = avg.lanes)
+  }
   
   
   major_roads_list <- c("motorway", "primary")

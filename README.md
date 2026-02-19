@@ -65,20 +65,34 @@ Example:
 
 ```bash
 Rscript run-scenarios.R \
-  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT:
+  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT|copy_baseline=urban_extent:
             trees:pedestrian-achievable-90pctl[gdcu],
             cool-roofs:all-buildings[dcu];
-          ZAF-Cape_Town@business_district|aoi=default:
-            cool-roofs:all-buildings[dcu]' \
-  --copy_baseline false
+          ZAF-Cape_Town@business_district|aoi=DEFAULT|copy_baseline=false:
+            cool-roofs:all-buildings[dcu]'
 ```
 
-* aoi can be provided as an S3 object URL. If not specified, the default is:
-`https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson`
-* `copy_baseline` takes the name of an AOI that already has baseline data (most commonly urban_extent). 
-  For example, `--copy_baseline urban_extent` copies baseline data for tiles that 
-  intersect the target AOI into that AOI’s folder. Scenario runs **require** 
-  baseline data to exist in the target AOI folder.
+To automatically terminate the EC2 instance after all groups finish add
+`EC2_TERMINATE_ON_COMPLETE=true`:
+
+```bash
+EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
+  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT|copy_baseline=urban_extent:
+            trees:pedestrian-achievable-90pctl[gdcu],
+            cool-roofs:all-buildings[dcu],
+            shade-structures:all-parks[gdcu];
+          ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
+            trees:custom-scenario[gdcu]'
+```
+
+* `aoi` can be provided as an S3 object URL. If not specified, the default is:
+`city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson` 
+in the `wri-cities-tcm` bucket where `{CITY}` is the city name and `{AOI}` is the AOI name
+specified in the script invocation.
+* Scenario runs **require** baseline data in the target AOI folder. Copy data from
+  an existing baseline run by setting `copy_baseline` per city block inside `--plan` using `|copy_baseline=...`.
+  Use `false` to disable, `true` (maps to `urban_extent`), or an AOI name such as `business_district`. If 
+  omitted, `copy_baseline` is disabled.
   
 Flags inside `[ ]`:
 - `g`: generate scenario data
@@ -106,4 +120,3 @@ screen -r chri
 nohup Rscript run-scenarios.R --plan '...' > run.log 2>&1 &
 tail -f run.log
 ```
-

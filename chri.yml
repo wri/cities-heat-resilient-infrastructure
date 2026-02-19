@@ -1,0 +1,22 @@
+name: chri
+channels:
+  - conda-forge
+
+dependencies:
+  - r-base=4.4
+
+  # Geospatial system libs used by sf/terra.
+  - gdal
+  - geos
+  - proj
+  - proj-data
+  - udunits2
+
+  # Core R geospatial bindings installed via conda for binary stability on EC2.
+  - r-s2
+  - r-sf
+  - r-lwgeom
+  - r-terra
+  - r-raster
+  - r-units
+  - r-exactextractr

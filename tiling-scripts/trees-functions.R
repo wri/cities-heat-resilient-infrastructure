@@ -596,21 +596,6 @@ plant_in_gridcell <- function(grid_index, aoi_grid, target_coverage, min_dist,
   
 }
 
-get_tile_rasters <- function(tile) {
-  key <- as.character(tile)
-  if (exists(key, envir = tile_cache, inherits = FALSE)) {
-    return(get(key, envir = tile_cache, inherits = FALSE))
-  }
-  crowns_r <- rast_retry(glue::glue(
-    "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
-  ))
-  height_r <- rast_retry(glue::glue(
-    "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
-  ))
-  val <- list(crowns_r = crowns_r, height_r = height_r)
-  assign(key, val, envir = tile_cache)
-  val
-}
 
 plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_dist,
                                    trees, crowns, tree_structure) {
@@ -706,6 +691,22 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   
   # ---- cache rasters per tile to avoid repeated S3 reads ----
   tile_cache <- new.env(parent = emptyenv())
+  
+  get_tile_rasters <- function(tile) {
+    key <- as.character(tile)
+    if (exists(key, envir = tile_cache, inherits = FALSE)) {
+      return(get(key, envir = tile_cache, inherits = FALSE))
+    }
+    crowns_r <- rast_retry(glue::glue(
+      "{aws_http}/{baseline_folder}/{tile}/ccl_layers/existing-tree-crowns__baseline__baseline.tif"
+    ))
+    height_r <- rast_retry(glue::glue(
+      "{aws_http}/{baseline_folder}/{tile}/raster_files/cif_tree_canopy.tif"
+    ))
+    val <- list(crowns_r = crowns_r, height_r = height_r)
+    assign(key, val, envir = tile_cache)
+    val
+  }
   
   # ---- collect outputs without rbind-in-loop ----
   new_pts_list <- vector("list", 0L)

@@ -250,10 +250,10 @@ run_tree_CTCM <- function(city, infra, scenario, aoi_name, aoi){
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- crs
   
-  scenario_yaml[[2]]$aoi_bounds$west <- round(bbox[[1]])
-  scenario_yaml[[2]]$aoi_bounds$south <- round(bbox[[2]])
-  scenario_yaml[[2]]$aoi_bounds$east <- round(bbox[[3]])
-  scenario_yaml[[2]]$aoi_bounds$north <- round(bbox[[4]])
+  scenario_yaml[[2]]$aoi_bounds$west <- as.integer(round(bbox[[1]]))
+  scenario_yaml[[2]]$aoi_bounds$south <- as.integer(round(bbox[[2]]))
+  scenario_yaml[[2]]$aoi_bounds$east <- as.integer(round(bbox[[3]]))
+  scenario_yaml[[2]]$aoi_bounds$north <- as.integer(round(bbox[[4]]))
   
   scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
   
@@ -334,10 +334,10 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name, aoi){
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- crs
   
-  scenario_yaml[[2]]$aoi_bounds$west <- round(bbox[[1]])
-  scenario_yaml[[2]]$aoi_bounds$south <- round(bbox[[2]])
-  scenario_yaml[[2]]$aoi_bounds$east <- round(bbox[[3]])
-  scenario_yaml[[2]]$aoi_bounds$north <- round(bbox[[4]])
+  scenario_yaml[[2]]$aoi_bounds$west <- as.integer(round(bbox[[1]]))
+  scenario_yaml[[2]]$aoi_bounds$south <- as.integer(round(bbox[[2]]))
+  scenario_yaml[[2]]$aoi_bounds$east <- as.integer(round(bbox[[3]]))
+  scenario_yaml[[2]]$aoi_bounds$north <- as.integer(round(bbox[[4]]))
   
   scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
 
@@ -420,10 +420,10 @@ run_shade_structures_CTCM <- function(transmissivity){
   scenario_yaml[[2]]$city <- "None"
   scenario_yaml[[2]]$aoi_bounds$epsg_code <- crs
   
-  scenario_yaml[[2]]$aoi_bounds$west <- round(bbox[[1]])
-  scenario_yaml[[2]]$aoi_bounds$south <- round(bbox[[2]])
-  scenario_yaml[[2]]$aoi_bounds$east <- round(bbox[[3]])
-  scenario_yaml[[2]]$aoi_bounds$north <- round(bbox[[4]])
+  scenario_yaml[[2]]$aoi_bounds$west <- as.integer(round(bbox[[1]]))
+  scenario_yaml[[2]]$aoi_bounds$south <- as.integer(round(bbox[[2]]))
+  scenario_yaml[[2]]$aoi_bounds$east <- as.integer(round(bbox[[3]]))
+  scenario_yaml[[2]]$aoi_bounds$north <- as.integer(round(bbox[[4]]))
   
   scenario_yaml[[2]]$remove_mrt_buffer_for_final_output <- baseline_yaml[[2]]$remove_mrt_buffer_for_final_output
   
@@ -482,12 +482,30 @@ run_shade_structures_CTCM <- function(transmissivity){
   
 }
 
+aws_sync_or_stop <- function(from, to, quiet = FALSE) {
+  args <- c("s3", "sync", paste0(from, "/"), to)
+  if (quiet) args <- c(args, "--only-show-errors")
+  
+  out <- system2("aws", args, stdout = TRUE, stderr = TRUE)
+  status <- attr(out, "status")
+  if (is.null(status)) status <- 0L
+  
+  if (status != 0L) {
+    msg <- paste(out, collapse = "\n")
+    stop("aws s3 sync failed (status=", status, ")\nFROM: ", from, "\nTO:   ", to, "\n\n", msg)
+  }
+  
+  invisible(TRUE)
+}
+
+
 upload_tcm_layers <- function(
     city,
     infra,
     scenario,
     aoi_name,
     # transmissivty = NULL,
+    delete_local = TRUE, 
     quiet           = FALSE
 ) {
   
@@ -522,16 +540,7 @@ upload_tcm_layers <- function(
   meta_dir <- file.path(results_dir, "metadata")
   
   if (dir.exists(meta_dir)) {
-    system2(
-      "aws",
-      c(
-        "s3", "sync",
-        paste0(meta_dir, "/"),
-        paste0(bucket_prefix, "/metadata")
-      ),
-      stdout = "",
-      stderr = ""
-    )
+    aws_sync_or_stop(meta_dir, paste0(bucket_prefix, "/metadata"), quiet = quiet)
   } else {
     message("  (no ", meta_dir, ", skipping)")
   }
@@ -569,17 +578,6 @@ upload_tcm_layers <- function(
     tile <- basename(tile_dir)
     message("Processing tile: ", tile)
     
-    system2(
-      "aws",
-      c(
-        "s3", "sync",
-        paste0(tile_dir, "/"),
-        paste0(bucket_prefix, glue("/{tile}"))
-      ),
-      stdout = "",
-      stderr = ""
-    )
-    
     files <- list.files(file.path(tile_dir, "tcm_results"), recursive = TRUE, full.names = FALSE)
     
     has_utci <- any(grepl("utci", files, ignore.case = TRUE))
@@ -611,6 +609,19 @@ upload_tcm_layers <- function(
       }
       
     }
+    
+    # Upload tile
+    aws_sync_or_stop(tile_dir, paste0(bucket_prefix, "/", tile), quiet = quiet)
+    
+    # --- delete local tile dir after successful upload + processing ---
+  if (isTRUE(delete_local)) {
+    unlink(tile_dir, recursive = TRUE, force = TRUE)
+    if (dir.exists(tile_dir)) {
+      warning("Tried to delete ", tile_dir, " but it still exists (permissions/locks?).")
+    } else {
+      message("Deleted local tile directory: ", tile_dir)
+    }
+  }
     
     message("")
   }

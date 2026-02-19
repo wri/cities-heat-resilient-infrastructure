@@ -16,3 +16,9 @@ EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
           ZAF-Cape_Town@corridors-of-excellence|aoi="DEFAULT":
             trees:custom-scenario[gdcu]' \
   --copy_baseline urban_extent
+
+
+EC2_TERMINATE_ON_COMPLETE=false Rscript run-scenarios.R \
+  --plan 'BRA-Campinas@accelerator_area|aoi=DEFAULT:
+            cool-roofs:all-buildings[gdc]'\ 
+  --copy_baseline urban_extent

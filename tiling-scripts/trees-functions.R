@@ -5,6 +5,8 @@ library(tidyverse)
 library(lidR)
 library(RANN)
 library(glue)
+library(geoarrow)
+library(sfarrow)
 
 
 source(here("tiling-scripts", "utils.R"))
@@ -140,7 +142,7 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   # no trees within 9-m of intersection
   
   # Load roads and filter to bbox of tile geometry
-  road_vectors <- st_read(glue("{open_urban_aws_http}/roads/roads_all.geojson"), quiet = TRUE) %>% 
+  road_vectors <- st_read_parquet(glue("{open_urban_aws_http}/roads/roads_all.parquet"), quiet = TRUE) %>% 
       st_transform(utm) %>% 
       st_filter(tile_geom)
   
@@ -274,8 +276,8 @@ create_plantable_area_all_roads <- function(
   ## intersections buffer ####
   # no trees within 9-m of intersection
   # Load roads and filter to bbox of tile geometry
-  road_vectors <- st_read(
-    glue("{open_urban_aws_http}/roads/roads_all.geojson"),
+  road_vectors <- st_read_parquet(
+    glue("{open_urban_aws_http}/roads/roads_all.parquet"),
     quiet = TRUE
   ) %>%
     st_transform(utm) %>%

@@ -18,11 +18,12 @@ cities <- c("BRA-Recife", "BRA-Fortaleza", "BRA-Florianopolis", "BRA-Campinas", 
 
 for (city in cities){
     print(city)
-    city <- "MEX-Hermosillo"
-    aoi_name <- "urban_extent"
+    city <- "ZAF-Cape_Town"
+    aoi_name <- "business_district"
     
     bucket   <- "wri-cities-tcm"
     aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
+    open_urban_aws_http <- paste0("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/", city)
     s3 <- paws::s3()
     
     country <- strsplit(city, "-")[[1]][1]
@@ -55,8 +56,8 @@ for (city in cities){
       st_filter(aoi) 
     tiles_aoi <- tile_grid_aoi$tile_name
     
-    infra <- "cool-roofs"
-    scenario <- "all-buildings"
+    infra <- "trees"
+    scenario <- "pedestrian-achievable-90pctl"
     
     process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
     calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)

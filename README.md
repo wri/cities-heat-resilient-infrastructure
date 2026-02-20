@@ -25,13 +25,14 @@ conda activate chri
 
 ### 🟢 2. Install R packages
 
+With the chri conda environment active, run:
 ```bash
 Rscript install_packages.R
 ```
 
 ## 🐍 Python Usage
 
-Python is not required for the active `run-scenarios.R` pipeline.
+Python is not currently required for the active pipeline.
 
 ## 🔐 Authentication
 

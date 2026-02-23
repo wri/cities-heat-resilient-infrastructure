@@ -83,7 +83,7 @@ EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
             trees:pedestrian-achievable-90pctl[gdcu],
             cool-roofs:all-buildings[dcu],
             shade-structures:all-parks[gdcu];
-          ZAF-Cape_Town@corridors-of-excellence|aoi_path="DEFAULT":
+          ZAF-Cape_Town@business_district|aoi_path="DEFAULT":
             trees:custom-scenario[gdcu]'
 ```
 The plan syntax is: 

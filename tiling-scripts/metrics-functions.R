@@ -380,7 +380,7 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   tree_n_scenario_pedestrian <- nrow(scenario_tree_points)
   
   # Achievable potential
-  aws_path <- paste0("https://wri-cities-heat.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
+  aws_path <- paste0("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/", city, "/scenarios/street-trees/", city, "-street-tree-pct-1km-grid.csv")
   ped_area_tree_dist <- read_csv(aws_path)
   target_coverage <- quantile(ped_area_tree_dist$`pct-tree`, 0.9, names = FALSE, na.rm = TRUE)
   

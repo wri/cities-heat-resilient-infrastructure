@@ -29,6 +29,7 @@ With the chri conda environment active, run:
 ```bash
 Rscript install_packages.R
 ```
+This may take some time!
 
 ## 🐍 Python Usage
 

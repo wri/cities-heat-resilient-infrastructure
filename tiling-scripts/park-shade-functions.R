@@ -101,7 +101,9 @@ generate_shade_structures <- function(
     
     tile <- buffered_tile_grid %>% dplyr::filter(tile_name == t)
     
-    x <- shade_structures_rast %>% terra::crop(tile)
+    x <- shade_structures_rast %>% 
+      crop(tile) %>% 
+      extend(tile, fill = 0)
     
     ensure_s3_prefix(bucket, glue::glue("{scenario_folder}/{t}/ccl_layers"))
     
@@ -123,26 +125,13 @@ generate_shade_structures <- function(
 }
 
 
-run_shade_scenario <- function() {
-  
-  list2env(
-    list(
-      bucket = bucket,
-      aws_http = aws_http,
-      baseline_folder = baseline_folder,
-      scenario_folder = scenario_folder,
-      city = city,
-      aoi_path = aoi_path,
-      buffered_tile_grid = buffered_tile_grid,
-      tile_grid = tile_grid
-    ),
-    envir = .GlobalEnv
-  )
-  
-  aoi <- sf::st_read(aoi_path, quiet = TRUE) %>%
-    sf::st_transform(sf::st_crs(buffered_tile_grid))
-  
-  open_urban_aws_http <- glue::glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/{city}")
+run_shade_scenario <- function(bucket, 
+                               aws_http, 
+                               open_urban_aws_http,
+                               baseline_folder, 
+                               scenario_folder,
+                               city, aoi, 
+                               buffered_tile_grid, tile_grid) {
   
   parks <- st_read(glue("{open_urban_aws_http}/open_space/open_space_all.geojson"), quiet = TRUE) %>%
     st_filter(aoi, .predicate = sf::st_within)

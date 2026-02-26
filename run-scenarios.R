@@ -21,7 +21,7 @@
 #   g = generate scenario data
 #   d = download data
 #   c = run CTCM
-#   u = upload CTCM data
+#   p = process CTCM data
 #
 # Example:
 # EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
@@ -148,7 +148,7 @@ global_copy_baseline <- parse_copy_baseline_setting(global_copy_baseline_raw)
 # -----------------------------
 parse_plan_blocks <- function(plan_str) {
   # Returns a tibble with one row per task:
-  # city, aoi_name, aoi_spec, copy_baseline_spec, infra, scenario, generate, download, ctcm, upload
+  # city, aoi_name, aoi_spec, copy_baseline_spec, infra, scenario, generate, download, ctcm, process
   plan_str <- trimws(plan_str)
   if (!nzchar(plan_str)) stop("--plan is empty")
   
@@ -235,7 +235,7 @@ parse_plan_blocks <- function(plan_str) {
         generate = grepl("g", flags, fixed = TRUE),
         download = grepl("d", flags, fixed = TRUE),
         ctcm     = grepl("c", flags, fixed = TRUE),
-        upload   = grepl("u", flags, fixed = TRUE)
+        process   = grepl("p", flags, fixed = TRUE)
       )
     }
   }
@@ -394,14 +394,14 @@ for (g in groups) {
       generate = g$generate[[i]],
       download = g$download[[i]],
       ctcm     = g$ctcm[[i]],
-      upload   = g$upload[[i]]
+      process   = g$process[[i]]
     )
     
     message("Task: ", infra, ":", scenario,
             "  [g=", steps$generate,
             ", d=", steps$download,
             ", c=", steps$ctcm,
-            ", u=", steps$upload, "]")
+            ", p=", steps$process, "]")
     
     # ------------------ baseline ------------------
     if (infra == "baseline" && scenario == "baseline") {
@@ -456,7 +456,7 @@ for (g in groups) {
         run_tree_CTCM(city, infra, scenario, aoi_name, aoi)
       }
       
-      if (steps$upload) {
+      if (steps$process) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder, tiles_aoi)
         calc_street_tree_metrics(city, aoi_name, tiles_aoi, scenario)
@@ -500,7 +500,7 @@ for (g in groups) {
         run_cool_roof_CTCM(city, infra, scenario, aoi_name = aoi_name, aoi)
       }
       
-      if (steps$upload) {
+      if (steps$process) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder, tiles_aoi)
         calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
@@ -517,10 +517,17 @@ for (g in groups) {
       source(here("tiling-scripts", "park-shade-functions.R"))
       source(here("scenario-generation", "park-shade-structures", "shade-generating-functions.R"))
       
-      if (steps$generate) run_shade_scenario()
+      if (steps$generate) run_shade_scenario(bucket, 
+                                             aws_http, 
+                                             open_urban_aws_http,
+                                             baseline_folder, 
+                                             scenario_folder,
+                                             city, aoi, 
+                                             buffered_tile_grid, tile_grid)
+      
+      scenario_tiles <- list_tiles(paste0("s3://", bucket, "/", scenario_folder))
       
       if (steps$download) {
-        scenario_tiles <- list_tiles(paste0("s3://", bucket, "/", scenario_folder))
         download_shade_data(
           city, infra, scenario,
           baseline_folder, scenario_folder,
@@ -530,17 +537,28 @@ for (g in groups) {
       }
       
       if (steps$ctcm) {
-        # Ensure these exist in your environment or wire them into CLI / plan:
-        # author, utc_offset, buffer, transmissivity, etc.
-        run_CTCM_shade_structures(city_folder, author, utc_offset, transmissivity = 3,
-                                  scenario_name = scenario, buffer)
-        run_CTCM_shade_structures(city_folder, author, utc_offset, transmissivity = 0,
-                                  scenario_name = scenario, buffer)
+        run_shade_structures_CTCM(city, infra, scenario, aoi_name = aoi_name, aoi, 
+                                  transmissivity = 3)
+        
+        # Rerun for transmissivity 0
+        download_shade_data(
+          city, infra, scenario,
+          baseline_folder, scenario_folder,
+          tiles = scenario_tiles,
+          transmissivity = 0
+        )
+        
+        run_shade_structures_CTCM(city, infra, scenario, aoi_name, aoi, 
+                                  transmissivity = 0)
       }
       
-      if (steps$upload) {
-        upload_tcm_layers(city, infra, scenario, aoi_name)
-        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+      if (steps$process) {
+        shade_structure_post_processing(baseline_folder, 
+                                        scenario_folder, 
+                                        infra,
+                                        scenario,
+                                        tiles = scenario_tiles)
+        calc_shade_structures_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       
       next

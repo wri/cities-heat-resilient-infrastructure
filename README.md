@@ -68,10 +68,10 @@ Example:
 ```bash
 Rscript run-scenarios.R \
   --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
-            trees:pedestrian-achievable-90pctl[gdcu],
-            cool-roofs:all-buildings[dcu];
+            trees:pedestrian-achievable-90pctl[gdcp],
+            cool-roofs:all-buildings[dcp];
           ZAF-Cape_Town@business_district|aoi_path=DEFAULT|copy_baseline=false:
-            cool-roofs:all-buildings[dcu]'
+            cool-roofs:all-buildings[dcp]'
 ```
 
 To automatically terminate the EC2 instance after all groups finish add
@@ -80,11 +80,19 @@ To automatically terminate the EC2 instance after all groups finish add
 ```bash
 EC2_TERMINATE_ON_COMPLETE=true Rscript run-scenarios.R \
   --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
+<<<<<<< Updated upstream
             trees:pedestrian-achievable-90pctl[gdcu],
             cool-roofs:all-buildings[dcu],
             shade-structures:all-parks[gdcu];
           ZAF-Cape_Town@business_district|aoi_path="DEFAULT":
             trees:custom-scenario[gdcu]'
+=======
+            trees:pedestrian-achievable-90pctl[gdcp],
+            cool-roofs:all-buildings[dcp],
+            shade-structures:all-parks[gdcp];
+          ZAF-Cape_Town@corridors-of-excellence|aoi_path="DEFAULT":
+            trees:custom-scenario[gdcp]'
+>>>>>>> Stashed changes
 ```
 The plan syntax is: 
 ```bash
@@ -95,7 +103,7 @@ Flags inside `[ ]`:
 - `g`: generate scenario data
 - `d`: download data
 - `c`: run CTCM
-- `u`: upload outputs
+- `p`: process and upload outputs
 
 Currently available infrastructures and scenarios are:
 

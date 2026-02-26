@@ -128,16 +128,16 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   baseline_tree_pct_pedestrian <- mean(values(mask(baseline_tree_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE)) 
    
   # Number of trees
-  baseline_tree_points <- map_dfr(tiles_aoi, function(t) {
+  baseline_tree_points <- map_dfr(tiles_aoi, function(time) {
     
     baseline_utci <- terra::rast(glue(
-      "{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-1200__baseline__baseline.tif"
+      "{aws_http}/{baseline_folder}/{time}/ccl_layers/utci-1200__baseline__baseline.tif"
     ))
     
     bbox_sf <- st_as_sf(st_as_sfc(st_bbox(baseline_utci)))
     
     st_read(glue(
-      "{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-points__baseline__baseline.geojson"
+      "{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"
     ), quiet = TRUE) %>%
       st_filter(bbox_sf) }) %>%
     st_filter(aoi)
@@ -362,10 +362,10 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   # Number of trees
   # Baseline
-  baseline_tree_points <- map_dfr(tiles_aoi, function(t) {
-    baseline_utci <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-1200__baseline__baseline.tif"))
+  baseline_tree_points <- map_dfr(tiles_aoi, function(time) {
+    baseline_utci <- rast(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/utci-1200__baseline__baseline.tif"))
     bbox_sf <- st_as_sf(st_as_sfc(st_bbox(baseline_utci)))
-    st_read(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/tree-points__baseline__baseline.geojson"), quiet = TRUE) %>%
+    st_read(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"), quiet = TRUE) %>%
       st_filter(bbox_sf) }) %>%
     st_filter(aoi)
   
@@ -511,12 +511,12 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   timestamps <- c("1200", "1500", "1800")
   
-  baseline_Ta <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"),
+  baseline_met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"),
                           skip = 2)
-  scenario_Ta <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/met_files/reduced_temps.csv"),
+  scenario_met_data <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/met_files/reduced_temps.csv"),
                           skip = 2)
   
-  date <- baseline_Ta %>%
+  date <- baseline_met_data %>%
     slice(1) %>%
     mutate(date = glue("{Year}_{Month}_{Day}")) %>%
     pull(date)
@@ -636,12 +636,12 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     "progress_reflectivity" = scenario_reflectivity / achievable_reflectivity,    
     "progress_cool_roofs" = (baseline_cool_roof_area + change_cool_roof_area) / technical_cool_roof_area * 100,
     
-    "baseline_mean_air_temp_1200" = (baseline_Ta %>% filter(Hour == 12) %>% pull(Temperature)),
-    "baseline_mean_air_temp_1500" = (baseline_Ta %>% filter(Hour == 15) %>% pull(Temperature)),
-    "baseline_mean_air_temp_1800" = (baseline_Ta %>% filter(Hour == 18) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1200" = (scenario_Ta %>% filter(Hour == 12) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1500" = (scenario_Ta %>% filter(Hour == 15) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1800" = (scenario_Ta %>% filter(Hour == 18) %>% pull(Temperature)),
+    "baseline_mean_air_temp_1200" = (baseline_met_data %>% filter(Hour == 12) %>% pull(Temperature)),
+    "baseline_mean_air_temp_1500" = (baseline_met_data %>% filter(Hour == 15) %>% pull(Temperature)),
+    "baseline_mean_air_temp_1800" = (baseline_met_data %>% filter(Hour == 18) %>% pull(Temperature)),
+    "scenario_mean_air_temp_1200" = (scenario_met_data %>% filter(Hour == 12) %>% pull(Temperature)),
+    "scenario_mean_air_temp_1500" = (scenario_met_data %>% filter(Hour == 15) %>% pull(Temperature)),
+    "scenario_mean_air_temp_1800" = (scenario_met_data %>% filter(Hour == 18) %>% pull(Temperature)),
     "change_mean_air_temp_1200" = scenario_mean_air_temp_1200 - baseline_mean_air_temp_1200,
     "change_mean_air_temp_1500" = scenario_mean_air_temp_1500 - baseline_mean_air_temp_1500,
     "change_mean_air_temp_1800" = scenario_mean_air_temp_1800 - baseline_mean_air_temp_1800
@@ -663,3 +663,145 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
 }
 
+
+calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
+  
+  library(geoarrow)
+  library(sfarrow)
+  
+  aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
+  
+  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
+  scenario_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/shade-structures/{scenario}")
+  
+  # Load parks 
+  parks <- st_read_parquet(glue("{aws_http}/{baseline_folder}/parks-polygons__baseline__baseline.parquet"))
+  
+  # Load AOI 
+  aoi <- st_read(glue("{aws_http}/{baseline_folder}/aoi__baseline__baseline.geojson"))
+  
+  # Load shade structures
+  shade_structures <- st_read(glue("{aws_http}/{scenario_folder}/structures__shade-structures__all-parks.geojson"))
+  
+  # Met data
+  met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"),
+                       skip = 2)
+  
+  date <- met_data %>%
+    slice(1) %>%
+    mutate(date = glue("{Year}_{Month}_{Day}")) %>%
+    pull(date)
+  
+  timestamps <- c("1200", "1500", "1800")
+  
+  # Initialize results list
+  results <- tibble()
+  
+  for (time in timestamps) {
+    
+    # Load existing UTCI raster & mask to parks
+    baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
+    baseline_utci_rast <- load_and_merge(baseline_utci_paths)
+    baseline_utci_rast <- baseline_utci_rast %>% 
+      crop(aoi) %>% 
+      mask(parks) 
+    
+    scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-{time}__shade-structures__{scenario}.tif")
+    scenario_utci_rast <- load_and_merge(scenario_utci_paths)
+    scenario_utci_rast <- scenario_utci_rast %>% 
+      crop(aoi) %>% 
+      mask(parks)
+    
+    # Load shade raster and combine tree and building shade
+    baseline_shade_rast <- rast(here(baseline_path, baseline_shadow_files[str_detect(baseline_shadow_files, time)])) < 1
+    baseline_shade_rast <- baseline_shade_rast %>% 
+      mask(parks)
+    
+    scenario_shade_rast <- rast(here(scenario_path, scenario_shadow_files[str_detect(scenario_shadow_files, time)])) < 1
+    scenario_shade_rast <- scenario_shade_rast %>% 
+      mask(parks)
+    
+    # Compute metrics
+    
+    # percent shade in parks, 1 = shade
+    baseline_park_shade_pct <- mean(values(baseline_shade_rast), na.rm = TRUE)
+    scenario_park_shade_pct <- mean(values(scenario_shade_rast), na.rm = TRUE)
+    change_park_shade_pct = scenario_park_shade_pct - baseline_park_shade_pct
+    
+    # area shade in parks
+    park_base <- exactextractr::exact_extract(baseline_shade_rast, parks, 'mean')
+    park_scenario <- exactextractr::exact_extract(scenario_shade_rast, parks, 'mean')
+    parks <- parks %>% 
+      st_transform(st_crs(scenario_shade_rast)) %>% 
+      mutate(area_sqm = as.numeric(st_area(geometry)),
+             baseline_shade_area = area_sqm * park_base,
+             scenario_shade_area = area_sqm * park_scenario,
+             baseline_shade_pct = baseline_shade_area / area_sqm)
+    
+    # utci in parks
+    baseline_mean_utci_parks <- mean(values(baseline_utci), na.rm = TRUE)
+    scenario_mean_utci_parks <- mean(values(scenario_utci), na.rm = TRUE)
+    change_mean_utci_parks <- scenario_mean_utci_parks - baseline_mean_utci_parks
+    
+    # Store results
+    metrics <- tibble(
+      
+      time = time,
+      
+      baseline_mean_utci_parks = baseline_mean_utci_parks,
+      scenario_mean_utci_parks = scenario_mean_utci_parks,
+      change_mean_utci_parks = change_mean_utci_parks,
+      
+      baseline_park_shade_pct = baseline_park_shade_pct * 100,
+      scenario_park_shade_pct = scenario_park_shade_pct * 100,
+      change_park_shade_pct = change_park_shade_pct * 100,
+      
+      baseline_park_shade = sum(parks$baseline_shade_area),
+      scenario_park_shade = sum(parks$scenario_shade_area),
+      change_park_area_shade = scenario_park_shade - baseline_park_shade,
+      
+      baseline_park_shade_cover = baseline_park_shade_pct,
+      change_park_shade_cover = change_park_shade_pct,
+      
+    )
+    
+    results <- bind_rows(results, metrics)
+  }
+  
+  results_long <- results %>%
+    pivot_longer(
+      cols = -c(time),
+      names_to = "indicators_id",
+      values_to = "value"
+    ) %>%
+    mutate(indicators_id = paste0(indicators_id, "_", time)) %>% 
+    bind_rows(tribble(~ indicators_id, ~ value,
+                      "new_shade_structures", nrow(shade_structures),
+                      "achievable_park_shade_cover_1200", quantile(parks$baseline_shade_pct, 0.9) * 100)) %>% 
+    filter(! indicators_id %in% c("baseline_park_shade_cover_1500", "baseline_park_shade_cover_1800",
+                                  "change_park_shade_cover_1500", "change_park_shade_cover_1800")) 
+  
+  progress <- results_long %>% 
+    filter(indicators_id %in% c("baseline_park_shade_cover_1200", 
+                                "change_park_shade_cover_1200",
+                                "achievable_park_shade_cover_1200")) %>% 
+    select(indicators_id, value) %>% 
+    pivot_wider(names_from = indicators_id) %>% 
+    mutate(x = (baseline_park_shade_cover_1200 + change_park_shade_cover_1200) / achievable_park_shade_cover_1200) %>% 
+    pull(x)
+  
+  results_long <- results_long %>% 
+    bind_rows(tibble(indicators_id = "shade_structure_progress", value = progress * 100)) %>% 
+    mutate(
+      date = date,
+      application_id = "ccl",
+      cities_id = city,
+      areas_of_interest_id = aoi_name,
+      interventions_id = "park_shade",
+      scenarios_id = paste("park_shade", str_replace(scenario, "-", "_"), sep = "_"),
+    ) %>%
+    select(-time)
+  
+  write_csv(results_long, here(scenario_path, "scenario-metrics.csv"))
+  
+}

@@ -11,9 +11,9 @@ cran_packages <- c(
   "optparse",
   "paws",
   "sfarrow",
-  "tidyverse",
   "withr",
-  "yaml"
+  "yaml",
+  "pak"
 )
 
 install_if_missing <- function(pkg) {
@@ -29,6 +29,8 @@ install_if_missing <- function(pkg) {
 }
 
 invisible(lapply(cran_packages, install_if_missing))
+
+pak::pkg_install("tidyverse")
 
 message("\nR dependency installation complete.")
 message("Environment is ready for run-scenarios.R and sourced workflow scripts.")

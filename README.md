@@ -68,6 +68,7 @@ Example:
 ```bash
 Rscript run-scenarios.R \
   --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
+            baseline:baseline[g],
             trees:pedestrian-achievable-90pctl[gdcp],
             cool-roofs:all-buildings[dcp];
           ZAF-Cape_Town@business_district|aoi_path=DEFAULT|copy_baseline=false:
@@ -100,7 +101,7 @@ The plan syntax is:
   {infrastructure_id}:{scenario_id}[flags]
 ```
 Flags inside `[ ]`:
-- `g`: generate scenario data
+- `g`: generate scenario data (only flag that can be used for baseline)
 - `d`: download data
 - `c`: run CTCM
 - `p`: process and upload outputs
@@ -114,7 +115,7 @@ Currently available infrastructures and scenarios are:
 | cool-roofs | all-buildings |
 | | large-buildings |
 
-\* Current behavior if baseline is specified is to process existing baseline data
+\* Current behavior if baseline is flagged to generate is to process existing baseline data
 to the necessary CCL layers and calculate metrics. This **does not** run the baseline
 CTCM.
 

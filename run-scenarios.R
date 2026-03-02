@@ -307,8 +307,7 @@ for (g in groups) {
     )
     
     aoi <- st_read(aoi_path, quiet = TRUE) %>%
-      st_transform(st_crs(tile_grid)) %>% 
-      st_buffer(50)
+      st_transform(st_crs(tile_grid)) 
     
     tile_ids <- tile_grid %>% st_filter(aoi) %>% dplyr::pull(tile_name)
     

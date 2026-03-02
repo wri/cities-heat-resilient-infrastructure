@@ -368,7 +368,7 @@ run_cool_roof_CTCM <- function(city, infra, scenario, aoi_name, aoi){
   scenario_yaml[[4]]$dsm_tif_filename <- "cif_dsm_ground_build.tif"
   scenario_yaml[[4]]$lulc_tif_filename <- "cif_lulc.tif"
   scenario_yaml[[4]]$open_urban_tif_filename <- "cif_open_urban.tif"
-  scenario_yaml[[4]]$tree_canopy_tif_filename <- "structures-as-trees.tif"
+  scenario_yaml[[4]]$tree_canopy_tif_filename <- "cif_tree_canopy.tif"
   
   # PreparedIntermediateFilenames
   scenario_yaml[[5]]$skyview_factor_filename <- "ctcm_svfs"

@@ -106,26 +106,53 @@ save_baseline_layers <- function(city = city,
     
     write_s3(shade_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1800__baseline__baseline.tif"))
 
-    # utci and utci cat
-    if (! s3_exists(bucket, glue("{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1200D.tif"))) {
-
-      met <- read_csv(
+    # times
+    times <- c("1200", "1500", "1800")
+    
+    # build S3 keys (what s3_exists expects)
+    utci_keys <- glue(
+      "{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{times}D.tif"
+    )
+    cat_keys <- glue(
+      "{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{times}D.tif"
+    )
+    
+    # check existence
+    utci_exists <- vapply(utci_keys, function(k) s3_exists(bucket, k), logical(1))
+    cat_exists  <- vapply(cat_keys,  function(k) s3_exists(bucket, k), logical(1))
+    
+    # build time if either UTCI or UTCIcat is missing
+    need_time <- !(utci_exists & cat_exists)
+    
+    if (any(need_time)) {
+      
+      met <- readr::read_csv(
         glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv"),
-        skip = 2)
-
-      for (time in c("1200", "1500", "1800")) {
-
-        mrt <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Tmrt_{stamp}_{time}D.tif"))
-        utci <- create_utci(mrt, time, met)
-        utci_class <- utci_risk_cat(utci)
-
-        out_path <- glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif")
-        write_s3(utci, out_path)
-
-        out_path2 <- glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{time}D.tif")
-        write_s3(utci_class, out_path2)
-      } 
-    } 
+        skip = 2
+      )
+      
+      for (i in which(need_time)) {
+        time <- times[i]
+        
+        if (!utci_exists[i]) {
+          
+          mrt <- terra::rast(
+            glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Tmrt_{stamp}_{time}D.tif")
+          )
+          
+          utci <- create_utci(mrt, time, met)
+          write_s3(utci, glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif"))
+        }
+        
+        if (!cat_exists[i]) {
+          utci <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif"))
+          utci_class <- utci_risk_cat(utci)
+          
+          out_cat <- glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{time}D.tif")
+          write_s3(utci_class, out_cat)
+        }
+      }
+    }
     
     # UTCI
     utci_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1200D.tif")) 

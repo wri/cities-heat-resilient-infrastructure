@@ -589,7 +589,7 @@ upload_tcm_layers <- function(
   date <- glue("{year}_{date_doy}")
   
   # Find tile directories (e.g., tile_00001/)
-  tile_dirs <- list.dirs(path.expand(file.path(results_dir)),
+  tile_dirs <- list.dirs(path.expand(file.path(results_dir, tcm_results_dir)),
                          recursive = FALSE, full.names = TRUE) 
   tile_dirs <- tile_dirs[grepl("tile", basename(tile_dirs))]
   

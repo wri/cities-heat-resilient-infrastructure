@@ -89,6 +89,10 @@ save_baseline_layers <- function(city = city,
     )
     write_s3(shade_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1200__baseline__baseline.tif"))
     
+    shade_1200 <- shade_1200 > 0
+    shade_1200_dist <- distance(shade_1200 %>% subst(0, NA))
+    write_s3(shade_1200_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1200__baseline__baseline.tif"))
+    
     shade_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1500D.tif"))
     shade_1500 <- ifel(
       is.na(shade_1500), NA,
@@ -96,6 +100,10 @@ save_baseline_layers <- function(city = city,
            ifel(shade_1500 == 1, 0, 2))
     )
     write_s3(shade_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1500__baseline__baseline.tif"))
+    
+    shade_1500 <- shade_1500 > 0
+    shade_1500_dist <- distance(shade_1500 %>% subst(0, NA))
+    write_s3(shade_1500_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1500__baseline__baseline.tif"))
     
     shade_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1800D.tif"))
     shade_1800 <- ifel(
@@ -105,6 +113,10 @@ save_baseline_layers <- function(city = city,
     )
     
     write_s3(shade_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1800__baseline__baseline.tif"))
+    
+    shade_1800 <- shade_1800 > 0
+    shade_1800_dist <- distance(shade_1800 %>% subst(0, NA))
+    write_s3(shade_1800_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1800__baseline__baseline.tif"))
 
     # times
     times <- c("1200", "1500", "1800")

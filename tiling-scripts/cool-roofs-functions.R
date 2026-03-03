@@ -96,6 +96,7 @@ update_albedo <- function(city = city,
   open_urban_aws_http <- glue("{aws_http}/OpenUrban/{city}")
   buildings_path <- glue("{open_urban_aws_http}/buildings/buildings_all.parquet")
   buildings <- st_read_parquet(buildings_path, quiet = TRUE) %>% 
+    st_transform(st_crs(aoi)) %>% 
     # Filter to only buildings that intersect the aoi
     st_transform(aoi) %>% 
     st_filter(aoi) %>% 

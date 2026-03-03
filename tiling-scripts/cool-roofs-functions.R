@@ -98,7 +98,6 @@ update_albedo <- function(city = city,
   buildings <- st_read_parquet(buildings_path, quiet = TRUE) %>% 
     st_transform(st_crs(aoi)) %>% 
     # Filter to only buildings that intersect the aoi
-    st_transform(aoi) %>% 
     st_filter(aoi) %>% 
     select(id) %>% 
     mutate(area_m2 = as.numeric(units::set_units(st_area(.), m^2))) 

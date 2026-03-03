@@ -88,7 +88,10 @@ generate_shade_structures <- function(
   
   if (is.null(shade_structures) || nrow(shade_structures) == 0) {
     # return an empty sf in the right CRS
-    return(shade_structures)
+    return(list(
+      park = park,
+      shade_structures = NULL
+    ))
   }
   
   structure_height <- 8 / 3.281
@@ -133,7 +136,7 @@ run_shade_scenario <- function(bucket,
                                city, aoi, 
                                buffered_tile_grid, tile_grid) {
   
-  parks <- st_read(glue("{open_urban_aws_http}/open_space/open_space_all.geojson"), quiet = TRUE) %>%
+  parks <- st_read_parquet(glue("{open_urban_aws_http}/open_space/open_space_all.parquet"), quiet = TRUE) %>%
     st_filter(aoi, .predicate = sf::st_within)
   
   park_vectors <- parks %>%
@@ -185,13 +188,18 @@ run_shade_scenario <- function(bucket,
     )
   )
   
-  all_parks <- purrr::map(results, "park") %>% 
-    dplyr::bind_rows() %>% 
-    select(- buffered_tile_names, - unbuffered_tile_names)
-  
   shade_structures_all_parks <- purrr::map(results, "shade_structures") %>%
     purrr::compact() %>%
     dplyr::bind_rows()
+  
+  all_parks <- purrr::map(results, "park") %>% 
+    dplyr::bind_rows() %>% 
+    select(- buffered_tile_names, - unbuffered_tile_names) %>% 
+    left_join(shade_structures_all_parks %>% 
+                st_drop_geometry() %>% 
+                group_by(park_id) %>% 
+                summarize(n_structures = n())) %>% 
+    mutate(n_structures = replace_na(n_structures, 0))
   
   write_s3(all_parks, glue::glue("{bucket}/{scenario_folder}/parks__shade-structures__all-parks.geojson"))
   

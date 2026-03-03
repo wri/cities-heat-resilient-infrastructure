@@ -566,7 +566,8 @@ upload_tcm_layers <- function(
   if (dir.exists(meta_dir)) {
     aws_sync_or_stop(meta_dir, paste0(bucket_prefix, "/metadata"), quiet = quiet)
   } else if (infra != "cool-roofs") {
-    aws_sync_or_stop(glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files"), paste0(bucket_prefix, "/metadata"), quiet = quiet)
+    # Copy from baseline if tree met file doesn't get saved
+    aws_sync_or_stop(glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files"), paste0(bucket_prefix, "/metadata/met_files"), quiet = quiet)
   }
   else {
     message("  (no ", meta_dir, ", skipping)")

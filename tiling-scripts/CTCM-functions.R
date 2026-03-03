@@ -529,7 +529,6 @@ upload_tcm_layers <- function(
     scenario,
     aoi_name,
     # transmissivty = NULL,
-    delete_local = TRUE, 
     quiet           = FALSE
 ) {
   
@@ -606,7 +605,17 @@ upload_tcm_layers <- function(
     tile <- basename(tile_dir)
     message("Processing tile: ", tile)
     
-    files <- list.files(file.path(tile_dir, "tcm_results"), recursive = TRUE, full.names = FALSE)
+    # Upload tcm tile
+    aws_sync_or_stop(tile_dir, 
+                     paste0(bucket_prefix, "/", tile, "/", tcm_results_dir), 
+                     quiet = quiet)
+    
+    # Upload processed data tile
+    aws_sync_or_stop(file.path(results_dir, processed_dir, tile),
+                     paste0(bucket_prefix, "/", tile, "/", processed_dir),
+                     quiet = quiet)
+    
+    files <- list.files(tile_dir, recursive = TRUE, full.names = FALSE)
     
     has_utci <- any(grepl("utci", files, ignore.case = TRUE))
     
@@ -637,19 +646,6 @@ upload_tcm_layers <- function(
       }
       
     }
-    
-    # Upload tile
-    aws_sync_or_stop(tile_dir, paste0(bucket_prefix, "/", tile), quiet = quiet)
-    
-    # --- delete local tile dir after successful upload + processing ---
-  if (isTRUE(delete_local)) {
-    unlink(tile_dir, recursive = TRUE, force = TRUE)
-    if (dir.exists(tile_dir)) {
-      warning("Tried to delete ", tile_dir, " but it still exists (permissions/locks?).")
-    } else {
-      message("Deleted local tile directory: ", tile_dir)
-    }
-  }
     
     message("")
   }

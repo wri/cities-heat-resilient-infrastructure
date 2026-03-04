@@ -878,6 +878,10 @@ generate_tree_scenario <- function(city = city,
                                    aoi = aoi,
                                    open_urban_aws_http = open_urban_aws_http,
                                    min_dist = 5) {
+  resume_from_id <- suppressWarnings(as.integer(Sys.getenv("TREE_RESUME_AOI_GRID_ID", "1")))
+  if (is.na(resume_from_id) || resume_from_id < 1) resume_from_id <- 1L
+  is_resume <- resume_from_id > 1L
+  if (is_resume) message("Resuming tree generation from aoi_grid ID ", resume_from_id)
   
   map(tiles_aoi, baseline_processing)
   create_tree_population(tiles_s3)
@@ -908,7 +912,7 @@ generate_tree_scenario <- function(city = city,
   
   map(glue("{scenario_folder}/{tiles_aoi}/raster_files/"), ~ ensure_s3_prefix(bucket, .x))
   s3_copy_vec(from = tree_canopy_paths, to = scenario_tree_canopy_paths, 
-              from_bucket = bucket, to_bucket = bucket, overwrite = TRUE)
+              from_bucket = bucket, to_bucket = bucket, overwrite = !is_resume)
   
   # Load tree population data
   glue("{bucket}/{city_folder}/scenarios/trees/tree-population/trees.geojson")
@@ -916,7 +920,8 @@ generate_tree_scenario <- function(city = city,
   crowns <- st_read(glue("{aws_http}/{city_folder}/scenarios/trees/tree-population/crowns.geojson"))
   tree_structure <- read_csv(glue("{aws_http}/{city_folder}/scenarios/trees/tree-population/tree-structure.csv"))
 
-  updated_trees <- map(aoi_grid$ID, 
+  aoi_ids <- aoi_grid$ID[aoi_grid$ID >= resume_from_id]
+  updated_trees <- map(aoi_ids, 
                    ~ plant_in_gridcell_fast(.x, aoi_grid, 
                                        target_coverage = target_coverage, 
                                        min_dist = min_dist,
@@ -926,7 +931,17 @@ generate_tree_scenario <- function(city = city,
     select(height, type)
   
   # Write new tree points
-  write_s3(updated_trees, glue("{bucket}/{scenario_folder}/new-tree-points__trees__{scenario}.geojson"))
+  points_key <- glue("{bucket}/{scenario_folder}/new-tree-points__trees__{scenario}.geojson")
+  if (is_resume) {
+    existing <- tryCatch(
+      st_read(glue("{aws_http}/{scenario_folder}/new-tree-points__trees__{scenario}.geojson"), quiet = TRUE),
+      error = function(e) NULL
+    )
+    if (!is.null(existing) && nrow(existing) > 0) {
+      updated_trees <- bind_rows(existing, updated_trees)
+    }
+  }
+  write_s3(updated_trees, points_key)
   
   # Copy final canopy to scenario folder
   for (t in tiles_aoi){

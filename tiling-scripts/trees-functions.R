@@ -692,9 +692,9 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   # ---- cache rasters per tile to avoid repeated S3 reads ----
   tile_cache <- new.env(parent = emptyenv())
   
-  get_tile_rasters <- function(tile) {
+  get_tile_rasters <- function(tile, refresh = FALSE) {
     key <- as.character(tile)
-    if (exists(key, envir = tile_cache, inherits = FALSE)) {
+    if (!refresh && exists(key, envir = tile_cache, inherits = FALSE)) {
       return(get(key, envir = tile_cache, inherits = FALSE))
     }
     crowns_r <- rast_retry(glue::glue(
@@ -763,13 +763,46 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     
     
     # ---- rasterize/shift crown the same way, but with cached tile rasters ----
-    tr <- get_tile_rasters(crown_geom$tile)
+    crown_vect <- terra::vect(crown_geom)
+    crown_pixels <- NULL
+    height_pixels <- NULL
+    crop_ok <- FALSE
+    crop_attempts <- 6L
     
-    crown_pixels <- terra::crop(tr$crowns_r, terra::vect(crown_geom))
+    for (attempt in seq_len(crop_attempts)) {
+      # Refresh raster handles on retry to recover from transient remote read failures
+      tr <- get_tile_rasters(crown_geom$tile, refresh = (attempt > 1L))
+      crop_err <- NULL
+      
+      tryCatch({
+        crown_pixels <- terra::crop(tr$crowns_r, crown_vect)
+        height_pixels <- terra::crop(tr$height_r, crown_vect)
+        crop_ok <- TRUE
+      }, error = function(e) {
+        crop_err <<- conditionMessage(e)
+      })
+      
+      if (isTRUE(crop_ok)) break
+      
+      if (attempt < crop_attempts) {
+        sleep <- 0.5 * (1.6 ^ (attempt - 1L)) + runif(1, 0, 0.25)
+        message(
+          "Transient raster read failure for tile ", crown_geom$tile,
+          " (attempt ", attempt, "/", crop_attempts, "): ", crop_err,
+          ". Retrying in ", sprintf("%.2f", sleep), "s."
+        )
+        Sys.sleep(sleep)
+      }
+    }
+    
+    if (!isTRUE(crop_ok) || is.null(crown_pixels) || is.null(height_pixels)) {
+      message("Skipping a tree candidate after repeated raster read failures for tile ", crown_geom$tile)
+      next
+    }
+    
     crown_pixels <- crown_pixels == crown_geom$treeID
     crown_pixels <- terra::subst(crown_pixels, from = 0, to = NA)
     
-    height_pixels <- terra::crop(tr$height_r, terra::vect(crown_geom))
     tree_pixels <- terra::mask(height_pixels, crown_pixels)
     
     px_cells <- which(!is.na(terra::values(tree_pixels, mat = FALSE)))

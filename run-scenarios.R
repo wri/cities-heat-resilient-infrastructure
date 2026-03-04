@@ -80,9 +80,10 @@ source(here("tiling-scripts", "post-processing-functions.R"))
 source(here("tiling-scripts", "metrics-functions.R"))
 
 Sys.setenv(
-  GDAL_HTTP_MAX_RETRY = "10",
-  GDAL_HTTP_RETRY_DELAY = "1",
-  CPL_VSIL_CURL_ALLOWED_EXTENSIONS = ".tif,.tiff,.vrt"
+  GDAL_HTTP_MAX_RETRY = "20",
+  GDAL_HTTP_RETRY_DELAY = "2",
+  CPL_VSIL_CURL_ALLOWED_EXTENSIONS = ".tif,.tiff,.geojson",
+  GDAL_DISABLE_READDIR_ON_OPEN = "EMPTY_DIR"
 )
 
 # -----------------------------
@@ -463,7 +464,7 @@ for (g in groups) {
       
       if (steps$process) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
-        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder, tiles_aoi)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
         calc_street_tree_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       
@@ -507,7 +508,7 @@ for (g in groups) {
       
       if (steps$process) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
-        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder, tiles_aoi)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
         calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       

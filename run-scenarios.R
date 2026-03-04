@@ -79,6 +79,12 @@ source(here("tiling-scripts", "CTCM-functions.R"))
 source(here("tiling-scripts", "post-processing-functions.R"))
 source(here("tiling-scripts", "metrics-functions.R"))
 
+Sys.setenv(
+  GDAL_HTTP_MAX_RETRY = "10",
+  GDAL_HTTP_RETRY_DELAY = "1",
+  CPL_VSIL_CURL_ALLOWED_EXTENSIONS = ".tif,.tiff,.vrt"
+)
+
 # -----------------------------
 # Helpers
 # -----------------------------

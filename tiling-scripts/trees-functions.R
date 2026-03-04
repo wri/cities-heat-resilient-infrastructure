@@ -878,13 +878,17 @@ generate_tree_scenario <- function(city = city,
                                    aoi = aoi,
                                    open_urban_aws_http = open_urban_aws_http,
                                    min_dist = 5) {
+  
   resume_from_id <- suppressWarnings(as.integer(Sys.getenv("TREE_RESUME_AOI_GRID_ID", "1")))
+  
   if (is.na(resume_from_id) || resume_from_id < 1) resume_from_id <- 1L
   is_resume <- resume_from_id > 1L
   if (is_resume) message("Resuming tree generation from aoi_grid ID ", resume_from_id)
   
-  map(tiles_aoi, baseline_processing)
-  create_tree_population(tiles_s3)
+  if (!is_resume){
+    map(tiles_aoi, baseline_processing)
+    create_tree_population(tiles_s3)
+  }
   
   # Achievable potential
   

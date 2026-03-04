@@ -14,7 +14,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
     results_dir <- "met_era5_hottest_days"
   }
   
-  for (t in tiles_aoi){
+  for (t in list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))){
     
     files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/{results_dir}"))
     

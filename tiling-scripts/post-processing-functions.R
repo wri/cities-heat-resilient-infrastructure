@@ -3,7 +3,7 @@ library(glue)
 library(tidyverse)
 library(terra)
 
-process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder, tiles_aoi){
+process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder){
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
   # tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))

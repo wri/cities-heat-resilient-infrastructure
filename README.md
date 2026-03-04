@@ -117,7 +117,16 @@ specified in the script invocation.
   Use `false` to disable, `true` (maps to `urban_extent`), or an AOI name such as `business_district`. If 
   omitted, `copy_baseline` is disabled.
   
+## Resume tree scenario generation
 
+The tree scenario generation may take a long time to run and may occasionally fail. The code works by iterating over a grid and you can resume the scenario generation from the point where it failed. Simply include `TREE_RESUME_AOI_GRID_ID=xx` before the script invocation where `xx` is the ID of the gridcell where the failure occured.
+
+```bash
+EC2_TERMINATE_ON_COMPLETE=true TREE_RESUME_AOI_GRID_ID=640 Rscript run-scenarios.R --plan 'BRA-Teresina@accelerator_area_big|aoi_path=DEFAULT|copy_baseline=false:
+            trees:pedestrian-achievable-90pctl[gdcp],
+            cool-roofs:all-buildings[gdcp]'
+
+```
 
 
 ## 🖥 Running Long-Running Jobs on EC2

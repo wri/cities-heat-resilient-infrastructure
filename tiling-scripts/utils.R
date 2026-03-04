@@ -110,8 +110,10 @@ s3_copy_vec <- function(from, to,
                     "--key", norm_key(to[i]))
       head_out <- suppressWarnings(system2(head_cmd[1], head_cmd[-1],
                                            stdout = TRUE, stderr = TRUE))
+      head_status <- attr(head_out, "status")
+      if (is.null(head_status)) head_status <- 0L
       if (!quiet) message("HEAD ", dst)
-      if (attr(head_out, "status") == 0) {
+      if (head_status == 0L) {
         if (!quiet) message("SKIP (exists): ", dst)
         results[[i]] <- list(ok = TRUE, skipped = TRUE, src = src, dst = dst, msg = "exists")
         next

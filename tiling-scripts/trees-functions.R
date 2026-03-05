@@ -796,8 +796,10 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     }
     
     if (!isTRUE(crop_ok) || is.null(crown_pixels) || is.null(height_pixels)) {
-      message("Skipping a tree candidate after repeated raster read failures for tile ", crown_geom$tile)
-      next
+      stop(
+        "Repeated raster read failures while cropping crown rasters for tile ",
+        crown_geom$tile, " in gridcell ", grid_index, ". Aborting after retries."
+      )
     }
     
     crown_pixels <- crown_pixels == crown_geom$treeID
@@ -826,9 +828,38 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
     tree_cover_size <- terra::global(cell_area_template * current_tree_cover, "sum", na.rm = TRUE)[1, 1] |>
       tidyr::replace_na(0)
     
-    # Update canopy heights (same method)
+    # Update canopy heights (same method), but retry on transient remote-read failures
     if (terra::hasValues(shifted)) {
-      canopy_height_gridcell <- max(canopy_height_gridcell, shifted, na.rm = TRUE)
+      max_ok <- FALSE
+      max_attempts <- 6L
+      for (attempt in seq_len(max_attempts)) {
+        max_err <- NULL
+        tryCatch({
+          canopy_height_gridcell <- max(canopy_height_gridcell, shifted, na.rm = TRUE)
+          max_ok <- TRUE
+        }, error = function(e) {
+          max_err <<- conditionMessage(e)
+        })
+        
+        if (isTRUE(max_ok)) break
+        
+        if (attempt < max_attempts) {
+          sleep <- 0.5 * (1.6 ^ (attempt - 1L)) + runif(1, 0, 0.25)
+          message(
+            "Transient raster max() failure in gridcell ", grid_index,
+            " (attempt ", attempt, "/", max_attempts, "): ", max_err,
+            ". Retrying in ", sprintf("%.2f", sleep), "s."
+          )
+          Sys.sleep(sleep)
+        }
+      }
+      
+      if (!isTRUE(max_ok)) {
+        stop(
+          "Repeated raster max() failures in gridcell ", grid_index,
+          " while updating canopy heights. Aborting after retries."
+        )
+      }
     }
     
     
@@ -851,13 +882,41 @@ plant_in_gridcell_fast <- function(grid_index, aoi_grid, target_coverage, min_di
   )
   
   for (p in update_paths) {
-    r <- rast_retry(p)
+    updated_canopy <- NULL
+    tile_ok <- FALSE
+    tile_attempts <- 6L
+    for (attempt in seq_len(tile_attempts)) {
+      tile_err <- NULL
+      tryCatch({
+        r <- rast_retry(p)
+        canopy_aligned <- canopy_height_gridcell |>
+          terra::extend(r) |>
+          terra::crop(r)
+        updated_canopy <- max(r, canopy_aligned, na.rm = TRUE)
+        tile_ok <- TRUE
+      }, error = function(e) {
+        tile_err <<- conditionMessage(e)
+      })
+      
+      if (isTRUE(tile_ok)) break
+      
+      if (attempt < tile_attempts) {
+        sleep <- 0.5 * (1.6 ^ (attempt - 1L)) + runif(1, 0, 0.25)
+        message(
+          "Transient canopy merge failure for ", p,
+          " (attempt ", attempt, "/", tile_attempts, "): ", tile_err,
+          ". Retrying in ", sprintf("%.2f", sleep), "s."
+        )
+        Sys.sleep(sleep)
+      }
+    }
     
-    canopy_aligned <- canopy_height_gridcell |>
-      terra::extend(r) |>
-      terra::crop(r)
-    
-    updated_canopy <- max(r, canopy_aligned, na.rm = TRUE)
+    if (!isTRUE(tile_ok) || is.null(updated_canopy)) {
+      stop(
+        "Repeated canopy merge failures for ", p,
+        ". Aborting after retries."
+      )
+    }
     
     updated_p <- stringr::str_replace(
       p,

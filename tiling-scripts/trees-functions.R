@@ -986,11 +986,11 @@ generate_tree_scenario <- function(city = city,
   # Prefer opportunity layers; fallback to legacy CSV
   op_path <- glue("{open_urban_aws_http}/opportunity-layers/opportunity__stats.parquet")
   csv_path <- glue("{open_urban_aws_http}/scenarios/street-trees/{city}-street-tree-pct-1km-grid.csv")
-  
+
   target_coverage <- NA_real_
   
   # 1) Try opportunity layers first
-  op_data <- tryCatch(st_read_geoparquet(op_path), error = function(...) NULL)
+  op_data <- tryCatch(st_read_parquet(op_path), error = function(...) NULL)
   if (!is.null(op_data) && "street_tree_pct_existing" %in% names(op_data)) {
     target_coverage <- quantile(
       op_data$street_tree_pct_existing,

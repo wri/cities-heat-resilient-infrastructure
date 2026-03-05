@@ -997,7 +997,7 @@ generate_tree_scenario <- function(city = city,
       0.9,
       names = FALSE,
       na.rm = TRUE
-    )
+    ) / 100
   }
   
   # 2) Fallback to legacy CSV

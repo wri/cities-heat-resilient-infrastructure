@@ -664,7 +664,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
 }
 
 
-calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
+calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
   
   library(geoarrow)
   library(sfarrow)
@@ -675,7 +675,10 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   scenario_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/shade-structures/{scenario}")
   
   # Load parks 
-  parks <- st_read_parquet(glue("{aws_http}/{baseline_folder}/parks-polygons__baseline__baseline.parquet"))
+  parks <- st_read(glue("{aws_http}/{scenario_folder}/parks__shade-structures__all-parks.geojson")) 
+  
+  # Tiles
+  tiles <- list_tiles(glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/"))
   
   # Load AOI 
   aoi <- st_read(glue("{aws_http}/{baseline_folder}/aoi__baseline__baseline.geojson"))
@@ -703,30 +706,34 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
     baseline_utci_rast <- load_and_merge(baseline_utci_paths)
     baseline_utci_rast <- baseline_utci_rast %>% 
-      crop(aoi) %>% 
       mask(parks) 
     
-    scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-{time}__shade-structures__{scenario}.tif")
+    scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/utci-{time}__shade-structures__{scenario}.tif")
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
     scenario_utci_rast <- scenario_utci_rast %>% 
-      crop(aoi) %>% 
-      mask(parks)
+      mask(parks) %>% 
+      # Fill in baseline where shade didn't change
+      mosaic(baseline_utci_rast, fun = "first")
     
     # Load shade raster and combine tree and building shade
-    baseline_shade_rast <- rast(here(baseline_path, baseline_shadow_files[str_detect(baseline_shadow_files, time)])) < 1
+    baseline_shade_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
+    baseline_shade_rast <- load_and_merge(baseline_shade_paths) > 0
     baseline_shade_rast <- baseline_shade_rast %>% 
       mask(parks)
     
-    scenario_shade_rast <- rast(here(scenario_path, scenario_shadow_files[str_detect(scenario_shadow_files, time)])) < 1
+    scenario_shade_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-{time}__shade-structures__{scenario}.tif")
+    scenario_shade_rast <- load_and_merge(scenario_shade_paths) > 0
     scenario_shade_rast <- scenario_shade_rast %>% 
-      mask(parks)
+      mask(parks) %>% 
+      # Fill in baseline where shade didn't change
+      mosaic(baseline_shade_rast, fun = "first")
     
     # Compute metrics
     
     # percent shade in parks, 1 = shade
     baseline_park_shade_pct <- mean(values(baseline_shade_rast), na.rm = TRUE)
     scenario_park_shade_pct <- mean(values(scenario_shade_rast), na.rm = TRUE)
-    change_park_shade_pct = scenario_park_shade_pct - baseline_park_shade_pct
+    change_park_shade_pct <- scenario_park_shade_pct - baseline_park_shade_pct
     
     # area shade in parks
     park_base <- exactextractr::exact_extract(baseline_shade_rast, parks, 'mean')

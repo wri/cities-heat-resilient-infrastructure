@@ -983,13 +983,41 @@ generate_tree_scenario <- function(city = city,
   }
   
   # Achievable potential
+  # Prefer opportunity layers; fallback to legacy CSV
+  op_path <- glue("{open_urban_aws_http}/opportunity-layers/opportunity__stats.parquet")
+  csv_path <- glue("{open_urban_aws_http}/scenarios/street-trees/{city}-street-tree-pct-1km-grid.csv")
   
-  tree_grid_path <- glue("{open_urban_aws_http}/scenarios/street-trees/{city}-street-tree-pct-1km-grid.csv")
+  target_coverage <- NA_real_
   
-  # Get percentile value
-  ped_area_tree_dist <- read_csv(tree_grid_path)
-  target_coverage <- quantile(ped_area_tree_dist$`pct-tree`, 0.9, 
-                              names = FALSE, na.rm = TRUE)
+  # 1) Try opportunity layers first
+  op_data <- tryCatch(st_read_geoparquet(op_path), error = function(...) NULL)
+  if (!is.null(op_data) && "street_tree_pct_existing" %in% names(op_data)) {
+    target_coverage <- quantile(
+      op_data$street_tree_pct_existing,
+      0.9,
+      names = FALSE,
+      na.rm = TRUE
+    )
+  }
+  
+  # 2) Fallback to legacy CSV
+  if (!is.finite(target_coverage)) {
+    csv_data <- tryCatch(read_csv(csv_path, show_col_types = FALSE), error = function(...) NULL)
+    if (!is.null(csv_data) && "pct-tree" %in% names(csv_data)) {
+      target_coverage <- quantile(
+        csv_data$`pct-tree`,
+        0.9,
+        names = FALSE,
+        na.rm = TRUE
+      )
+    }
+  }
+  
+  # 3) Neither source available
+  if (!is.finite(target_coverage)) {
+    stop("Opportunity layers must be generated")
+  }
+  
   
   # Create a grid over the tile geometry to iterate over for creating trees
   # intersect with AOI so only areas within the aoi are planted

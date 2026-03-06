@@ -567,8 +567,7 @@ upload_tcm_layers <- function(
   } else if (infra != "cool-roofs") {
     # Copy from baseline if tree met file doesn't get saved
     aws_sync_or_stop(glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files"), paste0(bucket_prefix, "/metadata/met_files"), quiet = quiet)
-  }
-  else {
+  } else {
     message("  (no ", meta_dir, ", skipping)")
   }
   
@@ -592,7 +591,7 @@ upload_tcm_layers <- function(
   date <- glue("{year}_{date_doy}")
   
   # Find tile directories (e.g., tile_00001/)
-  tile_dirs <- list.dirs(path.expand(file.path(results_dir, tcm_results_dir)),
+  tile_dirs <- list.dirs(path.expand(file.path(results_dir)),
                          recursive = FALSE, full.names = TRUE) 
   tile_dirs <- tile_dirs[grepl("tile", basename(tile_dirs))]
   
@@ -606,12 +605,12 @@ upload_tcm_layers <- function(
     message("Processing tile: ", tile)
     
     # Upload tcm tile
-    aws_sync_or_stop(tile_dir, 
+    aws_sync_or_stop(paste0(tile_dir, "/", tcm_results_dir), 
                      paste0(bucket_prefix, "/", tile, "/", tcm_results_dir), 
                      quiet = quiet)
     
     # Upload processed data tile
-    aws_sync_or_stop(file.path(results_dir, processed_dir, tile),
+    aws_sync_or_stop(paste0(results_dir, "/", tile, "/", processed_dir),
                      paste0(bucket_prefix, "/", tile, "/", processed_dir),
                      quiet = quiet)
     

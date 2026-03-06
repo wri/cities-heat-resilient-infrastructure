@@ -167,18 +167,34 @@ s3_copy_vec <- function(from, to,
 
 
 # Function to load and merge rasters from a list of paths
-load_and_merge <- function(paths) {
-  if (length(paths) == 0) {
-    stop("No raster paths provided in plantable_paths")
+merge_retry <- function(rasters, attempts = 6, base_sleep = 0.5, quiet = FALSE) {
+  last_err <- NULL
+  
+  for (i in seq_len(attempts)) {
+    out <- tryCatch(
+      do.call(terra::merge, rasters),
+      error = function(e) { last_err <<- e; NULL }
+    )
+    
+    if (!is.null(out)) return(out)
+    
+    sleep <- base_sleep * (1.6 ^ (i - 1)) + stats::runif(1, 0, 0.25)
+    if (!quiet) message(sprintf("merge() failed (%d/%d). Retrying in %.2fs", i, attempts, sleep))
+    Sys.sleep(sleep)
   }
   
-  rasters <- lapply(paths, rast_retry)
+  stop(sprintf("[merge_retry] Failed after %d attempts:\n%s",
+               attempts, conditionMessage(last_err)), call. = FALSE)
+}
+
+load_and_merge <- function(paths, quiet = FALSE) {
+  stopifnot(length(paths) > 0)
   
-  if (length(rasters) == 1) {
-    return(rasters[[1]])   # just return the single raster
-  } else {
-    return(do.call(merge, c(rasters)))  # merge multiple rasters
-  }
+  rasters <- lapply(paths, function(p) rast_retry(p, quiet = quiet))
+  
+  if (length(rasters) == 1) return(rasters[[1]])
+  
+  merge_retry(rasters, quiet = quiet)
 }
 
 # Get tile ids

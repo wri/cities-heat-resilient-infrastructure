@@ -3,6 +3,8 @@ library(glue)
 library(tidyverse)
 library(terra)
 
+source(here("tiling-scripts", "utils.R"))
+
 process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder){
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
@@ -19,15 +21,15 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
     files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/{results_dir}"))
     
     for (h in c("1200", "1500", "1800")){
-      base_utci <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{h}__baseline__baseline.tif"))
-      base_shade <- rast(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/shade-{h}__baseline__baseline.tif"))
+      base_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{h}__baseline__baseline.tif"))
+      base_shade <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/shade-{h}__baseline__baseline.tif"))
       
       utci_cat_key <- files[grepl(paste0("/UTCIcat_.*_", h, "D\\.tif$"), files)]
       utci_key     <- files[grepl(paste0("/UTCI_.*_", h, "D\\.tif$"), files)]
 
-      utci_cat <- terra::rast(glue("{aws_http}/{utci_cat_key}")) %>%
+      utci_cat <- rast_retry(glue("{aws_http}/{utci_cat_key}")) %>%
         crop(base_utci)
-      utci     <- terra::rast(glue("{aws_http}/{utci_key}")) %>%
+      utci     <- rast_retry(glue("{aws_http}/{utci_key}")) %>%
         crop(base_utci)
 
       diff_utci <- crop(utci, base_utci) - base_utci
@@ -38,7 +40,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
 
       if (scenario != "cool-roofs"){
         shade_key   <- files[grepl(paste0("/Shadow_.*_", h, "D\\.tif$"), files)]
-        shade   <- terra::rast(glue("{aws_http}/{shade_key}")) %>% 
+        shade   <- rast_retry(glue("{aws_http}/{shade_key}")) %>% 
           crop(base_utci)
         
         shade_recat <- ifel(
@@ -56,7 +58,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
         write_s3(diff_shade, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}__vs-baseline.tif"))
       }
       
-      shade <- rast(glue("{aws_http}/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif")) > 0
+      shade <- rast_retry(glue("{aws_http}/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif")) > 0
       shade_dist <- distance(shade %>% subst(0, NA))
       write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__trees__pedestrian-achievable-90pctl.tif"))
     }
@@ -103,16 +105,16 @@ shade_structure_post_processing <- function(baseline_folder,
         str_subset("cat", negate = TRUE)
       
       # Read rasters
-      baseline_utci <- rast(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/utci-{time}__baseline__baseline.tif")) 
+      baseline_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/utci-{time}__baseline__baseline.tif")) 
       
-      struct_t3_mask <- rast(here(tile_results_dir_t3, shadow_file)) %>% 
+      struct_t3_mask <- rast_retry(here(tile_results_dir_t3, shadow_file)) %>% 
         crop(baseline_utci, mask = TRUE)
       
-      struct_t0_utci <- rast(here(tile_results_dir_t0, utci_file)) %>% 
+      struct_t0_utci <- rast_retry(here(tile_results_dir_t0, utci_file)) %>% 
         crop(baseline_utci, mask = TRUE)
       
-      baseline_shadow <- rast(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/shade-{time}__baseline__baseline.tif")) 
-      struct_t0_shadow <- rast(here(tile_results_dir_t0, shadow_file)) %>% 
+      baseline_shadow <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/shade-{time}__baseline__baseline.tif")) 
+      struct_t0_shadow <- rast_retry(here(tile_results_dir_t0, shadow_file)) %>% 
         crop(baseline_utci, mask = TRUE)
       
       struct_t0_shadow_recat <- ifel(

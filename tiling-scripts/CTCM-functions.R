@@ -628,11 +628,11 @@ upload_tcm_layers <- function(
       
       if (is.null(transmissivity)) {
         
-        aws_sync_or_stop(paste0(results_dir, "/", tile, "/", processed_dir),
+        aws_sync_or_stop(paste0(results_dir, "/", processed_dir, "/", tile),
                          paste0(bucket_prefix, "/", tile, "/", processed_dir),
                          quiet = quiet)
       } else {
-        aws_sync_or_stop(paste0(results_dir, "/", tile, "/", processed_dir),
+        aws_sync_or_stop(paste0(results_dir, "/", processed_dir, "/", tile),
                          paste0(bucket_prefix, "/", tile, "/", processed_dir, "/t", transmissivity),
                          quiet = quiet)
         

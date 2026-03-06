@@ -16,7 +16,9 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
     results_dir <- "met_era5_hottest_days"
   }
   
-  for (t in list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))){
+  tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
+  
+  for (t in tiles){
     
     files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/{results_dir}"))
     
@@ -86,18 +88,24 @@ shade_structure_post_processing <- function(baseline_folder,
                               glue("{city}_{infra}_{scenario}_t0"), 
                               glue("{city}_{infra}_{scenario}_t0_{scenario}_{infra}"))
   
-  for (tile in tiles){
+  tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
+  
+  for (t in tiles){
     
-    tile_results_dir_t3 <- file.path(results_dir_t3, tile, "tcm_results")
-    tile_results_dir_t0 <- file.path(results_dir_t0, tile, "tcm_results")
+    # tile_results_dir_t3 <- file.path(results_dir_t3, t, "tcm_results")
+    tile_results_dir_t3 <- glue("{scenario_folder}/{t}/tcm_results/met_era5_hottest_days/t3")
+    tile_results_dir_t0 <- glue("{scenario_folder}/{t}/tcm_results/met_era5_hottest_days/t0")
     
     for (time in times) {
-      # Input file paths
-      shadow_file <- list.files(tile_results_dir_t3, 
-                                pattern = str_c("Shadow.*", time),
-                                recursive = TRUE) %>%
-        str_subset("aux", negate = TRUE)
       
+      files <- list_s3_keys("wri-cities-tcm", tile_results_dir_t3)
+      
+      # t3 shade
+      shade_key   <- files[grepl(paste0("/Shadow_.*_", h, "D\\.tif$"), files)]
+      shade   <- rast_retry(glue("{aws_http}/{shade_key}")) %>% 
+        crop(base_utci)
+      
+      # t0 utci
       utci_file <- list.files(tile_results_dir_t0, 
                               pattern = str_c("UTCI.*", time),
                               recursive = TRUE) %>%
@@ -105,7 +113,7 @@ shade_structure_post_processing <- function(baseline_folder,
         str_subset("cat", negate = TRUE)
       
       # Read rasters
-      baseline_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/utci-{time}__baseline__baseline.tif")) 
+      base_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{h}__baseline__baseline.tif"))
       
       struct_t3_mask <- rast_retry(here(tile_results_dir_t3, shadow_file)) %>% 
         crop(baseline_utci, mask = TRUE)
@@ -113,7 +121,7 @@ shade_structure_post_processing <- function(baseline_folder,
       struct_t0_utci <- rast_retry(here(tile_results_dir_t0, utci_file)) %>% 
         crop(baseline_utci, mask = TRUE)
       
-      baseline_shadow <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/shade-{time}__baseline__baseline.tif")) 
+      baseline_shadow <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/shade-{time}__baseline__baseline.tif")) 
       struct_t0_shadow <- rast_retry(here(tile_results_dir_t0, shadow_file)) %>% 
         crop(baseline_utci, mask = TRUE)
       
@@ -142,16 +150,16 @@ shade_structure_post_processing <- function(baseline_folder,
       
       # Write to output
       write_s3(utci_composite, 
-               glue("{bucket}/{scenario_folder}/{tile}/ccl_layers/utci-{time}__{infra}__{scenario}.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/utci-{time}__{infra}__{scenario}.tif"))
       write_s3(utci_cat, 
-               glue("{bucket}/{scenario_folder}/{tile}/ccl_layers/utci-cat-{time}__{infra}__{scenario}.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/utci-cat-{time}__{infra}__{scenario}.tif"))
       write_s3(utci_diff, 
-               glue("{bucket}/{scenario_folder}/{tile}/ccl_layers/utci-{time}__{infra}__{scenario}__vs-baseline.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/utci-{time}__{infra}__{scenario}__vs-baseline.tif"))
       
       write_s3(shadow_composite, 
-               glue("{bucket}/{scenario_folder}/{tile}/ccl_layers/shade-{time}__{infra}__{scenario}.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}.tif"))
       write_s3(shade_diff, 
-               glue("{bucket}/{scenario_folder}/{tile}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))
       
       message("Composite rasters written for time: ", time)
     }

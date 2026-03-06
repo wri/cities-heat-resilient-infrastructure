@@ -559,11 +559,16 @@ for (g in groups) {
       }
       
       if (steps$process) {
+
+        upload_tcm_layers(city, infra, scenario, aoi_name, transmissivity = 0)
+        upload_tcm_layers(city, infra, scenario, aoi_name, transmissivity = 3)
+        
         shade_structure_post_processing(baseline_folder, 
                                         scenario_folder, 
                                         infra,
                                         scenario,
                                         tiles = scenario_tiles)
+        
         calc_shade_structures_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       

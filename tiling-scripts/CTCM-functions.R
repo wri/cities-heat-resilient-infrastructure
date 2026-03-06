@@ -528,24 +528,25 @@ upload_tcm_layers <- function(
     infra,
     scenario,
     aoi_name,
-    # transmissivty = NULL,
-    quiet           = FALSE
+    transmissivity = NULL,
+    quiet          = FALSE
 ) {
   
   source(here("utils", "utci.R"))
   
   name <- glue("{city}_{infra}_{scenario}")
-  results_dir <- file.path("~", "CTCM_outcome", name, glue("{name}_{scenario}_{infra}"))
+  # results_dir <- file.path("~", "CTCM_outcome", name, glue("{name}_{scenario}_{infra}"))
   
-  # if (is.null(transmissivity)){
-  #   name <- glue("{city}_{infra}_{scenario}")
-  #   results_dir <- file.path("~", "CTCM_outcome", 
-  #                            name, glue("{name}_{scenario}_{infra}"))
-  # } else {
-  #   name <- glue("{city}_{infra}_{scenario}_{transmissivity}")
-  #   results_dir <- file.path("~", "CTCM_outcome", 
-  #                            name, glue("{name}_{scenario}_{infra}_{transmissivity}"))
-  # }
+  if (is.null(transmissivity)){
+    name <- glue("{city}_{infra}_{scenario}")
+    results_dir <- file.path("~", "CTCM_outcome",
+                             name, glue("{name}_{scenario}_{infra}"))
+  } else {
+    name <- glue("{city}_{infra}_{scenario}_t{transmissivity}")
+    results_dir <- file.path("~", "CTCM_outcome",
+                             name, glue("{name}_{scenario}_{infra}"))
+  }
+  
   if (infra == "cool-roofs"){
     tcm_results_dir <-  "tcm_results/reduced_temps"
   } else {
@@ -605,15 +606,37 @@ upload_tcm_layers <- function(
     message("Processing tile: ", tile)
     
     # Upload tcm tile
-    aws_sync_or_stop(paste0(tile_dir, "/", tcm_results_dir), 
-                     paste0(bucket_prefix, "/", tile, "/", tcm_results_dir), 
-                     quiet = quiet)
+    if (is.null(transmissivity)) {
+      
+      aws_sync_or_stop(paste0(tile_dir, "/", tcm_results_dir), 
+                       paste0(bucket_prefix, "/", tile, "/", tcm_results_dir), 
+                       quiet = quiet)
+    } else {
+      
+      aws_sync_or_stop(paste0(tile_dir, "/", tcm_results_dir), 
+                       paste0(bucket_prefix, "/", tile, "/", tcm_results_dir, "/t", transmissivity), 
+                       quiet = quiet)
+      
+    }
     
-    # Upload processed data tile
-    aws_sync_or_stop(paste0(results_dir, "/", tile, "/", processed_dir),
-                     paste0(bucket_prefix, "/", tile, "/", processed_dir),
-                     quiet = quiet)
     
+    # Upload processed data tile if infra is not cool roofs
+    if (! infra == "cool-roofs") {
+      
+      
+      if (is.null(transmissivity)) {
+        
+        aws_sync_or_stop(paste0(results_dir, "/", tile, "/", processed_dir),
+                         paste0(bucket_prefix, "/", tile, "/", processed_dir),
+                         quiet = quiet)
+      } else {
+        aws_sync_or_stop(paste0(results_dir, "/", tile, "/", processed_dir),
+                         paste0(bucket_prefix, "/", tile, "/", processed_dir, "/t", transmissivity),
+                         quiet = quiet)
+        
+      }
+    }
+
     files <- list.files(tile_dir, recursive = TRUE, full.names = FALSE)
     
     has_utci <- any(grepl("utci", files, ignore.case = TRUE))

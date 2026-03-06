@@ -606,15 +606,17 @@ upload_tcm_layers <- function(
     
     message("Processing tile: ", tile)
     
+    tile_dir <- file.path(results_dir, tcm_results_dir, tile)
+    
     # Upload tcm tile
     if (is.null(transmissivity)) {
       
-      aws_sync_or_stop(paste0(tile_dir, "/", tcm_results_dir), 
+      aws_sync_or_stop(tile_dir, 
                        paste0(bucket_prefix, "/", tile, "/", tcm_results_dir), 
                        quiet = quiet)
     } else {
       
-      aws_sync_or_stop(paste0(tile_dir, "/", tcm_results_dir), 
+      aws_sync_or_stop(tile_dir, 
                        paste0(bucket_prefix, "/", tile, "/", tcm_results_dir, "/t", transmissivity), 
                        quiet = quiet)
       
@@ -623,7 +625,6 @@ upload_tcm_layers <- function(
     
     # Upload processed data tile if infra is not cool roofs
     if (! infra == "cool-roofs") {
-      
       
       if (is.null(transmissivity)) {
         

@@ -592,17 +592,18 @@ upload_tcm_layers <- function(
   date <- glue("{year}_{date_doy}")
   
   # Find tile directories (e.g., tile_00001/)
-  tile_dirs <- list.dirs(path.expand(file.path(results_dir)),
+  tile_dirs <- list.dirs(path.expand(file.path(results_dir, tcm_results_dir)),
                          recursive = FALSE, full.names = TRUE) 
   tile_dirs <- tile_dirs[grepl("tile", basename(tile_dirs))]
   
-  if (length(tile_dirs) == 0) {
+  tiles <- basename(tile_dirs)
+  
+  if (length(tiles) == 0) {
     stop("No tile directories found in ", tcm_results_dir)
   }
   
-  for (tile_dir in tile_dirs) {
+  for (tile in tiles) {
     
-    tile <- basename(tile_dir)
     message("Processing tile: ", tile)
     
     # Upload tcm tile

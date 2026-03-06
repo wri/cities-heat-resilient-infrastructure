@@ -31,9 +31,24 @@ write_s3 <- function(obj, file_path) {
   tmp <- tempfile(fileext = paste0(".", ext))
   
   # write to a local temp file
+  # write to a local temp file (supports Parquet for spatial and tabular data)
   if (inherits(obj, "sf") || inherits(obj, "sfc")) {
-    st_write(obj, tmp, delete_dsn = TRUE, quiet = TRUE)
-    ctype <- if (ext %in% c("geojson","json")) "application/geo+json" else "application/octet-stream"
+    
+    # support Parquet for sf/sfc
+    if (ext %in% c("parquet", "pq")) {
+      if (inherits(obj, "sfc")) obj <- sf::st_as_sf(obj)
+      if (!requireNamespace("sfarrow", quietly = TRUE)) {
+        stop("Package 'sfarrow' is required to write Parquet with sf geometry.")
+      }
+      sfarrow::st_write_parquet(obj, tmp)
+      ctype <- "application/octet-stream"  # keep 2nd fn style (not fancy MIME)
+      
+    } else {
+      # Original 2nd-function sf/sfc behavior
+      if (inherits(obj, "sfc")) obj <- sf::st_as_sf(obj)
+      sf::st_write(obj, tmp, delete_dsn = TRUE, quiet = TRUE)
+      ctype <- if (ext %in% c("geojson", "json")) "application/geo+json" else "application/octet-stream"
+    }
     
   } else if (inherits(obj, "SpatRaster")) {
     writeRaster(obj, tmp, overwrite = TRUE)

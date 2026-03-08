@@ -114,7 +114,7 @@ generate_shade_structures <- function(
       "{aws_http}/{scenario_folder}/{t}/ccl_layers/structures-as-trees.tif"
     )
     
-    existing <- tryCatch(terra::rast(url_existing), error = function(e) NULL)
+    existing <- tryCatch(rast_retry(url_existing, quiet = TRUE), error = function(e) NULL)
     
     if (!is.null(existing)) {
       x <- terra::mosaic(x, existing, fun = "max")
@@ -212,4 +212,3 @@ run_shade_scenario <- function(bucket,
   #   structures = shade_structures_all_parks
   # ))
 }
-

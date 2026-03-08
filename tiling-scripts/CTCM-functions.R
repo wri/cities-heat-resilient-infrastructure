@@ -4,6 +4,7 @@ library(tidyverse)
 library(terra)
 library(sf)
 library(yaml)
+source(here("tiling-scripts", "utils.R"))
 
 download_tree_data <- function(city, infra, scenario, baseline_folder, scenario_folder, tiles){
   
@@ -657,7 +658,7 @@ upload_tcm_layers <- function(
       for (f in mrt_files){
         
         time <- sub(".*_(\\d+)D\\.tif$", "\\1", f)
-        mrt <- rast(f)
+        mrt <- rast_retry(f)
         utci <- create_utci(mrt, time, met)
         utci_class <- utci_risk_cat(utci)
         

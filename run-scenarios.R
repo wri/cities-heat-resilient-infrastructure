@@ -566,8 +566,7 @@ for (g in groups) {
         shade_structure_post_processing(baseline_folder, 
                                         scenario_folder, 
                                         infra,
-                                        scenario,
-                                        tiles = scenario_tiles)
+                                        scenario)
         
         calc_shade_structures_metrics(city, aoi_name, tiles_aoi, scenario)
       }

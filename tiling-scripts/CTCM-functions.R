@@ -593,8 +593,8 @@ upload_tcm_layers <- function(
   date <- glue("{year}_{date_doy}")
   
   # Find tile directories (e.g., tile_00001/)
-  tile_dirs <- list.dirs(path.expand(file.path(results_dir, tcm_results_dir)),
-                         recursive = FALSE, full.names = TRUE) 
+  tile_dirs <- list.dirs(path.expand(file.path(results_dir)),
+                         recursive = TRUE, full.names = TRUE) 
   tile_dirs <- tile_dirs[grepl("tile", basename(tile_dirs))]
   
   tiles <- basename(tile_dirs)
@@ -607,7 +607,7 @@ upload_tcm_layers <- function(
     
     message("Processing tile: ", tile)
     
-    tile_dir <- file.path(results_dir, tcm_results_dir, tile)
+    tile_dir <- file.path(results_dir, tile, tcm_results_dir)
     
     # Upload tcm tile
     if (is.null(transmissivity)) {
@@ -629,11 +629,11 @@ upload_tcm_layers <- function(
       
       if (is.null(transmissivity)) {
         
-        aws_sync_or_stop(paste0(results_dir, "/", processed_dir, "/", tile),
+        aws_sync_or_stop(file.path(results_dir, tile, processed_dir),
                          paste0(bucket_prefix, "/", tile, "/", processed_dir),
                          quiet = quiet)
       } else {
-        aws_sync_or_stop(paste0(results_dir, "/", processed_dir, "/", tile),
+        aws_sync_or_stop(file.path(results_dir, tile, processed_dir),
                          paste0(bucket_prefix, "/", tile, "/", processed_dir, "/t", transmissivity),
                          quiet = quiet)
         

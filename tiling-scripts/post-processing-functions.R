@@ -101,14 +101,14 @@ shade_structure_post_processing <- function(baseline_folder,
       files_t0 <- list_s3_keys("wri-cities-tcm", tile_results_dir_t0)
       
       # Base UTCI
-      base_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{h}__baseline__baseline.tif"))
+      base_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{time}__baseline__baseline.tif"))
       
       # t3 shade
       shade_key   <- files_t3[grepl(paste0("/Shadow_.*_", time, "D\\.tif$"), files_t3)]
       struct_t3_mask   <- rast_retry(glue("{aws_http}/{shade_key}")) 
       
       # t0 utci
-      utci_key   <- files[grepl(paste0("/UTCI_.*_", time, "D\\.tif$"), files)]
+      utci_key   <- files_t0[grepl(paste0("/UTCI_.*_", time, "D\\.tif$"), files_t0)]
       struct_t0_utci   <- rast_retry(glue("{aws_http}/{utci_key}")) 
       
       # struct_t3_mask <- rast_retry(here(tile_results_dir_t3, shadow_file)) %>% 
@@ -133,14 +133,14 @@ shade_structure_post_processing <- function(baseline_folder,
       utci_composite <- ifel(struct_shade_mask, struct_t0_utci, base_utci)
       shadow_composite <- ifel(struct_shade_mask, struct_t0_shadow_recat, base_shade)
       
-      shade_recat <- ifel(
-        is.na(shadow_composite), NA,
-        ifel(shadow_composite == 0, 1,
-             ifel(shadow_composite == 1, 0, 2))
-      )
+      # shade_recat <- ifel(
+      #   is.na(shadow_composite), NA,
+      #   ifel(shadow_composite == 0, 1,
+      #        ifel(shadow_composite == 1, 0, 2))
+      # )
       
       # shade diff
-      shade <- shade_recat > 0
+      shade <- shadow_composite > 0
       base_shade <- base_shade > 0
       
       diff_shade <- shade - base_shade
@@ -167,7 +167,7 @@ shade_structure_post_processing <- function(baseline_folder,
       write_s3(diff_shade, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))
       write_s3(shade_dist, 
-               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__trees__pedestrian-achievable-90pctl.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{time}__trees__pedestrian-achievable-90pctl.tif"))
       
       message("Composite rasters written for time: ", time)
     }

@@ -153,7 +153,7 @@ update_albedo <- function(city = city,
       build_slope <- exactextractr::exact_extract(open_urban, tile_buildings, 'mode', force_df = TRUE) 
       
       tile_buildings <- tile_buildings %>% 
-        add_column(lulc = open_urban$mode) %>% 
+        add_column(lulc = build_slope$mode) %>% 
         mutate(slope = case_when(lulc %in% c(600, 601, 611, 620, 621) ~ "low",
                                  lulc %in% c(602, 610, 612, 622) ~ "high",
                                  .default = NA),

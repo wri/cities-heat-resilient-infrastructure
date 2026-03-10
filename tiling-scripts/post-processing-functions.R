@@ -105,11 +105,13 @@ shade_structure_post_processing <- function(baseline_folder,
       
       # t3 shade
       shade_key   <- files_t3[grepl(paste0("/Shadow_.*_", time, "D\\.tif$"), files_t3)]
-      struct_t3_mask   <- rast_retry(glue("{aws_http}/{shade_key}")) 
+      struct_t3_mask   <- rast_retry(glue("{aws_http}/{shade_key}")) %>% 
+          crop(base_utci, mask = TRUE)
       
       # t0 utci
       utci_key   <- files_t0[grepl(paste0("/UTCI_.*_", time, "D\\.tif$"), files_t0)]
-      struct_t0_utci   <- rast_retry(glue("{aws_http}/{utci_key}")) 
+      struct_t0_utci   <- rast_retry(glue("{aws_http}/{utci_key}")) %>% 
+          crop(base_utci, mask = TRUE)
       
       # struct_t3_mask <- rast_retry(here(tile_results_dir_t3, shadow_file)) %>% 
       #   crop(baseline_utci, mask = TRUE)
@@ -118,7 +120,8 @@ shade_structure_post_processing <- function(baseline_folder,
       #   crop(baseline_utci, mask = TRUE)
       
       base_shade <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/shade-{time}__baseline__baseline.tif")) 
-      struct_t0_shadow <- rast_retry(glue("{aws_http}/{tile_results_dir_t0}/{basename(shade_key)}")) 
+      struct_t0_shadow <- rast_retry(glue("{aws_http}/{tile_results_dir_t0}/{basename(shade_key)}")) %>% 
+        crop(base_utci, mask = TRUE)
       
       struct_t0_shadow_recat <- ifel(
         is.na(struct_t0_shadow), NA,
@@ -162,7 +165,7 @@ shade_structure_post_processing <- function(baseline_folder,
       write_s3(utci_diff, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/utci-{time}__{infra}__{scenario}__vs-baseline.tif"))
       
-      write_s3(shade_recat, 
+      write_s3(shade, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}.tif"))
       write_s3(diff_shade, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))

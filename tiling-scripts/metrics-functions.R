@@ -741,6 +741,9 @@ calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
       mask(parks) 
     
     scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/utci-{time}__shade-structures__{scenario}.tif")
+    # scenario_utci_paths <- scenario_utci_paths[
+    #   sapply(scenario_utci_paths, \(x) httr::status_code(httr::HEAD(x)) == 200)
+    # ]
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
     scenario_utci_rast <- scenario_utci_rast %>% 
       mask(parks) %>% 
@@ -754,6 +757,9 @@ calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
       mask(parks)
     
     scenario_shade_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-{time}__shade-structures__{scenario}.tif")
+    # scenario_shade_paths <- scenario_shade_paths[
+    #   sapply(scenario_shade_paths, \(x) httr::status_code(httr::HEAD(x)) == 200)
+    # ]
     scenario_shade_rast <- load_and_merge(scenario_shade_paths) > 0
     scenario_shade_rast <- scenario_shade_rast %>% 
       mask(parks) %>% 
@@ -778,8 +784,8 @@ calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
              baseline_shade_pct = baseline_shade_area / area_sqm)
     
     # utci in parks
-    baseline_mean_utci_parks <- mean(values(baseline_utci), na.rm = TRUE)
-    scenario_mean_utci_parks <- mean(values(scenario_utci), na.rm = TRUE)
+    baseline_mean_utci_parks <- mean(values(baseline_utci_rast), na.rm = TRUE)
+    scenario_mean_utci_parks <- mean(values(scenario_utci_rast), na.rm = TRUE)
     change_mean_utci_parks <- scenario_mean_utci_parks - baseline_mean_utci_parks
     
     # Store results

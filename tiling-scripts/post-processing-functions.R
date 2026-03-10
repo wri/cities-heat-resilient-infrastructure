@@ -167,7 +167,7 @@ shade_structure_post_processing <- function(baseline_folder,
       write_s3(diff_shade, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))
       write_s3(shade_dist, 
-               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{time}__trees__pedestrian-achievable-90pctl.tif"))
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{time}__{infra}__{scenario}.tif"))
       
       message("Composite rasters written for time: ", time)
     }

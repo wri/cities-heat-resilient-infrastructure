@@ -120,7 +120,7 @@ process_trees <- function(tree_canopy, city_folder, baseline_folder, t_id){
 
 # Create plantable area ---------------------------------------------------
 
-create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t){
+create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t, roads_vector){
   
   utm <- st_crs(lulc)
   
@@ -142,19 +142,18 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   # no trees within 9-m of intersection
   
   # Load roads and filter to bbox of tile geometry
-  road_vectors <- st_read_parquet(glue("{open_urban_aws_http}/roads/roads_all.parquet"), quiet = TRUE) %>% 
-      st_transform(utm) %>% 
+  roads_vector <- roads_vector %>% 
       st_filter(tile_geom)
   
   
-  if (nrow(road_vectors) == 0) {
+  if (nrow(roads_vector) == 0) {
     plantable_street <- lulc
     values(plantable_street) <- 0
     return(plantable_street)
   }
   
   # Dissolve road segments 
-  dissolved_roads <- st_union(road_vectors)
+  dissolved_roads <- st_union(roads_vector)
   
   # Convert the dissolved result back into an sf object
   dissolved_roads_sf <- st_as_sf(data.frame(geometry = dissolved_roads)) %>% 
@@ -200,13 +199,13 @@ create_plantable_area <- function(lulc, pedestrian_area, binary_tree_cover, open
   
   major_roads_list <- c("motorway", "primary")
   
-  road_vectors <- road_vectors %>% 
+  roads_vector <- roads_vector %>% 
     select(highway, lanes) %>% 
     mutate(lanes = as.integer(lanes)) %>% 
     left_join(lanes, by = "highway") %>% 
     mutate(lanes = coalesce(lanes, avg_lanes))
   
-  major_road_vectors <- road_vectors %>% 
+  major_road_vectors <- roads_vector %>% 
     filter(highway %in% major_roads_list)
   
   if (nrow(major_road_vectors) != 0){
@@ -252,6 +251,7 @@ create_plantable_area_all_roads <- function(
     binary_tree_cover,
     open_urban_aws_http,
     t,
+    roads_vector,
     intersection_buff = 9
 ) {
   
@@ -274,21 +274,21 @@ create_plantable_area_all_roads <- function(
   ## intersections buffer ####
   # no trees within 9-m of intersection
   # Load roads and filter to bbox of tile geometry
-  road_vectors <- st_read_parquet(
+  roads_vector <- st_read_parquet(
     glue("{open_urban_aws_http}/roads/roads_all.parquet"),
     quiet = TRUE
   ) %>%
     st_transform(utm) %>%
     st_filter(tile_geom)
   
-  if (nrow(road_vectors) == 0) {
+  if (nrow(roads_vector) == 0) {
     plantable_street <- lulc
     values(plantable_street) <- 0
     return(plantable_street)
   }
   
   # Dissolve road segments
-  dissolved_roads <- st_union(road_vectors)
+  dissolved_roads <- st_union(roads_vector)
   
   # Convert the dissolved result back into an sf object
   dissolved_roads_sf <- st_as_sf(
@@ -337,7 +337,7 @@ create_plantable_area_all_roads <- function(
 # Baseline tree processing per tile ---------------------------------------
 
 # baseline folder is the output of the baseline CTCM run
-baseline_processing <- function(t){
+baseline_processing <- function(t, roads_vector){
   print(t)
   
   ensure_s3_prefix(
@@ -352,7 +352,7 @@ baseline_processing <- function(t){
   pedestrian_area <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
 
   # Create plantable area
-  plantable_street <- create_plantable_area(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t)
+  plantable_street <- create_plantable_area(lulc, pedestrian_area, binary_tree_cover, open_urban_aws_http, t, roads_vector)
   write_s3(plantable_street, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/plantable-areas__trees__{scenario}.tif"))
   
   # Create available points to place trees
@@ -968,6 +968,7 @@ generate_tree_scenario <- function(city = city,
                                    scenario_folder = scenario_folder,
                                    city_folder = city_folder,
                                    aoi = aoi,
+                                   utm,
                                    open_urban_aws_http = open_urban_aws_http,
                                    min_dist = 5) {
   
@@ -978,7 +979,10 @@ generate_tree_scenario <- function(city = city,
   if (is_resume) message("Resuming tree generation from aoi_grid ID ", resume_from_id)
   
   if (!is_resume){
-    map(tiles_aoi, baseline_processing)
+    roads_vector <- st_read_parquet(glue("{open_urban_aws_http}/roads/roads_all.parquet"), quiet = TRUE) %>% 
+      st_transform(utm)
+    
+    map(tiles_aoi, baseline_processing, roads_vector)
     create_tree_population(tiles_s3)
   }
   

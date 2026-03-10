@@ -444,6 +444,7 @@ for (g in groups) {
                                                  scenario_folder = scenario_folder,
                                                  city_folder = city_folder,
                                                  aoi = aoi,
+                                                 utm,
                                                  open_urban_aws_http = open_urban_aws_http,
                                                  min_dist = 5)
       

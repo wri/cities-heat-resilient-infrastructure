@@ -575,6 +575,48 @@ for (g in groups) {
       next
     }
     
+    # ------------------ cool roofs / trees combo ------------------
+    if (infra %in% c("cool-roofs_trees", "trees_cool-roofs")) {
+      
+      infra == "cool-roofs_trees"
+      
+      scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
+      
+      source(here("tiling-scripts", "combo-functions.R"))
+      
+      if (steps$generate) cool_roof_tree_combo(city = city,
+                                               aoi_name = aoi_name,
+                                               aws_http = aws_http,
+                                               city_folder = city_folder,
+                                               baseline_folder = baseline_folder,
+                                               infra = infra,
+                                               scenario = scenario,
+                                               tiles_aoi = tiles_aoi,
+                                               buffered_tile_grid = buffered_tile_grid)
+      
+      if (steps$download) {
+        downlaod_cool_roof_tree_data(
+          city            = city,
+          aoi_name        = aoi_name,
+          scenario        = scenario,
+          baseline_folder = baseline_folder,
+          tiles           = tiles_aoi
+        )
+      }
+      
+      if (steps$ctcm) {
+        run_cool_roof_tree_CTCM(city, infra, scenario, aoi_name, aoi)
+      }
+      
+      if (steps$process) {
+        
+        upload_tcm_layers(city, infra, scenario, aoi_name)
+        calc_cool_roof_tree_metrics(city, aoi_name, tiles_aoi, scenario)
+      }
+      
+      next
+    }
+    
     stop("Unknown infra in plan: ", infra)
   }
   

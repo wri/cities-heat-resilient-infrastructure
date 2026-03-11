@@ -695,8 +695,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
 }
 
-
-calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
+calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   library(geoarrow)
   library(sfarrow)
@@ -708,6 +707,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
   
   # Load parks 
   parks <- st_read(glue("{aws_http}/{scenario_folder}/parks__shade-structures__all-parks.geojson")) 
+  park_area <- sum(parks$area_sqm)
   
   # Tiles
   tiles <- list_tiles(glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/"))
@@ -734,79 +734,88 @@ calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
   
   for (time in timestamps) {
     
-    # Load existing UTCI raster & mask to parks
+    # Baseline and scenario UTCI
     baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
     baseline_utci_rast <- load_and_merge(baseline_utci_paths)
-    baseline_utci_rast <- baseline_utci_rast %>% 
-      mask(parks) 
     
     scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/utci-{time}__shade-structures__{scenario}.tif")
-    # scenario_utci_paths <- scenario_utci_paths[
-    #   sapply(scenario_utci_paths, \(x) httr::status_code(httr::HEAD(x)) == 200)
-    # ]
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
     scenario_utci_rast <- scenario_utci_rast %>% 
-      mask(parks) %>% 
       # Fill in baseline where shade didn't change
       mosaic(baseline_utci_rast, fun = "first")
     
-    # Load shade raster and combine tree and building shade
+    # Baseline and scenario shade
     baseline_shade_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
     baseline_shade_rast <- load_and_merge(baseline_shade_paths) > 0
-    baseline_shade_rast <- baseline_shade_rast %>% 
-      mask(parks)
     
     scenario_shade_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-{time}__shade-structures__{scenario}.tif")
-    # scenario_shade_paths <- scenario_shade_paths[
-    #   sapply(scenario_shade_paths, \(x) httr::status_code(httr::HEAD(x)) == 200)
-    # ]
     scenario_shade_rast <- load_and_merge(scenario_shade_paths) > 0
     scenario_shade_rast <- scenario_shade_rast %>% 
-      mask(parks) %>% 
       # Fill in baseline where shade didn't change
       mosaic(baseline_shade_rast, fun = "first")
+    
+    # Baseline and scenario shade distance
+    baseline_shade_dist_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-distance-{time}__baseline__baseline.tif")
+    baseline_shade_dist_rast <- load_and_merge(baseline_shade_dist_paths) 
+    
+    scenario_shade_dist_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-distance-{time}__shade-structures__{scenario}.tif")
+    scenario_shade_dist_rast <- load_and_merge(scenario_shade_dist_paths) 
+    scenario_shade_dist_rast <- scenario_shade_dist_rast %>% 
+      # Fill in baseline where shade didn't change
+      mosaic(baseline_shade_dist_rast, fun = "first")
     
     # Compute metrics
     
     # percent shade in parks, 1 = shade
-    baseline_park_shade_pct <- mean(values(baseline_shade_rast), na.rm = TRUE)
-    scenario_park_shade_pct <- mean(values(scenario_shade_rast), na.rm = TRUE)
-    change_park_shade_pct <- scenario_park_shade_pct - baseline_park_shade_pct
+    shade_cover_baseline_parks <- mean(values(baseline_shade_rast |> mask(parks)), na.rm = TRUE)
+    shade_cover_scenario_parks <- mean(values(scenario_shade_rast |> mask(parks)), na.rm = TRUE)
+    shade_cover_change_parks <- shade_cover_scenario_parks - shade_cover_baseline_parks
     
     # area shade in parks
-    park_base <- exactextractr::exact_extract(baseline_shade_rast, parks, 'mean')
-    park_scenario <- exactextractr::exact_extract(scenario_shade_rast, parks, 'mean')
-    parks <- parks %>% 
-      st_transform(st_crs(scenario_shade_rast)) %>% 
-      mutate(area_sqm = as.numeric(st_area(geometry)),
-             baseline_shade_area = area_sqm * park_base,
-             scenario_shade_area = area_sqm * park_scenario,
-             baseline_shade_pct = baseline_shade_area / area_sqm)
+    # parks <- parks %>% 
+    #   st_transform(st_crs(scenario_shade_rast)) %>% 
+    #   mutate(area_sqm = as.numeric(st_area(geometry)),
+    #          baseline_shade_area = area_sqm * shade_cover_baseline_parks,
+    #          scenario_shade_area = area_sqm * shade_cover_scenario_parks)
     
     # utci in parks
-    baseline_mean_utci_parks <- mean(values(baseline_utci_rast), na.rm = TRUE)
-    scenario_mean_utci_parks <- mean(values(scenario_utci_rast), na.rm = TRUE)
-    change_mean_utci_parks <- scenario_mean_utci_parks - baseline_mean_utci_parks
+    mean_utci_baseline_parks <- mean(values(baseline_utci_rast |> mask(parks)), na.rm = TRUE)
+    mean_utci_scenario_parks <- mean(values(scenario_utci_rast |> mask(parks)), na.rm = TRUE)
+    mean_utci_change_parks <- mean_utci_scenario_parks - mean_utci_baseline_parks
+    
+    # shade distance in parks
+    mean_distance_shade_cover_baseline_parks <- mean(values(baseline_shade_dist_rast |> mask(parks)), na.rm = TRUE)
+    mean_distance_shade_cover_scenario_parks <- mean(values(scenario_shade_dist_rast |> mask(parks)), na.rm = TRUE)
+    mean_distance_shade_cover_change_parks <- mean_distance_shade_cover_scenario_parks - mean_distance_shade_cover_baseline_parks
+    
+    # Achievable targets
+    mean_distance_shade_cover_achievable_parks <- exactextractr::exact_extract(baseline_shade_dist_rast, parks, "mean", force_df = TRUE) |> 
+      quantile(0.1, na.rm = T)
     
     # Store results
     metrics <- tibble(
       
       time = time,
       
-      baseline_mean_utci_parks = baseline_mean_utci_parks,
-      scenario_mean_utci_parks = scenario_mean_utci_parks,
-      change_mean_utci_parks = change_mean_utci_parks,
+      mean_utci_baseline_parks = mean_utci_baseline_parks,
+      mean_utci_scenario_parks = mean_utci_scenario_parks,
+      mean_utci_change_parks = mean_utci_change_parks,
       
-      baseline_park_shade_pct = baseline_park_shade_pct * 100,
-      scenario_park_shade_pct = scenario_park_shade_pct * 100,
-      change_park_shade_pct = change_park_shade_pct * 100,
+      shade_cover_baseline_parks = shade_cover_baseline_parks * 100,
+      shade_cover_scenario_parks = shade_cover_scenario_parks * 100,
+      shade_cover_change_parks = shade_cover_change_parks * 100,
       
-      baseline_park_shade = sum(parks$baseline_shade_area),
-      scenario_park_shade = sum(parks$scenario_shade_area),
-      change_park_area_shade = scenario_park_shade - baseline_park_shade,
+      mean_distance_shade_cover_baseline_parks = mean_distance_shade_cover_baseline_parks,
+      mean_distance_shade_cover_scenario_parks = mean_distance_shade_cover_scenario_parks,
+      mean_distance_shade_cover_change_parks = mean_distance_shade_cover_change_parks,
       
-      baseline_park_shade_cover = baseline_park_shade_pct,
-      change_park_shade_cover = change_park_shade_pct,
+      mean_distance_shade_cover_achievable_parks = mean_distance_shade_cover_achievable_parks,
+      mean_distance_shade_cover_progress_parks = (mean_distance_shade_cover_baseline_parks - mean_distance_shade_cover_scenario_parks) /
+        (mean_distance_shade_cover_baseline_parks - mean_distance_shade_cover_achievable_parks) * 100
+      
+      # baseline_park_shade = sum(parks$baseline_shade_area),
+      # scenario_park_shade = sum(parks$scenario_shade_area),
+      # change_park_area_shade = scenario_park_shade - baseline_park_shade,
       
     )
     
@@ -819,34 +828,27 @@ calc_shade_structures_metrics <- function(city, aoi_name, scenario, tiles_aoi){
       names_to = "indicators_id",
       values_to = "value"
     ) %>%
-    mutate(indicators_id = paste0(indicators_id, "_", time)) %>% 
+    separate(
+      indicators_id,
+      into = c("indicator", "scenario"),
+      sep = "_(?=[^_]+_[^_]+$)"
+    ) |> 
+    mutate(indicators_id = paste0(indicator, "_", time, "_", scenario)) %>% 
     bind_rows(tribble(~ indicators_id, ~ value,
-                      "new_shade_structures", nrow(shade_structures),
-                      "achievable_park_shade_cover_1200", quantile(parks$baseline_shade_pct, 0.9) * 100)) %>% 
-    filter(! indicators_id %in% c("baseline_park_shade_cover_1500", "baseline_park_shade_cover_1800",
-                                  "change_park_shade_cover_1500", "change_park_shade_cover_1800")) 
-  
-  progress <- results_long %>% 
-    filter(indicators_id %in% c("baseline_park_shade_cover_1200", 
-                                "change_park_shade_cover_1200",
-                                "achievable_park_shade_cover_1200")) %>% 
-    select(indicators_id, value) %>% 
-    pivot_wider(names_from = indicators_id) %>% 
-    mutate(x = (baseline_park_shade_cover_1200 + change_park_shade_cover_1200) / achievable_park_shade_cover_1200) %>% 
-    pull(x)
-  
-  results_long <- results_long %>% 
-    bind_rows(tibble(indicators_id = "shade_structure_progress", value = progress * 100)) %>% 
+                      "new_shade_structures", nrow(shade_structures))) %>% 
     mutate(
       date = date,
       application_id = "ccl",
       cities_id = city,
       areas_of_interest_id = aoi_name,
-      interventions_id = "park_shade",
-      scenarios_id = paste("park_shade", str_replace(scenario, "-", "_"), sep = "_"),
+      interventions_id = "shade-structures",
+      scenarios_id = scenario,
+      park_area = park_area
     ) %>%
     select(-time)
   
-  write_csv(results_long, here(scenario_path, "scenario-metrics.csv"))
+  # Save results
+  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  write_s3(results_long, glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__shade-structures__{scenario}.csv"))
   
 }

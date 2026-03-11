@@ -113,7 +113,7 @@ update_albedo <- function(city = city,
     
     # Load data
     albedo <- tryCatch(
-      rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_albedo_cloud_masked.tif")),
+      rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_albedo_cloud_masked.tif")),
       error = function(e) NULL
     )
     
@@ -149,7 +149,7 @@ update_albedo <- function(city = city,
     # if city is in the U.S. use the slope classification
     if (country == "USA"){
       
-      open_urban <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
+      open_urban <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
       build_slope <- exactextractr::exact_extract(open_urban, tile_buildings, 'mode', force_df = TRUE) 
       
       tile_buildings <- tile_buildings %>% 

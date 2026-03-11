@@ -57,9 +57,6 @@ cool_roof_tree_combo <- function(city,
   
   for (tile in tiles_aoi){
     
-    tile <- buffered_tile_grid %>% 
-      filter(tile_name == tile)
-    
     baseline_albedo <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/albedo__baseline__baseline.tif"))
     cool_roof_albedo <- rast_retry(glue("{aws_http}/{cool_roof_scenario_folder}/{tile}/ccl_layers/albedo__cool-roofs__{cool_roof_scenario$scenario}.tif"))
     
@@ -77,6 +74,7 @@ cool_roof_tree_combo <- function(city,
     ensure_s3_prefix("wri-cities-tcm", glue("{combo_scenario_folder}/{tile}/ccl_layers"))
     write_s3(updated_albedo, glue("wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/albedo__{infra_combined}__{scenario_combined}.tif"))
     
+    print(glue("Saved tile {tile}"))
   }
   
   

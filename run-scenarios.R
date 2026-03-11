@@ -578,7 +578,7 @@ for (g in groups) {
     # ------------------ cool roofs / trees combo ------------------
     if (infra %in% c("cool-roofs_trees", "trees_cool-roofs")) {
       
-      infra == "cool-roofs_trees"
+      infra <- "cool-roofs_trees"
       
       scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
       

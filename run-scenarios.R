@@ -611,7 +611,8 @@ for (g in groups) {
       if (steps$process) {
         
         upload_tcm_layers(city, infra, scenario, aoi_name)
-        calc_cool_roof_tree_metrics(city, aoi_name, tiles_aoi, scenario)
+        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+        # calc_cool_roof_tree_metrics(city, aoi_name, tiles_aoi, scenario)
       }
       
       next

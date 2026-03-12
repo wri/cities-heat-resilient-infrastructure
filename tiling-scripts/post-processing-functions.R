@@ -8,9 +8,8 @@ source(here("tiling-scripts", "utils.R"))
 process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder){
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
-  # tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
   
-  if (infra == "cool-roofs") {
+  if (infra %in% c("cool-roofs", "cool-roofs_trees")) {
     results_dir <- "reduced_temps"
   } else {
     results_dir <- "met_era5_hottest_days"
@@ -53,7 +52,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
         
         write_s3(shade_recat, glue("wri-cities-tcm/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif"))
         
-        shade <- shade > 0
+        shade <- shade_recat > 0
         base_shade <- base_shade > 0
 
         diff_shade <- crop(shade, base_shade) - base_shade
@@ -62,7 +61,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
       
       shade <- rast_retry(glue("{aws_http}/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif")) > 0
       shade_dist <- distance(shade %>% subst(0, NA))
-      write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__trees__pedestrian-achievable-90pctl.tif"))
+      write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__{infra}__{scenario}.tif"))
     }
     
   }

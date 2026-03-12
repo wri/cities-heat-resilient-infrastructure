@@ -71,8 +71,11 @@ cool_roof_tree_combo <- function(city,
     tree_alb_iqr <- tree_albedo[tree_albedo >= q[1] & tree_albedo <= q[2]]
     
     updated_albedo <- update_albedo_with_trees(cool_roof_albedo, new_tree_cover, tree_alb_iqr)
+    diff_albedo <- updated_albedo - baseline_albedo
+    
     ensure_s3_prefix("wri-cities-tcm", glue("{combo_scenario_folder}/{tile}/ccl_layers"))
     write_s3(updated_albedo, glue("wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/albedo__{infra_combined}__{scenario_combined}.tif"))
+    write_s3(diff_albedo, glue("wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/albedo__{infra_combined}__{scenario_combined}__vs-baseline.tif"))
     
     print(glue("Saved tile {tile}"))
   }

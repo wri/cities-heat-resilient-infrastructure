@@ -9,7 +9,11 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
   
+<<<<<<< Updated upstream
   if (infra %in% c("cool-roofs", "cool-roofs_trees")) {
+=======
+  if (infra %in% c("cool-roofs_trees", "trees_cool-roofs", "cool-roofs")) {
+>>>>>>> Stashed changes
     results_dir <- "reduced_temps"
   } else {
     results_dir <- "met_era5_hottest_days"

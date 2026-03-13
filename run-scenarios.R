@@ -381,8 +381,7 @@ for (g in groups) {
   
   # AOI
   aoi <- st_read(aoi_path, quiet = TRUE) %>%
-    st_transform(utm) %>% 
-    st_buffer(50)
+    st_transform(utm) 
   
   # Tiles intersecting AOI
   buffered_tile_grid_aoi <- buffered_tile_grid %>%

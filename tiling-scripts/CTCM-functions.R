@@ -722,7 +722,7 @@ upload_tcm_layers <- function(
   
   source(here("utils", "utci.R"))
   
-  name <- glue("{city}_{infra}_{scenario}")
+  # name <- glue("{city}_{infra}_{scenario}")
   # results_dir <- file.path("~", "CTCM_outcome", name, glue("{name}_{scenario}_{infra}"))
   
   if (is.null(transmissivity)){
@@ -735,7 +735,7 @@ upload_tcm_layers <- function(
                              name, glue("{name}_{scenario}_{infra}"))
   }
   
-  if (infra %in% c("cool-roofs_trees", "trees_cool-roofs")){
+  if (infra %in% c("cool-roofs_trees", "trees_cool-roofs", "cool-roofs")){
     tcm_results_dir <-  "tcm_results/reduced_temps"
   } else {
     tcm_results_dir <-  "tcm_results/met_era5_hottest_days"
@@ -760,7 +760,7 @@ upload_tcm_layers <- function(
     message("  (no ", meta_dir, ", skipping)")
   }
   
-  if (infra == "cool-roofs"){
+  if (infra %in% c("cool-roofs_trees", "trees_cool-roofs", "cool-roofs")){
     met_file_name <- "reduced_temps.csv"
   } else {
     met_file_name <- "met_era5_hottest_days.csv"

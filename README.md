@@ -95,12 +95,13 @@ Flags inside `[ ]`:
 
 Currently available infrastructures and scenarios are:
 
-| infra_id | scenario_id |
-| ----- | ----- |
-| baseline | baseline\* |
-| trees | pedestrian-achievable-90pctl |
-| cool-roofs | all-buildings |
-| | large-buildings |
+| infra_id | scenario_id | Definition |
+| ----- | ----- | ----- |
+| baseline | baseline\* | Baseline layers |
+| trees | pedestrian-achievable-90pctl | Street trees achievable |
+| cool-roofs | all-buildings | Cool roofs on all buildings |
+| | large-buildings | Cool roofs on large buildings |
+| cool-roofs_trees | all-buildings_pedestrian-achievable-90pctl | Combination cool roofs and street trees achievable |
 
 \* Current behavior if baseline is flagged to generate is to process existing baseline data
 to the necessary CCL layers and calculate metrics. This **does not** run the baseline

@@ -1,7 +1,7 @@
-# system("aws sso login --profile cities-data-dev")
-# Sys.setenv(AWS_PROFILE = "cities-data-dev",
-#            AWS_DEFAULT_REGION = "us-east-1",
-#            AWS_SDK_LOAD_CONFIG = "1")
+system("aws sso login --profile cities-data-dev")
+Sys.setenv(AWS_PROFILE = "cities-data-dev",
+           AWS_DEFAULT_REGION = "us-east-1",
+           AWS_SDK_LOAD_CONFIG = "1")
 
 library(glue)
 library(tidyverse)
@@ -13,13 +13,29 @@ source(here("tiling-scripts", "metrics-functions.R"))
 source(here("tiling-scripts", "utils.R"))
 source(here("tiling-scripts", "post-processing-functions.R"))
 
-cities <- c("BRA-Recife", "BRA-Fortaleza", "BRA-Florianopolis", "BRA-Campinas", "BRA-Teresina")
+cities_to_run <- tribble(
+  ~c, ~aoi_name,
+  # "BRA-Rio_de_Janeiro", "low_emission_zone",
+  # "MEX-Monterrey", "mitras_centro",
+  # "BRA-Teresina", "accelerator_area_big",
+  # "ARG-Buenos_Aires", "cildenez_padre_rodolfo_ricciardelli",
+  # "ZAF-Johannesburg", "jukskei-river",
+  # "ZAF-Cape_Town", "business_district",
+  # "IND-Bhopal", "tt_nagar",
+  "BRA-Campinas", "accelerator_area",
+  "BRA-Florianopolis", "accelerator_area",
+  "BRA-Fortaleza", "accelerator_area",
+  "BRA-Recife", "accelerator_area"
+)
 
 
-for (city in cities){
+for (city in cities_to_run$c){
     print(city)
-    city <- "ZAF-Cape_Town"
-    aoi_name <- "business_district"
+    # city <- "ZAF-Cape_Town"
+    # aoi_name <- "business_district"
+    aoi_name <- cities_to_run |> 
+      filter(c == city) |> 
+      pull(aoi_name)
     
     bucket   <- "wri-cities-tcm"
     aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
@@ -56,11 +72,21 @@ for (city in cities){
       st_filter(aoi) 
     tiles_aoi <- tile_grid_aoi$tile_name
     
-    infra <- "trees"
-    scenario <- "pedestrian-achievable-90pctl"
+    infra <- "cool-roofs_trees"
+    scenario <- "all-buildings_pedestrian-achievable-90pctl"
+    scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
     
-    process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
-    calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
+    cool_roof_tree_combo(city,aoi_name,aws_http,
+                                     city_folder,
+                                     baseline_folder,
+                                     infra,
+                                     scenario,
+                                     tiles_aoi,
+                                     buffered_tile_grid) 
+    calc_cool_roofs_trees_metrics(city, aoi_name, tiles_aoi, infra, scenario)
+    
+    # process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+    # calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
     # for (scenario in c("baseline", "pedestrian-achievable-90pctl")){
     # 
     # if (scenario == "pedestrian-achievable-90pctl"){
@@ -69,7 +95,7 @@ for (city in cities){
     #   infra = "baseline"
     # }
     
-    # scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
+    # 
     # 
     # retain_only_tiles_s3(city,
     #                      aoi_name,

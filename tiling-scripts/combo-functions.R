@@ -55,13 +55,19 @@ cool_roof_tree_combo <- function(city,
   
   combo_scenario_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/{infra_combined}/{scenario_combined}")
   
+  # Copy new tree points
+  system2("aws", c("s3", "cp", 
+                   glue("s3://wri-cities-tcm/{tree_scenario_folder}/new-tree-points__{tree_scenario$infra}__{tree_scenario$scenario}.geojson"), 
+                   glue("s3://wri-cities-tcm/{combo_scenario_folder}/new-tree-points__{infra_combined}__{scenario_combined}.geojson")))
+  
+  
   for (tile in tiles_aoi){
     
     baseline_albedo <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/albedo__baseline__baseline.tif"))
-    cool_roof_albedo <- rast_retry(glue("{aws_http}/{cool_roof_scenario_folder}/{tile}/ccl_layers/albedo__cool-roofs__{cool_roof_scenario$scenario}.tif"))
+    cool_roof_albedo <- rast_retry(glue("{aws_http}/{cool_roof_scenario_folder}/{tile}/ccl_layers/albedo__{cool_roof_scenario$infra}__{cool_roof_scenario$scenario}.tif"))
     
     baseline_tree_cover <- rast_retry(glue("{aws_http}/{baseline_folder}/{tile}/ccl_layers/tree-cover__baseline__baseline.tif"))
-    new_tree_cover <- rast_retry(glue("{aws_http}/{tree_scenario_folder}/{tile}/ccl_layers/new-tree-cover__trees__{tree_scenario$scenario}.tif"))
+    new_tree_cover <- rast_retry(glue("{aws_http}/{tree_scenario_folder}/{tile}/ccl_layers/new-tree-cover__{tree_scenario$infra}__{tree_scenario$scenario}.tif"))
     
     # Get albedo range for existing trees
     tree_albedo <- mask(baseline_albedo, baseline_tree_cover, maskvalues = 0) %>% 
@@ -77,6 +83,37 @@ cool_roof_tree_combo <- function(city,
     write_s3(updated_albedo, glue("wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/albedo__{infra_combined}__{scenario_combined}.tif"))
     write_s3(diff_albedo, glue("wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/albedo__{infra_combined}__{scenario_combined}__vs-baseline.tif"))
     
+    # Copy tree scenario ccl layers
+    tree_ccl_layers <- c(glue("new-tree-cover__{tree_scenario$infra}__{tree_scenario$scenario}.tif"),
+                         glue("new-tree-points__{tree_scenario$infra}__{tree_scenario$scenario}.geojson"),
+                         glue("plantable-areas__{tree_scenario$infra}__{tree_scenario$scenario}.tif"),
+                         glue("tree-cover__{tree_scenario$infra}__{tree_scenario$scenario}.tif"))
+    
+    tree_ccl_layers_paths <- glue("s3://wri-cities-tcm/{tree_scenario_folder}/{tile}/ccl_layers/{tree_ccl_layers}")
+    
+    output_ccl_layers <- c(glue("new-tree-cover__{infra_combined}__{scenario_combined}.tif"),
+                           glue("new-tree-points__{infra_combined}__{scenario_combined}.geojson"),
+                           glue("plantable-areas__{infra_combined}__{scenario_combined}.tif"),
+                           glue("tree-cover__{infra_combined}__{scenario_combined}.tif"))
+    
+    output_ccl_layers_paths <- glue("s3://wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/{output_ccl_layers}")
+    
+    purrr::walk2(
+      tree_ccl_layers_paths,
+      output_ccl_layers_paths,
+      \(src, dst) {
+        status <- system2("aws", c("s3", "cp", src, dst))
+        if (status != 0) {
+          stop("Copy failed: ", src, " -> ", dst)
+        }
+      }
+    )
+    
+    # Copy buildings
+    system2("aws", c("s3", "cp",
+                     glue("s3://wri-cities-tcm/{cool_roof_scenario_folder}/{tile}/ccl_layers/buildings__{cool_roof_scenario$infra}__{cool_roof_scenario$scenario}.geojson"),
+                     glue("s3://wri-cities-tcm/{combo_scenario_folder}/{tile}/ccl_layers/buildings__{infra_combined}__{scenario_combined}.geojson")))
+
     print(glue("Saved tile {tile}"))
   }
   

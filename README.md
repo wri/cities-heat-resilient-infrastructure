@@ -103,6 +103,7 @@ Currently available infrastructures and scenarios are:
 | | large-buildings | Cool roofs on large buildings |
 | cool-roofs_trees | all-buildings_pedestrian-achievable-90pctl | Combination cool roofs and street trees achievable |
 
+
 \* Current behavior if baseline is flagged to generate is to process existing baseline data
 to the necessary CCL layers and calculate metrics. This **does not** run the baseline
 CTCM.

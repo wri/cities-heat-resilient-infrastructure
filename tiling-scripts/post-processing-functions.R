@@ -9,11 +9,7 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
   
-<<<<<<< Updated upstream
-  if (infra %in% c("cool-roofs", "cool-roofs_trees")) {
-=======
   if (infra %in% c("cool-roofs_trees", "trees_cool-roofs", "cool-roofs")) {
->>>>>>> Stashed changes
     results_dir <- "reduced_temps"
   } else {
     results_dir <- "met_era5_hottest_days"
@@ -64,8 +60,8 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
       }
       
       shade <- rast_retry(glue("{aws_http}/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif")) > 0
-      shade_dist <- distance(shade %>% subst(0, NA))
-      write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__{infra}__{scenario}.tif"))
+      # shade_dist <- distance(shade %>% subst(0, NA))
+      # write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__{infra}__{scenario}.tif"))
     }
     
   }
@@ -168,7 +164,7 @@ shade_structure_post_processing <- function(baseline_folder,
       write_s3(utci_diff, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/utci-{time}__{infra}__{scenario}__vs-baseline.tif"))
       
-      write_s3(shade, 
+      write_s3(shadow_composite, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}.tif"))
       write_s3(diff_shade, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))

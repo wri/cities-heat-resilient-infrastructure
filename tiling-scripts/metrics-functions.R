@@ -16,9 +16,9 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   met_file <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv")
   met_data <- read_csv(met_file, skip = 2) 
   
-  date <- met_data %>%
-    slice(1) %>%
-    mutate(date = glue("{Year}_{Month}_{Day}")) %>%
+  date <- met_data |>
+    slice(1) |>
+    mutate(date = glue("{Year}_{Month}_{Day}")) |>
     pull(date)
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
@@ -31,9 +31,9 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   ped_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/pedestrian-areas__baseline__baseline.tif")
   ped_area_rast <- load_and_merge(ped_area_paths) 
   
-  aoi <- aoi %>%
+  aoi <- aoi |>
     st_transform(st_crs(ped_area_rast))
-  ped_area_rast <- ped_area_rast %>% 
+  ped_area_rast <- ped_area_rast |> 
     mask(aoi)
 
   pedestrian_area <- sum(values(ped_area_rast) != 0, na.rm = TRUE)
@@ -42,7 +42,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   nonbuild_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/non-building-areas__baseline__baseline.tif")
   nonbuild_area_rast <- load_and_merge(nonbuild_area_paths) 
   
-  nonbuild_area_rast <- nonbuild_area_rast %>% 
+  nonbuild_area_rast <- nonbuild_area_rast |> 
     mask(aoi)
   
   nonbuild_area <- sum(values(nonbuild_area_rast) != 0, na.rm = TRUE)
@@ -59,33 +59,33 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
     # Load shade raster and mask to AOI
     baseline_shade_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
     baseline_shade_rast <- load_and_merge(baseline_shade_paths) 
-    baseline_shade_rast <- baseline_shade_rast %>% 
+    baseline_shade_rast <- baseline_shade_rast |> 
       mask(aoi) > 0
     
     # Mask UTCI to AOI
     baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
     baseline_utci_rast <- load_and_merge(baseline_utci_paths)
-    baseline_utci_rast <- baseline_utci_rast %>% 
+    baseline_utci_rast <- baseline_utci_rast |> 
       mask(aoi)
     
-    ped_area_rast <- ped_area_rast %>% 
+    ped_area_rast <- ped_area_rast |> 
       crop(baseline_utci_rast)
     
-    nonbuild_area_rast <- nonbuild_area_rast %>% 
+    nonbuild_area_rast <- nonbuild_area_rast |> 
       crop(baseline_utci_rast)
     
     # Compute metrics
-    mean_utci_baseline_aoi <- mean(values(baseline_utci_rast %>% 
+    mean_utci_baseline_aoi <- mean(values(baseline_utci_rast |> 
                                                    subst(0, NA)), na.rm = TRUE)
     
     shade_cover_baseline_aoi <- mean(values(baseline_shade_rast), na.rm = TRUE) 
     
-    mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) %>% 
+    mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) |> 
                                        subst(0, NA)), na.rm = TRUE)
     
     shade_cover_baseline_pedestrian <- mean(values(mask(baseline_shade_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE)) 
     
-    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
     
     shade_cover_baseline_nonbuild <- mean(values(mask(baseline_shade_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE)) 
@@ -98,18 +98,18 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
       shade_cover_baseline_pedestrian = shade_cover_baseline_pedestrian * 100,
       mean_utci_baseline_nonbuild = mean_utci_baseline_nonbuild,
       shade_cover_baseline_nonbuild = shade_cover_baseline_nonbuild * 100
-    ) %>%
+    ) |>
       pivot_longer(
         cols = everything(),
         names_to = "indicators_id",
         values_to = "value"
-      ) %>%
-      rowwise() %>% 
+      ) |>
+      rowwise() |> 
       mutate(
         metric = str_extract(indicators_id, "^[^_]+_[^_]+"),
         metric2 = str_replace(indicators_id, metric, ""),
         indicators_id = paste0(metric, "_", time, metric2)
-      ) %>%
+      ) |>
       select(-metric, -metric2)
     
     
@@ -118,9 +118,9 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   
   # Load updated trees
   baseline_tree_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/tree-cover__baseline__baseline.tif")
-  baseline_tree_rast <- load_and_merge(baseline_tree_paths) %>% 
-    subst(from = NA, 0) %>% 
-    crop(baseline_utci_rast) %>% 
+  baseline_tree_rast <- load_and_merge(baseline_tree_paths) |> 
+    subst(from = NA, 0) |> 
+    crop(baseline_utci_rast) |> 
     mask(aoi)
   
   # Tree pct
@@ -138,8 +138,8 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
     
     st_read(glue(
       "{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"
-    ), quiet = TRUE) %>%
-      st_filter(bbox_sf) }) %>%
+    ), quiet = TRUE) |>
+      st_filter(bbox_sf) }) |>
     st_filter(aoi)
   
   
@@ -148,21 +148,21 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
   baseline_tree_points$pedestrian <- pedestrian_vals[[2]]  # second column is the raster value
   
   baseline_tree_n_aoi <- nrow(baseline_tree_points)
-  baseline_tree_n_pedestrian <- nrow(baseline_tree_points %>% filter(pedestrian == 1))
+  baseline_tree_n_pedestrian <- nrow(baseline_tree_points |> filter(pedestrian == 1))
   
   tree_metrics <- 
     tibble(
       tree_cover_baseline_aoi = baseline_tree_pct_aoi * 100,
       tree_cover_baseline_pedestrian = baseline_tree_pct_pedestrian * 100,
       tree_n_baseline_aoi = baseline_tree_n_aoi,
-      tree_n_baseline_pedestrian = baseline_tree_n_pedestrian) %>% 
+      tree_n_baseline_pedestrian = baseline_tree_n_pedestrian) |> 
     pivot_longer(
       cols = everything(),
       names_to = "indicators_id",
       values_to = "value"
     )
   
-  results <- bind_rows(results, tree_metrics) %>% 
+  results <- bind_rows(results, tree_metrics) |> 
     mutate(application_id = "ccl",
            cities_id = city,
            areas_of_interest_id = str_replace(aoi_name, "-", "_"),
@@ -186,9 +186,9 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   met_file <- glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv")
   met_data <- read_csv(met_file, skip = 2) 
   
-  date <- met_data %>%
-    slice(1) %>%
-    mutate(date = glue("{Year}_{Month}_{Day}")) %>%
+  date <- met_data |>
+    slice(1) |>
+    mutate(date = glue("{Year}_{Month}_{Day}")) |>
     pull(date)
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
@@ -201,9 +201,9 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   ped_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/pedestrian-areas__baseline__baseline.tif")
   ped_area_rast <- load_and_merge(ped_area_paths) 
   
-  aoi <- aoi %>%
+  aoi <- aoi |>
     st_transform(st_crs(ped_area_rast))
-  ped_area_rast <- ped_area_rast %>% 
+  ped_area_rast <- ped_area_rast |> 
     mask(aoi)
   
   # pixel areas (in m²)
@@ -214,7 +214,7 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   nonbuild_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/non-building-areas__baseline__baseline.tif")
   nonbuild_area_rast <- load_and_merge(nonbuild_area_paths) 
   
-  nonbuild_area_rast <- nonbuild_area_rast %>% 
+  nonbuild_area_rast <- nonbuild_area_rast |> 
     mask(aoi)
   
   nonbuild_area <- global(px_area * nonbuild_area_rast, "sum", na.rm = TRUE)[1, 1]
@@ -232,36 +232,36 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     # Load shade raster and mask to AOI
     baseline_shade_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
     baseline_shade_rast <- load_and_merge(baseline_shade_paths) 
-    baseline_shade_rast <- baseline_shade_rast %>% 
+    baseline_shade_rast <- baseline_shade_rast |> 
       mask(aoi) > 0
     
     scenario_shade_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/shade-{time}__trees__{scenario}.tif")
     scenario_shade_rast <- load_and_merge(scenario_shade_paths) 
-    scenario_shade_rast <- scenario_shade_rast %>% 
+    scenario_shade_rast <- scenario_shade_rast |> 
       mask(aoi) > 0
     
     # Mask UTCI to AOI
     baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
     baseline_utci_rast <- load_and_merge(baseline_utci_paths)
-    baseline_utci_rast <- baseline_utci_rast %>% 
+    baseline_utci_rast <- baseline_utci_rast |> 
       mask(aoi)
     
     scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-{time}__trees__{scenario}.tif")
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
-    scenario_utci_rast <- scenario_utci_rast %>% 
+    scenario_utci_rast <- scenario_utci_rast |> 
       mask(aoi)
     
-    ped_area_rast <- ped_area_rast %>% 
+    ped_area_rast <- ped_area_rast |> 
       crop(baseline_utci_rast)
     
-    nonbuild_area_rast <- nonbuild_area_rast %>% 
+    nonbuild_area_rast <- nonbuild_area_rast |> 
       crop(baseline_utci_rast)
     
     # Compute metrics
     # UTCI AOI
-    mean_utci_baseline_aoi <- mean(values(baseline_utci_rast %>% 
+    mean_utci_baseline_aoi <- mean(values(baseline_utci_rast |> 
                                             subst(0, NA)), na.rm = TRUE)
-    mean_utci_scenario_aoi <- mean(values(scenario_utci_rast %>% 
+    mean_utci_scenario_aoi <- mean(values(scenario_utci_rast |> 
                                             subst(0, NA)), na.rm = TRUE)
     utci_diff_aoi <- mean_utci_scenario_aoi - mean_utci_baseline_aoi
     
@@ -271,9 +271,9 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     shade_diff_aoi <- shade_cover_scenario_aoi - shade_cover_baseline_aoi
     
     # UTCI pedestrian
-    mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) %>% 
+    mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
-    mean_utci_scenario_pedestrian <- mean(values(mask(scenario_utci_rast, ped_area_rast, maskvalues = 0) %>% 
+    mean_utci_scenario_pedestrian <- mean(values(mask(scenario_utci_rast, ped_area_rast, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
     utci_diff_pedestrian <- mean_utci_scenario_pedestrian - mean_utci_baseline_pedestrian
     
@@ -283,9 +283,9 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     shade_diff_pedestrian <- shade_cover_scenario_pedestrian - shade_cover_baseline_pedestrian
     
     # UTCI nonbuild
-    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                  subst(0, NA)), na.rm = TRUE)
-    mean_utci_scenario_nonbuild <- mean(values(mask(scenario_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    mean_utci_scenario_nonbuild <- mean(values(mask(scenario_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                  subst(0, NA)), na.rm = TRUE)
     utci_diff_nonbuild <- mean_utci_scenario_nonbuild - mean_utci_baseline_nonbuild
     
@@ -297,43 +297,43 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     # Store results
     metrics <- tibble(
       
-      mean_utci_baseline_aoi = mean_utci_baseline_aoi,
-      mean_utci_scenario_aoi = mean_utci_scenario_aoi,
-      mean_utci_change_aoi = utci_diff_aoi,
+      "mean_utci_baseline_aoi" = mean_utci_baseline_aoi,
+      "mean_utci_scenario_aoi" = mean_utci_scenario_aoi,
+      "mean_utci_change_aoi" = utci_diff_aoi,
       
-      shade_cover_baseline_aoi = shade_cover_baseline_aoi * 100,
-      shade_cover_scenario_aoi = shade_cover_scenario_aoi * 100,
-      shade_cover_change_aoi = shade_diff_aoi,
+      "shade_cover_baseline_aoi" = shade_cover_baseline_aoi * 100,
+      "shade_cover_scenario_aoi" = shade_cover_scenario_aoi * 100,
+      "shade_cover_change_aoi" = shade_diff_aoi * 100,
       
-      mean_utci_baseline_pedestrian = mean_utci_baseline_pedestrian,
-      mean_utci_scenario_pedestrian = mean_utci_scenario_pedestrian,
-      mean_utci_change_pedestrian = utci_diff_pedestrian,
+      "mean_utci_baseline_pedestrian" = mean_utci_baseline_pedestrian,
+      "mean_utci_scenario_pedestrian" = mean_utci_scenario_pedestrian,
+      "mean_utci_change_pedestrian" = utci_diff_pedestrian,
       
-      shade_cover_baseline_pedestrian = shade_cover_baseline_pedestrian * 100,
-      shade_cover_scenario_pedestrian = shade_cover_scenario_pedestrian * 100,
-      shade_cover_change_pedestrian = shade_diff_pedestrian,
+      "shade_cover_baseline_pedestrian" = shade_cover_baseline_pedestrian * 100,
+      "shade_cover_scenario_pedestrian" = shade_cover_scenario_pedestrian * 100,
+      "shade_cover_change_pedestrian" = shade_diff_pedestrian * 100,
       
-      mean_utci_baseline_nonbuilding_areas = mean_utci_baseline_nonbuild,
-      mean_utci_scenario_nonbuilding_areas = mean_utci_scenario_nonbuild,
-      mean_utci_change_nonbuilding_areas = utci_diff_nonbuild,
+      "mean_utci_baseline_nonbuilding_areas" = mean_utci_baseline_nonbuild,
+      "mean_utci_scenario_nonbuilding_areas" = mean_utci_scenario_nonbuild,
+      "mean_utci_change_nonbuilding_areas" = utci_diff_nonbuild,
       
-      shade_cover_baseline_nonbuilding_areas = shade_cover_baseline_nonbuild * 100,
-      shade_cover_scenario_nonbuilding_areas = shade_cover_scenario_nonbuild * 100,
-      shade_cover_change_nonbuilding_areas = shade_diff_nonbuild
+      "shade_cover_baseline_nonbuilding_areas" = shade_cover_baseline_nonbuild * 100,
+      "shade_cover_scenario_nonbuilding_areas" = shade_cover_scenario_nonbuild * 100,
+      "shade_cover_change_nonbuilding_areas" = shade_diff_nonbuild * 100
       
-    ) %>%
+    ) |>
       pivot_longer(
         cols = everything(),
         names_to = "indicators_id",
         values_to = "value"
-      ) %>%
-      rowwise() %>% 
+      ) |>
+      rowwise() |> 
       mutate(
         metric = str_extract(indicators_id, "^[^_]+_[^_]+"),
         metric2 = str_replace(indicators_id, metric, ""),
         indicators_id = paste0(metric, "_", time, metric2),
         -0.33
-      ) %>%
+      ) |>
       select(-metric, -metric2)
     
     
@@ -343,15 +343,15 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   # Load updated trees
   baseline_tree_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/tree-cover__baseline__baseline.tif")
-  baseline_tree_rast <- load_and_merge(baseline_tree_paths) %>% 
-    subst(from = NA, 0) %>% 
-    crop(baseline_utci_rast) %>% 
+  baseline_tree_rast <- load_and_merge(baseline_tree_paths) |> 
+    subst(from = NA, 0) |> 
+    crop(baseline_utci_rast) |> 
     mask(aoi)
   
   scenario_tree_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/tree-cover__trees__{scenario}.tif")
-  scenario_tree_rast <- load_and_merge(scenario_tree_paths) %>% 
-    subst(from = NA, 0) %>% 
-    crop(baseline_utci_rast) %>% 
+  scenario_tree_rast <- load_and_merge(scenario_tree_paths) |> 
+    subst(from = NA, 0) |> 
+    crop(baseline_utci_rast) |> 
     mask(aoi)
   
   # Tree pct
@@ -368,14 +368,14 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   baseline_tree_points <- map_dfr(tiles_aoi, function(time) {
     baseline_utci <- rast(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/utci-1200__baseline__baseline.tif"))
     bbox_sf <- st_as_sf(st_as_sfc(st_bbox(baseline_utci)))
-    st_read(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"), quiet = TRUE) %>%
-      st_filter(bbox_sf) }) %>%
+    st_read(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"), quiet = TRUE) |>
+      st_filter(bbox_sf) }) |>
     st_filter(aoi)
   
   # Extract raster values at each point
   pedestrian_vals <- terra::extract(ped_area_rast, vect(baseline_tree_points))
   baseline_tree_points$pedestrian <- pedestrian_vals[[2]]  # second column is the raster value
-  tree_n_baseline_pedestrian <- nrow(baseline_tree_points %>% filter(pedestrian == 1))
+  tree_n_baseline_pedestrian <- nrow(baseline_tree_points |> filter(pedestrian == 1))
   
   # Scenario
   scenario_tree_points <- st_read(glue("{aws_http}/{scenario_folder}/new-tree-points__trees__{scenario}.geojson"), 
@@ -436,14 +436,14 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
       tree_cover_achievable_pedestrian = target_coverage * 100,
       tree_cover_progress = (tree_cover_scenario_pedestrian - tree_cover_baseline_pedestrian) /
         (tree_cover_achievable_pedestrian - tree_cover_baseline_pedestrian) * 100
-    ) %>% 
+    ) |> 
     pivot_longer(
       cols = everything(),
       names_to = "indicators_id",
       values_to = "value"
     )
   
-  results <- bind_rows(results, tree_metrics) %>% 
+  results <- bind_rows(results, tree_metrics) |> 
     mutate(application_id = "ccl",
            cities_id = city,
            areas_of_interest_id = str_replace(aoi_name, "-", "_"),
@@ -475,7 +475,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   # Load buildings
   building_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/building-areas__baseline__baseline.tif")
-  buildings <- load_and_merge(building_area_paths) %>% 
+  buildings <- load_and_merge(building_area_paths) |> 
     subst(0, NA)
   
   if (str_detect(city, "USA")) {
@@ -508,7 +508,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
       buildings_low & baseline_albedo < alb_target_low,
       alb_target_low,
       baseline_albedo
-    ) %>% ifel(
+    ) |> ifel(
       buildings_high & baseline_albedo < alb_target_high,
       alb_target_high,
       baseline_albedo
@@ -528,19 +528,19 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   # Load AOI and clip layers
   aoi_path <- glue("{aws_http}/{baseline_folder}/aoi__baseline__baseline.geojson")
-  aoi <- st_read(aoi_path) %>% 
+  aoi <- st_read(aoi_path) |> 
     st_transform(st_crs(baseline_albedo))
   
   # Mask albedo to AOI
-  baseline_albedo <- baseline_albedo %>% crop(aoi) %>% mask(aoi)
-  scenario_albedo <- scenario_albedo %>% crop(aoi) %>% mask(aoi)
-  achievable_albedo <- achievable_albedo %>% crop(aoi) %>% mask(aoi)
-  buildings <- buildings %>% crop(aoi) %>% mask(aoi)
+  baseline_albedo <- baseline_albedo |> crop(aoi) |> mask(aoi)
+  scenario_albedo <- scenario_albedo |> crop(aoi) |> mask(aoi)
+  achievable_albedo <- achievable_albedo |> crop(aoi) |> mask(aoi)
+  buildings <- buildings |> crop(aoi) |> mask(aoi)
 
   # Mask albedo to buildings
-  baseline_building_alb <- baseline_albedo %>% mask(buildings)
-  scenario_building_alb <- scenario_albedo %>% mask(buildings)
-  achievable_building_alb <- achievable_albedo %>% mask(buildings)
+  baseline_building_alb <- baseline_albedo |> mask(buildings)
+  scenario_building_alb <- scenario_albedo |> mask(buildings)
+  achievable_building_alb <- achievable_albedo |> mask(buildings)
 
   # baseline_roof_alb <- mean(values(baseline_building_alb), na.rm = TRUE)
   # scenario_roof_alb <- mean(values(scenario_building_alb), na.rm = TRUE)
@@ -552,9 +552,9 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   scenario_met_data <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/met_files/reduced_temps.csv"),
                           skip = 2)
   
-  date <- baseline_met_data %>%
-    slice(1) %>%
-    mutate(date = glue("{Year}_{Month}_{Day}")) %>%
+  date <- baseline_met_data |>
+    slice(1) |>
+    mutate(date = glue("{Year}_{Month}_{Day}")) |>
     pull(date)
   
   # UTCI difference
@@ -562,8 +562,8 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   # Load non-building area raster
   nonbuild_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/non-building-areas__baseline__baseline.tif")
-  nonbuild_area_rast <- load_and_merge(nonbuild_area_paths) %>% 
-    crop(aoi) %>% 
+  nonbuild_area_rast <- load_and_merge(nonbuild_area_paths) |> 
+    crop(aoi) |> 
     mask(aoi)
   
   for (time in timestamps) {
@@ -571,20 +571,20 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     # Mask UTCI to AOI
     baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
     baseline_utci_rast <- load_and_merge(baseline_utci_paths)
-    baseline_utci_rast <- baseline_utci_rast %>% 
-      crop(aoi) %>% 
+    baseline_utci_rast <- baseline_utci_rast |> 
+      crop(aoi) |> 
       mask(aoi) 
     
     scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-{time}__cool-roofs__{scenario}.tif")
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
-    scenario_utci_rast <- scenario_utci_rast %>% 
-      crop(aoi) %>% 
+    scenario_utci_rast <- scenario_utci_rast |> 
+      crop(aoi) |> 
       mask(aoi)
     
     # Compute metrics
-    baseline_utci_avg <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    baseline_utci_avg <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                        subst(from = 0, to = NA)), na.rm = TRUE)
-    scenario_utci_avg <- mean(values(mask(scenario_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    scenario_utci_avg <- mean(values(mask(scenario_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                        subst(from = 0, to = NA)), na.rm = TRUE)
     utci_diff <- scenario_utci_avg - baseline_utci_avg
     
@@ -596,18 +596,18 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
       mean_utci_scenario_nonbuilding_areas = scenario_utci_avg,
       mean_utci_change_nonbuilding_areas = utci_diff
       
-    ) %>%
+    ) |>
       pivot_longer(
         cols = -c(time),
         names_to = "indicators_id",
         values_to = "value"
-      ) %>%
-      rowwise() %>% 
+      ) |>
+      rowwise() |> 
       mutate(
         metric = str_extract(indicators_id, "^[^_]+_[^_]+"),
         metric2 = str_replace(indicators_id, metric, ""),
         indicators_id = paste0(metric, "_", time, metric2)
-      ) %>%
+      ) |>
       select(-time, -metric, -metric2)
     
     
@@ -620,23 +620,23 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   # Cool roof vectors
   buildings_vect_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/buildings__cool-roofs__all-buildings.geojson")
-  buildings_vect <- map_df(buildings_vect_paths, ~ st_read(.)) %>% 
+  buildings_vect <- map_df(buildings_vect_paths, ~ st_read(.)) |> 
     distinct(id, .keep_all = TRUE)
   
-  buildings_scenario <- buildings_vect %>% 
+  buildings_scenario <- buildings_vect |> 
     filter(updated)
   
-  cool_roofs_baseline <- buildings_vect %>% 
+  cool_roofs_baseline <- buildings_vect |> 
     filter(median_alb >= cool_roof_alb)
-  cool_roofs_scenario <- buildings_vect %>% 
+  cool_roofs_scenario <- buildings_vect |> 
     filter(median_alb >= cool_roof_alb | updated)
   
   # Roof albedos
   baseline_roof_alb <- mean(buildings_vect$median_alb, na.rm = TRUE) 
-  scenario_roof_alb <- buildings_vect %>% 
+  scenario_roof_alb <- buildings_vect |> 
     mutate(updated_alb = case_when(updated ~ cool_roof_alb,
-                                   ! updated ~ median_alb)) %>% 
-    summarize(mean = mean(updated_alb, na.rm = TRUE)) %>% 
+                                   ! updated ~ median_alb)) |> 
+    summarize(mean = mean(updated_alb, na.rm = TRUE)) |> 
     pull(mean) 
 
   # total area
@@ -676,20 +676,20 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
       (technical_cool_roof_area - baseline_cool_roof_area) * 100,
     # "progress_cool_roofs" = (baseline_cool_roof_area + change_cool_roof_area) / technical_cool_roof_area * 100,
     
-    "baseline_mean_air_temp_1200" = (baseline_met_data %>% filter(Hour == 12) %>% pull(Temperature)),
-    "baseline_mean_air_temp_1500" = (baseline_met_data %>% filter(Hour == 15) %>% pull(Temperature)),
-    "baseline_mean_air_temp_1800" = (baseline_met_data %>% filter(Hour == 18) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1200" = (scenario_met_data %>% filter(Hour == 12) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1500" = (scenario_met_data %>% filter(Hour == 15) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1800" = (scenario_met_data %>% filter(Hour == 18) %>% pull(Temperature)),
+    "baseline_mean_air_temp_1200" = (baseline_met_data |> filter(Hour == 12) |> pull(Temperature)),
+    "baseline_mean_air_temp_1500" = (baseline_met_data |> filter(Hour == 15) |> pull(Temperature)),
+    "baseline_mean_air_temp_1800" = (baseline_met_data |> filter(Hour == 18) |> pull(Temperature)),
+    "scenario_mean_air_temp_1200" = (scenario_met_data |> filter(Hour == 12) |> pull(Temperature)),
+    "scenario_mean_air_temp_1500" = (scenario_met_data |> filter(Hour == 15) |> pull(Temperature)),
+    "scenario_mean_air_temp_1800" = (scenario_met_data |> filter(Hour == 18) |> pull(Temperature)),
     "change_mean_air_temp_1200" = scenario_mean_air_temp_1200 - baseline_mean_air_temp_1200,
     "change_mean_air_temp_1500" = scenario_mean_air_temp_1500 - baseline_mean_air_temp_1500,
     "change_mean_air_temp_1800" = scenario_mean_air_temp_1800 - baseline_mean_air_temp_1800
-  ) %>% 
-    pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") %>% 
+  ) |> 
+    pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") |> 
     bind_rows(tribble(~ indicators_id, ~ value,
-                      "nonbuilding_area" = nonbuild_area)) %>% 
-    bind_rows(utci_metrics) %>% 
+                      "nonbuilding_area" = nonbuild_area)) |> 
+    bind_rows(utci_metrics) |> 
     mutate(date = date,
            application_id = "ccl",
            cities_id = city,
@@ -732,9 +732,9 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"),
                        skip = 2)
   
-  date <- met_data %>%
-    slice(1) %>%
-    mutate(date = glue("{Year}_{Month}_{Day}")) %>%
+  date <- met_data |>
+    slice(1) |>
+    mutate(date = glue("{Year}_{Month}_{Day}")) |>
     pull(date)
   
   timestamps <- c("1200", "1500", "1800")
@@ -750,7 +750,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     
     scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/utci-{time}__shade-structures__{scenario}.tif")
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
-    scenario_utci_rast <- scenario_utci_rast %>% 
+    scenario_utci_rast <- scenario_utci_rast |> 
       # Fill in baseline where shade didn't change
       mosaic(baseline_utci_rast, fun = "first")
     
@@ -760,7 +760,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     
     scenario_shade_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-{time}__shade-structures__{scenario}.tif")
     scenario_shade_rast <- load_and_merge(scenario_shade_paths) > 0
-    scenario_shade_rast <- scenario_shade_rast %>% 
+    scenario_shade_rast <- scenario_shade_rast |> 
       # Fill in baseline where shade didn't change
       mosaic(baseline_shade_rast, fun = "first")
     
@@ -770,7 +770,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     
     scenario_shade_dist_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-distance-{time}__shade-structures__{scenario}.tif")
     scenario_shade_dist_rast <- load_and_merge(scenario_shade_dist_paths) 
-    scenario_shade_dist_rast <- scenario_shade_dist_rast %>% 
+    scenario_shade_dist_rast <- scenario_shade_dist_rast |> 
       # Fill in baseline where shade didn't change
       mosaic(baseline_shade_dist_rast, fun = "first")
     
@@ -782,8 +782,8 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     shade_cover_change_parks <- shade_cover_scenario_parks - shade_cover_baseline_parks
     
     # area shade in parks
-    # parks <- parks %>% 
-    #   st_transform(st_crs(scenario_shade_rast)) %>% 
+    # parks <- parks |> 
+    #   st_transform(st_crs(scenario_shade_rast)) |> 
     #   mutate(area_sqm = as.numeric(st_area(geometry)),
     #          baseline_shade_area = area_sqm * shade_cover_baseline_parks,
     #          scenario_shade_area = area_sqm * shade_cover_scenario_parks)
@@ -805,15 +805,15 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     # Store results
     metrics <- tibble(
       
-      time = time,
+      "time" = time,
       
-      mean_utci_baseline_parks = mean_utci_baseline_parks,
-      mean_utci_scenario_parks = mean_utci_scenario_parks,
-      mean_utci_change_parks = mean_utci_change_parks,
+      "baseline_mean_utci_parks" = mean_utci_baseline_parks,
+      "scenario_mean_utci_parks" = mean_utci_scenario_parks,
+      "change_mean_utci_parks" = mean_utci_change_parks,
       
-      shade_cover_baseline_parks = shade_cover_baseline_parks * 100,
-      shade_cover_scenario_parks = shade_cover_scenario_parks * 100,
-      shade_cover_change_parks = shade_cover_change_parks * 100,
+      "baseline_park_shade_cover" = shade_cover_baseline_parks * 100,
+      "scenario_park_shade_cover" = shade_cover_scenario_parks * 100,
+      "change_park_shade_cover" = shade_cover_change_parks * 100,
       
       mean_distance_shade_cover_baseline_parks = mean_distance_shade_cover_baseline_parks,
       mean_distance_shade_cover_scenario_parks = mean_distance_shade_cover_scenario_parks,
@@ -832,30 +832,33 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     results <- bind_rows(results, metrics)
   }
   
-  results_long <- results %>%
+  results_long <- results  |> 
     pivot_longer(
       cols = -c(time),
       names_to = "indicators_id",
       values_to = "value"
-    ) %>%
+    )  |> 
     separate(
       indicators_id,
       into = c("indicator", "scenario"),
       sep = "_(?=[^_]+_[^_]+$)"
     ) |> 
-    mutate(indicators_id = paste0(indicator, "_", time, "_", scenario)) %>% 
+    mutate(indicators_id = case_when(str_detect(indicator, "distance") ~ 
+                                       paste0(indicator, "_", time, "_", scenario),
+                                     TRUE ~ paste0(indicator, "_", scenario, "_", time))) |> 
     bind_rows(tribble(~ indicators_id, ~ value,
                       "new_shade_structures", nrow(shade_structures),
-                      "park_area" = park_area)) %>% 
+                      "park_area", park_area)) |> 
     mutate(
       date = date,
       application_id = "ccl",
       cities_id = city,
       areas_of_interest_id = aoi_name,
       interventions_id = "shade-structures",
-      scenarios_id = scenario
-    ) %>%
-    select(-time)
+      scenarios_id = scenario,
+      value = round(value, 2)
+    ) |>
+    select(-time, -indicator, -scenario) 
   
   # Save results
   ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
@@ -875,9 +878,9 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   scenario_met_data <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/met_files/reduced_temps.csv"),
                                 skip = 2)
   
-  date <- baseline_met_data %>%
-    slice(1) %>%
-    mutate(date = glue("{Year}_{Month}_{Day}")) %>%
+  date <- baseline_met_data |>
+    slice(1) |>
+    mutate(date = glue("{Year}_{Month}_{Day}")) |>
     pull(date)
   
   # Load AOI and clip layers
@@ -888,9 +891,9 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   ped_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/pedestrian-areas__baseline__baseline.tif")
   ped_area_rast <- load_and_merge(ped_area_paths) 
   
-  aoi <- aoi %>%
+  aoi <- aoi |>
     st_transform(st_crs(ped_area_rast))
-  ped_area_rast <- ped_area_rast %>% 
+  ped_area_rast <- ped_area_rast |> 
     mask(aoi)
   
   pedestrian_area <- sum(values(ped_area_rast) != 0, na.rm = TRUE)
@@ -899,7 +902,7 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   nonbuild_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/non-building-areas__baseline__baseline.tif")
   nonbuild_area_rast <- load_and_merge(nonbuild_area_paths) 
   
-  nonbuild_area_rast <- nonbuild_area_rast %>% 
+  nonbuild_area_rast <- nonbuild_area_rast |> 
     mask(aoi)
   
   # Initialize results list
@@ -915,36 +918,36 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     # Load shade raster and mask to AOI
     baseline_shade_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-{time}__baseline__baseline.tif")
     baseline_shade_rast <- load_and_merge(baseline_shade_paths) 
-    baseline_shade_rast <- baseline_shade_rast %>% 
+    baseline_shade_rast <- baseline_shade_rast |> 
       mask(aoi) > 0
     
     scenario_shade_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/shade-{time}__{infra}__{scenario}.tif")
     scenario_shade_rast <- load_and_merge(scenario_shade_paths) 
-    scenario_shade_rast <- scenario_shade_rast %>% 
+    scenario_shade_rast <- scenario_shade_rast |> 
       mask(aoi) > 0
     
     # Mask UTCI to AOI
     baseline_utci_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/utci-{time}__baseline__baseline.tif")
     baseline_utci_rast <- load_and_merge(baseline_utci_paths)
-    baseline_utci_rast <- baseline_utci_rast %>% 
+    baseline_utci_rast <- baseline_utci_rast |> 
       mask(aoi)
     
     scenario_utci_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-{time}__{infra}__{scenario}.tif")
     scenario_utci_rast <- load_and_merge(scenario_utci_paths)
-    scenario_utci_rast <- scenario_utci_rast %>% 
+    scenario_utci_rast <- scenario_utci_rast |> 
       mask(aoi)
     
-    ped_area_rast_crop <- ped_area_rast %>% 
+    ped_area_rast_crop <- ped_area_rast |> 
       crop(baseline_utci_rast)
     
-    nonbuild_area_rast <- nonbuild_area_rast %>% 
+    nonbuild_area_rast <- nonbuild_area_rast |> 
       crop(baseline_utci_rast)
     
     # Compute metrics
     # UTCI AOI
-    mean_utci_baseline_aoi <- mean(values(baseline_utci_rast %>% 
+    mean_utci_baseline_aoi <- mean(values(baseline_utci_rast |> 
                                             subst(0, NA)), na.rm = TRUE)
-    mean_utci_scenario_aoi <- mean(values(scenario_utci_rast %>% 
+    mean_utci_scenario_aoi <- mean(values(scenario_utci_rast |> 
                                             subst(0, NA)), na.rm = TRUE)
     utci_diff_aoi <- mean_utci_scenario_aoi - mean_utci_baseline_aoi
     
@@ -954,9 +957,9 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     shade_diff_aoi <- shade_cover_scenario_aoi - shade_cover_baseline_aoi
     
     # UTCI pedestrian
-    mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast_crop, maskvalues = 0) %>% 
+    mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast_crop, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
-    mean_utci_scenario_pedestrian <- mean(values(mask(scenario_utci_rast, ped_area_rast_crop, maskvalues = 0) %>% 
+    mean_utci_scenario_pedestrian <- mean(values(mask(scenario_utci_rast, ped_area_rast_crop, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
     utci_diff_pedestrian <- mean_utci_scenario_pedestrian - mean_utci_baseline_pedestrian
     
@@ -966,9 +969,9 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     shade_diff_pedestrian <- shade_cover_scenario_pedestrian - shade_cover_baseline_pedestrian
     
     # UTCI nonbuild
-    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                  subst(0, NA)), na.rm = TRUE)
-    mean_utci_scenario_nonbuild <- mean(values(mask(scenario_utci_rast, nonbuild_area_rast, maskvalues = 0) %>% 
+    mean_utci_scenario_nonbuild <- mean(values(mask(scenario_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                  subst(0, NA)), na.rm = TRUE)
     utci_diff_nonbuild <- mean_utci_scenario_nonbuild - mean_utci_baseline_nonbuild
     
@@ -1004,18 +1007,18 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       shade_cover_scenario_nonbuilding_areas = shade_cover_scenario_nonbuild * 100,
       shade_cover_change_nonbuilding_areas = shade_diff_nonbuild
       
-    ) %>%
+    ) |>
       pivot_longer(
         cols = everything(),
         names_to = "indicators_id",
         values_to = "value"
-      ) %>%
-      rowwise() %>% 
+      ) |>
+      rowwise() |> 
       mutate(
         metric = str_extract(indicators_id, "^[^_]+_[^_]+"),
         metric2 = str_replace(indicators_id, metric, ""),
         indicators_id = paste0(metric, "_", time, metric2)
-      ) %>%
+      ) |>
       select(-metric, -metric2)
     
     
@@ -1025,15 +1028,15 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   
   # Load updated trees
   baseline_tree_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/tree-cover__baseline__baseline.tif")
-  baseline_tree_rast <- load_and_merge(baseline_tree_paths) %>% 
-    subst(from = NA, 0) %>% 
-    crop(baseline_utci_rast) %>% 
+  baseline_tree_rast <- load_and_merge(baseline_tree_paths) |> 
+    subst(from = NA, 0) |> 
+    crop(baseline_utci_rast) |> 
     mask(aoi)
   
   scenario_tree_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/tree-cover__{infra}__{scenario}.tif")
-  scenario_tree_rast <- load_and_merge(scenario_tree_paths) %>% 
-    subst(from = NA, 0) %>% 
-    crop(baseline_utci_rast) %>% 
+  scenario_tree_rast <- load_and_merge(scenario_tree_paths) |> 
+    subst(from = NA, 0) |> 
+    crop(baseline_utci_rast) |> 
     mask(aoi)
   
   # Tree pct
@@ -1050,14 +1053,14 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   baseline_tree_points <- map_dfr(tiles_aoi, function(time) {
     baseline_utci <- rast(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/utci-1200__baseline__baseline.tif"))
     bbox_sf <- st_as_sf(st_as_sfc(st_bbox(baseline_utci)))
-    st_read(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"), quiet = TRUE) %>%
-      st_filter(bbox_sf) }) %>%
+    st_read(glue("{aws_http}/{baseline_folder}/{time}/ccl_layers/tree-points__baseline__baseline.geojson"), quiet = TRUE) |>
+      st_filter(bbox_sf) }) |>
     st_filter(aoi)
   
   # Extract raster values at each point
   pedestrian_vals <- terra::extract(ped_area_rast_crop, vect(baseline_tree_points))
   baseline_tree_points$pedestrian <- pedestrian_vals[[2]]  # second column is the raster value
-  tree_n_baseline_pedestrian <- nrow(baseline_tree_points %>% filter(pedestrian == 1))
+  tree_n_baseline_pedestrian <- nrow(baseline_tree_points |> filter(pedestrian == 1))
   
   # Scenario
   scenario_tree_points <- st_read(glue("{aws_http}/{scenario_folder}/new-tree-points__{infra}__{scenario}.geojson"), 
@@ -1103,24 +1106,24 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   
   tree_metrics <- 
     tibble(
-      tree_cover_baseline_aoi = tree_cover_baseline_aoi * 100,
-      tree_cover_scenario_aoi = tree_cover_scenario_aoi * 100,
-      tree_cover_change_aoi = tree_cover_change_aoi * 100,
+      "tree_cover_baseline_aoi" = tree_cover_baseline_aoi * 100,
+      "tree_cover_scenario_aoi" = tree_cover_scenario_aoi * 100,
+      "tree_cover_change_aoi" = tree_cover_change_aoi * 100,
       
-      tree_cover_baseline_pedestrian = tree_cover_baseline_pedestrian * 100,
-      tree_cover_scenario_pedestrian = tree_cover_scenario_pedestrian * 100,
-      tree_cover_change_pedestrian = tree_cover_change_pedestrian * 100,
+      "tree_cover_baseline_pedestrian" = tree_cover_baseline_pedestrian * 100,
+      "tree_cover_scenario_pedestrian" = tree_cover_scenario_pedestrian * 100,
+      "tree_cover_change_pedestrian" = tree_cover_change_pedestrian * 100,
       
-      tree_n_baseline_pedestrian = tree_n_baseline_pedestrian,
-      tree_n_change_pedestrian = tree_n_scenario_pedestrian,
-      tree_n_scenario_pedestrian = tree_n_scenario_pedestrian + tree_n_baseline_pedestrian,
+      "tree_n_baseline_pedestrian" = tree_n_baseline_pedestrian,
+      "tree_n_change_pedestrian" = tree_n_scenario_pedestrian,
+      "tree_n_scenario_pedestrian" = tree_n_scenario_pedestrian + tree_n_baseline_pedestrian,
       
-      tree_cover_achievable_pedestrian = target_coverage * 100,
-      tree_cover_progress = (tree_cover_baseline_pedestrian - tree_cover_scenario_pedestrian) /
+      "tree_cover_achievable_pedestrian" = target_coverage * 100,
+      "tree_cover_progress" = (tree_cover_baseline_pedestrian - tree_cover_scenario_pedestrian) /
         (tree_cover_baseline_pedestrian - tree_cover_achievable_pedestrian) * 100,
       
-      pedestrian_area = pedestrian_area
-    ) %>% 
+      "pedestrian_area" = pedestrian_area
+    ) |> 
     pivot_longer(
       cols = everything(),
       names_to = "indicators_id",
@@ -1138,7 +1141,7 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   
   # Load buildings
   building_area_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/building-areas__baseline__baseline.tif")
-  buildings <- load_and_merge(building_area_paths) %>% 
+  buildings <- load_and_merge(building_area_paths) |> 
     subst(0, NA)
   
   if (str_detect(city, "USA")) {
@@ -1171,7 +1174,7 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       buildings_low & baseline_albedo < alb_target_low,
       alb_target_low,
       baseline_albedo
-    ) %>% ifel(
+    ) |> ifel(
       buildings_high & baseline_albedo < alb_target_high,
       alb_target_high,
       baseline_albedo
@@ -1189,15 +1192,15 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   }
   
   # Mask albedo to AOI
-  baseline_albedo <- baseline_albedo %>% crop(aoi) %>% mask(aoi)
-  scenario_albedo <- scenario_albedo %>% crop(aoi) %>% mask(aoi)
-  achievable_albedo <- achievable_albedo %>% crop(aoi) %>% mask(aoi)
-  buildings <- buildings %>% crop(aoi) %>% mask(aoi)
+  baseline_albedo <- baseline_albedo |> crop(aoi) |> mask(aoi)
+  scenario_albedo <- scenario_albedo |> crop(aoi) |> mask(aoi)
+  achievable_albedo <- achievable_albedo |> crop(aoi) |> mask(aoi)
+  buildings <- buildings |> crop(aoi) |> mask(aoi)
   
   # Mask albedo to buildings
-  baseline_building_alb <- baseline_albedo %>% mask(buildings)
-  scenario_building_alb <- scenario_albedo %>% mask(buildings)
-  achievable_building_alb <- achievable_albedo %>% mask(buildings)
+  baseline_building_alb <- baseline_albedo |> mask(buildings)
+  scenario_building_alb <- scenario_albedo |> mask(buildings)
+  achievable_building_alb <- achievable_albedo |> mask(buildings)
   
   # baseline_roof_alb <- mean(values(baseline_building_alb), na.rm = TRUE)
   # scenario_roof_alb <- mean(values(scenario_building_alb), na.rm = TRUE)
@@ -1208,23 +1211,23 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   
   # Cool roof vectors
   buildings_vect_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/buildings__{infra}__{scenario}.geojson")
-  buildings_vect <- map_df(buildings_vect_paths, ~ st_read(.)) %>% 
+  buildings_vect <- map_df(buildings_vect_paths, ~ st_read(.)) |> 
     distinct(id, .keep_all = TRUE)
   
-  buildings_scenario <- buildings_vect %>% 
+  buildings_scenario <- buildings_vect |> 
     filter(updated)
   
-  cool_roofs_baseline <- buildings_vect %>% 
+  cool_roofs_baseline <- buildings_vect |> 
     filter(median_alb >= cool_roof_alb)
-  cool_roofs_scenario <- buildings_vect %>% 
+  cool_roofs_scenario <- buildings_vect |> 
     filter(median_alb >= cool_roof_alb | updated)
   
   # Roof albedos
   baseline_roof_alb <- mean(buildings_vect$median_alb, na.rm = TRUE) 
-  scenario_roof_alb <- buildings_vect %>% 
+  scenario_roof_alb <- buildings_vect |> 
     mutate(updated_alb = case_when(updated ~ cool_roof_alb,
-                                   ! updated ~ median_alb)) %>% 
-    summarize(mean = mean(updated_alb, na.rm = TRUE)) %>% 
+                                   ! updated ~ median_alb)) |> 
+    summarize(mean = mean(updated_alb, na.rm = TRUE)) |> 
     pull(mean) 
   
   # total area
@@ -1241,7 +1244,7 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   utci_diff_1500_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-1500__{infra}__{scenario}__vs-baseline.tif")
   # Area of UTCI decrease  
   utci_diff_1500_rast <- load_and_merge(utci_diff_1500_paths) 
-  utci_diff_1500_rast <- utci_diff_1500_rast %>% 
+  utci_diff_1500_rast <- utci_diff_1500_rast |> 
     mask(aoi)
   
   utci_decrease_pct <- global(utci_diff_1500_rast < 0, "mean", na.rm = TRUE)[1, 1] * 100
@@ -1275,18 +1278,18 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       (technical_cool_roof_area - baseline_cool_roof_area) * 100,
     # "progress_cool_roofs" = (baseline_cool_roof_area + change_cool_roof_area) / technical_cool_roof_area * 100,
     
-    "baseline_mean_air_temp_1200" = (baseline_met_data %>% filter(Hour == 12) %>% pull(Temperature)),
-    "baseline_mean_air_temp_1500" = (baseline_met_data %>% filter(Hour == 15) %>% pull(Temperature)),
-    "baseline_mean_air_temp_1800" = (baseline_met_data %>% filter(Hour == 18) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1200" = (scenario_met_data %>% filter(Hour == 12) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1500" = (scenario_met_data %>% filter(Hour == 15) %>% pull(Temperature)),
-    "scenario_mean_air_temp_1800" = (scenario_met_data %>% filter(Hour == 18) %>% pull(Temperature)),
+    "baseline_mean_air_temp_1200" = (baseline_met_data |> filter(Hour == 12) |> pull(Temperature)),
+    "baseline_mean_air_temp_1500" = (baseline_met_data |> filter(Hour == 15) |> pull(Temperature)),
+    "baseline_mean_air_temp_1800" = (baseline_met_data |> filter(Hour == 18) |> pull(Temperature)),
+    "scenario_mean_air_temp_1200" = (scenario_met_data |> filter(Hour == 12) |> pull(Temperature)),
+    "scenario_mean_air_temp_1500" = (scenario_met_data |> filter(Hour == 15) |> pull(Temperature)),
+    "scenario_mean_air_temp_1800" = (scenario_met_data |> filter(Hour == 18) |> pull(Temperature)),
     "change_mean_air_temp_1200" = scenario_mean_air_temp_1200 - baseline_mean_air_temp_1200,
     "change_mean_air_temp_1500" = scenario_mean_air_temp_1500 - baseline_mean_air_temp_1500,
     "change_mean_air_temp_1800" = scenario_mean_air_temp_1800 - baseline_mean_air_temp_1800,
-    "mean_air_temp_1500_change_impact_areas" = (-0.33 * tree_cover_change_aoi) + change_mean_air_temp_1500
-  ) %>% 
-    pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") %>% 
+    "mean_air_temp_1500_change_impact_areas" = (-3.3 * tree_cover_change_aoi) + change_mean_air_temp_1500
+  ) |> 
+    pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") |> 
     bind_rows(tribble(
       ~indicators_id, ~value,
       "nonbuilding_area", nonbuild_area,
@@ -1297,8 +1300,8 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       
       #### TODO change when we have real AT data, rename
       "air_temp_reduction_1500_impact_area", 100
-    )) %>% 
-    bind_rows(results) %>% 
+    )) |> 
+    bind_rows(results) |> 
     mutate(date = date,
            application_id = "ccl",
            cities_id = city,

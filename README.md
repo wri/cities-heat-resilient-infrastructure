@@ -98,7 +98,7 @@ Currently available infrastructures and scenarios are:
 | infra_id | scenario_id | Definition |
 | ----- | ----- | ----- |
 | baseline | baseline\* | Baseline layers |
-| trees | pedestrian-achievable-90pctl | Street trees achievable |
+| trees | pedestrian-achievable-90pctl\* | Street trees achievable |
 | cool-roofs | all-buildings | Cool roofs on all buildings |
 | | large-buildings | Cool roofs on large buildings |
 | cool-roofs_trees | all-buildings_pedestrian-achievable-90pctl | Combination cool roofs and street trees achievable |
@@ -107,6 +107,7 @@ Currently available infrastructures and scenarios are:
 \* Current behavior if baseline is flagged to generate is to process existing baseline data
 to the necessary CCL layers and calculate metrics. This **does not** run the baseline
 CTCM.
+\* Running the pedestrian-achievable-90pctl tree scenario requires that the [Opportunity Layers](https://github.com/wri/cities-OpenUrban?tab=readme-ov-file#-generate-opportunity-layers) have been generated for a city. Generation of the scenario requires a geojson file that is created during this process.
 
 Notes:
 

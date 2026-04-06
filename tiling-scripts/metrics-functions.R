@@ -688,7 +688,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   ) |> 
     pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") |> 
     bind_rows(tribble(~ indicators_id, ~ value,
-                      "nonbuilding_area" = nonbuild_area)) |> 
+                      "nonbuilding_area", nonbuild_area)) |> 
     bind_rows(utci_metrics) |> 
     mutate(date = date,
            application_id = "ccl",

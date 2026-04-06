@@ -67,12 +67,13 @@ Example:
 
 ```bash
 Rscript run-scenarios.R \
-  --plan 'BRA-Campinas@accelerator_area|aoi_path=DEFAULT|copy_baseline=urban_extent:
+  --plan 'BRA-Campinas@accelerator_area|aoi_path="http//wri-cities-tcm...."|copy_baseline=urban_extent:
             baseline:baseline[g],
             trees:pedestrian-achievable-90pctl[gdcp],
-            cool-roofs:all-buildings[dcp];
+            cool-roofs:all-buildings[gdcp],
+            cool-roofs_trees:all-buildings_pedestrian-achievable-90pctl[gdcp];
           ZAF-Cape_Town@business_district|aoi_path=DEFAULT|copy_baseline=false:
-            cool-roofs:all-buildings[dcp]'
+            cool-roofs:all-buildings[gdcp]'
 ```
 
 To automatically terminate the EC2 instance after all groups finish add

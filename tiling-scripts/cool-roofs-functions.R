@@ -209,7 +209,7 @@ update_albedo <- function(city = city,
 
       # Rasterize buildings
       build_rast <- rasterize(tile_buildings_s, albedo, field = "cool_roof_alb",
-                              touches = TRUE, background = NA)
+                              background = NA)
 
       # Mask albedo
       updated_albedo <- terra::ifel(

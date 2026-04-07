@@ -153,3 +153,20 @@ screen -r chri
 nohup Rscript run-scenarios.R --plan '...' > run.log 2>&1 &
 tail -f run.log
 ```
+
+## Testing
+
+An AOI exists for testing the workflow—a small area in Cape Town. The aoi is sized
+such that it requires only one CTCM tile and has features that meet the requirements
+to get updated in all scenario scripts. The AOI boundary file is found at `https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/ZAF-Cape_Town_TEST/boundaries/city_polygon.geojson`.
+
+To generate all scenarios for the test AOI, run:
+
+```bash
+Rscript run-scenarios.R \
+  --plan 'ZAF-Cape_Town@TEST|aoi_path="https://wri-cities-tcm.s3.us-east-1.amazonaws.com/OpenUrban/ZAF-Cape_Town_TEST/boundaries/city_polygon.geojson"|copy_baseline=urban_extent:
+            baseline:baseline[g],
+            trees:pedestrian-achievable-90pctl[gdcp],
+            cool-roofs:all-buildings[gdcp],
+            cool-roofs_trees:all-buildings_pedestrian-achievable-90pctl[gdcp]'
+```

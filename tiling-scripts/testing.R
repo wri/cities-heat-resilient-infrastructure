@@ -15,13 +15,13 @@ source(here("tiling-scripts", "post-processing-functions.R"))
 
 cities_to_run <- tribble(
   ~c, ~aoi_name,
-  # "BRA-Rio_de_Janeiro", "low_emission_zone",
-  # "MEX-Monterrey", "mitras_centro",
-  # "BRA-Teresina", "accelerator_area_big",
-  # "ARG-Buenos_Aires", "cildenez_padre_rodolfo_ricciardelli",
-  # "ZAF-Johannesburg", "jukskei-river",
-  # "ZAF-Cape_Town", "business_district",
-  # "IND-Bhopal", "tt_nagar",
+  "BRA-Rio_de_Janeiro", "low_emission_zone",
+  "MEX-Monterrey", "mitras_centro",
+  "BRA-Teresina", "accelerator_area_big",
+  "ARG-Buenos_Aires", "cildenez_padre_rodolfo_ricciardelli",
+  "ZAF-Johannesburg", "jukskei-river",
+  "ZAF-Cape_Town", "business_district",
+  "IND-Bhopal", "tt_nagar",
   "BRA-Campinas", "accelerator_area",
   "BRA-Florianopolis", "accelerator_area",
   "BRA-Fortaleza", "accelerator_area",
@@ -31,7 +31,7 @@ cities_to_run <- tribble(
 
 for (city in cities_to_run$c){
     print(city)
-    # city <- "ZAF-Cape_Town"
+    city <- "ZAF-Cape_Town"
     # aoi_name <- "business_district"
     aoi_name <- cities_to_run |> 
       filter(c == city) |> 
@@ -72,18 +72,21 @@ for (city in cities_to_run$c){
       st_filter(aoi) 
     tiles_aoi <- tile_grid_aoi$tile_name
     
-    infra <- "cool-roofs_trees"
-    scenario <- "all-buildings_pedestrian-achievable-90pctl"
+    infra <- "trees"
+    scenario <- "pedestrian-achievable-90pctl"
+    
+    # infra <- "cool-roofs_trees"
+    # scenario <- "all-buildings_pedestrian-achievable-90pctl"
     scenario_folder <- file.path(city_folder, "scenarios", infra, scenario)
     
-    cool_roof_tree_combo(city,aoi_name,aws_http,
-                                     city_folder,
-                                     baseline_folder,
-                                     infra,
-                                     scenario,
-                                     tiles_aoi,
-                                     buffered_tile_grid) 
-    calc_cool_roofs_trees_metrics(city, aoi_name, tiles_aoi, infra, scenario)
+    # cool_roof_tree_combo(city,aoi_name,aws_http,
+    #                                  city_folder,
+    #                                  baseline_folder,
+    #                                  infra,
+    #                                  scenario,
+    #                                  tiles_aoi,
+    #                                  buffered_tile_grid) 
+    # calc_cool_roofs_trees_metrics(city, aoi_name, tiles_aoi, infra, scenario)
     
     # process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
     # calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)

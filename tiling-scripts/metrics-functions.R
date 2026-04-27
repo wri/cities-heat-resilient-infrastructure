@@ -74,21 +74,32 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
     nonbuild_area_rast <- nonbuild_area_rast |> 
       crop(baseline_utci_rast)
     
+    baseline_shade_dist_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-distance-{time}__baseline__baseline.tif")
+    baseline_shade_dist_rast <- load_and_merge(baseline_shade_dist_paths) |> 
+      mask(aoi) > 0
+    
     # Compute metrics
+    # AOI
     mean_utci_baseline_aoi <- mean(values(baseline_utci_rast |> 
                                                    subst(0, NA)), na.rm = TRUE)
-    
     shade_cover_baseline_aoi <- mean(values(baseline_shade_rast), na.rm = TRUE) 
+    mean_distance_shade_cover_baseline_aoi <- mean(values(baseline_shade_dist_rast), na.rm = TRUE)
     
+    # Pedestrian area
     mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) |> 
                                        subst(0, NA)), na.rm = TRUE)
-    
     shade_cover_baseline_pedestrian <- mean(values(mask(baseline_shade_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE)) 
+    mean_distance_shade_cover_baseline_pedestrian <- mean(values(mask(baseline_shade_dist_rast, ped_area_rast, maskvalues = 0), 
+                                                                 na.rm = TRUE))
     
-    mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
+    # Non-building areas
+    mean_utci_baseline_nonbuilding_areas <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
-    
-    shade_cover_baseline_nonbuild <- mean(values(mask(baseline_shade_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE)) 
+    shade_cover_baseline_nonbuilding_areas <- mean(values(mask(baseline_shade_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE)) 
+    mean_distance_shade_cover_baseline_nonbuilding_areas <- mean(values(mask(baseline_shade_dist_rast, 
+                                                                             nonbuild_area_rast, 
+                                                                             maskvalues = 0), 
+                                                                 na.rm = TRUE))
     
     # Store results
     metrics <- tibble(
@@ -96,8 +107,11 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
       shade_cover_baseline_aoi = shade_cover_baseline_aoi * 100,
       mean_utci_baseline_pedestrian = mean_utci_baseline_pedestrian,
       shade_cover_baseline_pedestrian = shade_cover_baseline_pedestrian * 100,
-      mean_utci_baseline_nonbuild = mean_utci_baseline_nonbuild,
-      shade_cover_baseline_nonbuild = shade_cover_baseline_nonbuild * 100
+      mean_utci_baseline_nonbuilding_areas = mean_utci_baseline_nonbuilding_areas,
+      shade_cover_baseline_nonbuilding_areas = shade_cover_baseline_nonbuilding_areas * 100,
+      mean_distance_shade_cover_baseline_parks = mean_distance_shade_cover_baseline_aoi,
+      mean_distance_shade_cover_baseline_pedestrian = mean_distance_shade_cover_baseline_pedestrian,
+      mean_distance_shade_cover_baseline_nonbuilding_areas = mean_distance_shade_cover_baseline_nonbuilding_areas
     ) |>
       pivot_longer(
         cols = everything(),
@@ -116,7 +130,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi){
     results <- bind_rows(results, metrics)
   }
   
-  # Load updated trees
+  # Load trees
   baseline_tree_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/tree-cover__baseline__baseline.tif")
   baseline_tree_rast <- load_and_merge(baseline_tree_paths) |> 
     subst(from = NA, 0) |> 
@@ -251,6 +265,18 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     scenario_utci_rast <- scenario_utci_rast |> 
       mask(aoi)
     
+    # Mask shade distance to AOI
+    baseline_shade_dist_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-distance-{time}__baseline__baseline.tif")
+    baseline_shade_dist_rast <- load_and_merge(baseline_shade_dist_paths) |> 
+      mask(aoi)
+    
+    scenario_shade_dist_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-distance-{time}__shade-structures__{scenario}.tif")
+    scenario_shade_dist_rast <- load_and_merge(scenario_shade_dist_paths) 
+    scenario_shade_dist_rast <- scenario_shade_dist_rast |> 
+      # Fill in baseline where shade didn't change
+      mosaic(baseline_shade_dist_rast, fun = "first") |> 
+      mask(aoi)
+    
     ped_area_rast <- ped_area_rast |> 
       crop(baseline_utci_rast)
     
@@ -265,10 +291,24 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
                                             subst(0, NA)), na.rm = TRUE)
     utci_diff_aoi <- mean_utci_scenario_aoi - mean_utci_baseline_aoi
     
+    utci_diff_paths <- glue("{aws_http}/{scenario_folder}/{tiles_aoi}/ccl_layers/utci-{time}__{infra}__{scenario}__vs-baseline.tif")
+    # Area of UTCI decrease  
+    utci_diff_rast <- load_and_merge(utci_diff_paths) 
+    utci_diff_rast <- utci_diff_rast |> 
+      mask(aoi)
+    
+    utci_decrease_pct <- global(utci_diff_rast < 0, "mean", na.rm = TRUE)[1, 1] * 100
+    max_utci_decrease <- global(utci_diff_rast, "max", na.rm = TRUE)[1, 1]
+    mean_utci_decrease <- global(utci_diff_rast, "mean", na.rm = TRUE)[1, 1]
+    
     # Shade AOI
     shade_cover_baseline_aoi <- mean(values(baseline_shade_rast), na.rm = TRUE)
     shade_cover_scenario_aoi <- mean(values(scenario_shade_rast), na.rm = TRUE)
     shade_diff_aoi <- shade_cover_scenario_aoi - shade_cover_baseline_aoi
+    
+    mean_distance_shade_cover_baseline_aoi <- mean(values(baseline_shade_dist_rast), na.rm = TRUE)
+    mean_distance_shade_cover_scenario_aoi <- mean(values(scenario_shade_dist_rast), na.rm = TRUE)
+    mean_distance_shade_cover_change_aoi <- mean_distance_shade_cover_scenario_aoi - mean_distance_shade_cover_baseline_aoi
     
     # UTCI pedestrian
     mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast, maskvalues = 0) |> 
@@ -282,6 +322,10 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     shade_cover_scenario_pedestrian <- mean(values(mask(scenario_shade_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE)) 
     shade_diff_pedestrian <- shade_cover_scenario_pedestrian - shade_cover_baseline_pedestrian
     
+    mean_distance_shade_cover_baseline_pedestrian <- mean(values(mask(baseline_shade_dist_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE))
+    mean_distance_shade_cover_scenario_pedestrian <- mean(values(mask(scenario_shade_dist_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE))
+    mean_distance_shade_cover_change_pedestrian <- mean_distance_shade_cover_scenario_pedestrian - mean_distance_shade_cover_baseline_pedestrian
+    
     # UTCI nonbuild
     mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
                                                  subst(0, NA)), na.rm = TRUE)
@@ -294,6 +338,11 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     shade_cover_scenario_nonbuild <- mean(values(mask(scenario_shade_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE)) 
     shade_diff_nonbuild <- shade_cover_scenario_nonbuild - shade_cover_baseline_nonbuild
     
+    mean_distance_shade_cover_baseline_nonbuild <- mean(values(mask(baseline_shade_dist_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE))
+    mean_distance_shade_cover_scenario_nonbuild <- mean(values(mask(scenario_shade_dist_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE))
+    mean_distance_shade_cover_change_nonbuild <- mean_distance_shade_cover_scenario_nonbuild - mean_distance_shade_cover_baseline_nonbuild
+    
+    
     # Store results
     metrics <- tibble(
       
@@ -305,6 +354,10 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
       "shade_cover_scenario_aoi" = shade_cover_scenario_aoi * 100,
       "shade_cover_change_aoi" = shade_diff_aoi * 100,
       
+      "mean_distance_shade_cover_baseline_aoi" = mean_distance_shade_cover_baseline_aoi,
+      "mean_distance_shade_cover_scenario_aoi" = mean_distance_shade_cover_scenario_aoi,
+      "mean_distance_shade_cover_change_aoi" = mean_distance_shade_cover_change_aoi,
+      
       "mean_utci_baseline_pedestrian" = mean_utci_baseline_pedestrian,
       "mean_utci_scenario_pedestrian" = mean_utci_scenario_pedestrian,
       "mean_utci_change_pedestrian" = utci_diff_pedestrian,
@@ -313,13 +366,26 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
       "shade_cover_scenario_pedestrian" = shade_cover_scenario_pedestrian * 100,
       "shade_cover_change_pedestrian" = shade_diff_pedestrian * 100,
       
+      "mean_distance_shade_cover_baseline_pedestrian" = mean_distance_shade_cover_baseline_pedestrian,
+      "mean_distance_shade_cover_scenario_pedestrian" = mean_distance_shade_cover_scenario_pedestrian,
+      "mean_distance_shade_cover_change_pedestrian" = mean_distance_shade_cover_change_pedestrian,
+      
       "mean_utci_baseline_nonbuilding_areas" = mean_utci_baseline_nonbuild,
       "mean_utci_scenario_nonbuilding_areas" = mean_utci_scenario_nonbuild,
       "mean_utci_change_nonbuilding_areas" = utci_diff_nonbuild,
       
       "shade_cover_baseline_nonbuilding_areas" = shade_cover_baseline_nonbuild * 100,
       "shade_cover_scenario_nonbuilding_areas" = shade_cover_scenario_nonbuild * 100,
-      "shade_cover_change_nonbuilding_areas" = shade_diff_nonbuild * 100
+      "shade_cover_change_nonbuilding_areas" = shade_diff_nonbuild * 100,
+      
+      "mean_distance_shade_cover_baseline_nonbuilding_areas" = mean_distance_shade_cover_baseline_nonbuild,
+      "mean_distance_shade_cover_scenario_nonbuilding_areas" = mean_distance_shade_cover_scenario_nonbuild,
+      "mean_distance_shade_cover_change_nonbuilding_areas" = mean_distance_shade_cover_change_nonbuild,
+      
+      "max_utci_change_impact_areas" = max_utci_decrease,
+      "mean_utci_change_impact_areas" = mean_utci_decrease,
+      "utci_reduction_impact_area" = utci_decrease_pct
+      
       
     ) |>
       pivot_longer(
@@ -334,10 +400,11 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
         indicators_id = paste0(metric, "_", time, metric2),
         -0.33
       ) |>
-      select(-metric, -metric2)
+      select(-metric, -metric2) 
     
     
-    results <- bind_rows(results, metrics)
+    results <- bind_rows(results, metrics) 
+    
   }
   
   
@@ -421,21 +488,24 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, scenario){
   
   tree_metrics <- 
     tibble(
-      tree_cover_baseline_aoi = tree_cover_baseline_aoi * 100,
-      tree_cover_scenario_aoi = tree_cover_scenario_aoi * 100,
-      tree_cover_change_aoi = tree_cover_change_aoi * 100,
+      "tree_cover_baseline_aoi" = tree_cover_baseline_aoi * 100,
+      "tree_cover_scenario_aoi" = tree_cover_scenario_aoi * 100,
+      "tree_cover_change_aoi" = tree_cover_change_aoi * 100,
       
-      tree_cover_baseline_pedestrian = tree_cover_baseline_pedestrian * 100,
-      tree_cover_scenario_pedestrian = tree_cover_scenario_pedestrian * 100,
-      tree_cover_change_pedestrian = tree_cover_change_pedestrian * 100,
+      "tree_cover_baseline_pedestrian" = tree_cover_baseline_pedestrian * 100,
+      "tree_cover_scenario_pedestrian" = tree_cover_scenario_pedestrian * 100,
+      "tree_cover_change_pedestrian" = tree_cover_change_pedestrian * 100,
       
-      tree_n_baseline_pedestrian = tree_n_baseline_pedestrian,
-      tree_n_change_pedestrian = tree_n_scenario_pedestrian,
-      tree_n_scenario_pedestrian = tree_n_scenario_pedestrian + tree_n_baseline_pedestrian,
+      "tree_n_baseline_pedestrian" = tree_n_baseline_pedestrian,
+      "tree_n_change_pedestrian" = tree_n_scenario_pedestrian,
+      "tree_n_scenario_pedestrian" = tree_n_scenario_pedestrian + tree_n_baseline_pedestrian,
       
-      tree_cover_achievable_pedestrian = target_coverage * 100,
-      tree_cover_progress = (tree_cover_scenario_pedestrian - tree_cover_baseline_pedestrian) /
-        (tree_cover_achievable_pedestrian - tree_cover_baseline_pedestrian) * 100
+      "tree_cover_achievable_pedestrian" = target_coverage * 100,
+      "tree_cover_progress" = (tree_cover_scenario_pedestrian - tree_cover_baseline_pedestrian) /
+        (tree_cover_achievable_pedestrian - tree_cover_baseline_pedestrian) * 100,
+      
+      "mean_air_temp_1500_change_impact_areas" = (-3.3 * tree_cover_change_aoi),
+      "air_temp_reduction_1500_impact_area" = 100
     ) |> 
     pivot_longer(
       cols = everything(),
@@ -684,7 +754,10 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, scenario){
     "scenario_mean_air_temp_1800" = (scenario_met_data |> filter(Hour == 18) |> pull(Temperature)),
     "change_mean_air_temp_1200" = scenario_mean_air_temp_1200 - baseline_mean_air_temp_1200,
     "change_mean_air_temp_1500" = scenario_mean_air_temp_1500 - baseline_mean_air_temp_1500,
-    "change_mean_air_temp_1800" = scenario_mean_air_temp_1800 - baseline_mean_air_temp_1800
+    "change_mean_air_temp_1800" = scenario_mean_air_temp_1800 - baseline_mean_air_temp_1800,
+    
+    "mean_air_temp_1500_change_impact_areas" = change_mean_air_temp_1500,
+    "air_temp_reduction_1500_impact_area" = 100
   ) |> 
     pivot_longer(cols = everything(), names_to = "indicators_id", values_to = "value") |> 
     bind_rows(tribble(~ indicators_id, ~ value,
@@ -937,6 +1010,18 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     scenario_utci_rast <- scenario_utci_rast |> 
       mask(aoi)
     
+    # Mask shade distance to AOI
+    baseline_shade_dist_paths <- glue("{aws_http}/{baseline_folder}/{tiles_aoi}/ccl_layers/shade-distance-{time}__baseline__baseline.tif")
+    baseline_shade_dist_rast <- load_and_merge(baseline_shade_dist_paths) |> 
+      mask(aoi)
+    
+    scenario_shade_dist_paths <- glue("{aws_http}/{scenario_folder}/{tiles}/ccl_layers/shade-distance-{time}__shade-structures__{scenario}.tif")
+    scenario_shade_dist_rast <- load_and_merge(scenario_shade_dist_paths) 
+    scenario_shade_dist_rast <- scenario_shade_dist_rast |> 
+      # Fill in baseline where shade didn't change
+      mosaic(baseline_shade_dist_rast, fun = "first") |> 
+      mask(aoi)
+    
     ped_area_rast_crop <- ped_area_rast |> 
       crop(baseline_utci_rast)
     
@@ -956,6 +1041,11 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     shade_cover_scenario_aoi <- mean(values(scenario_shade_rast), na.rm = TRUE)
     shade_diff_aoi <- shade_cover_scenario_aoi - shade_cover_baseline_aoi
     
+    # shade distance AOI
+    mean_distance_shade_cover_baseline_aoi <- mean(values(baseline_shade_dist_rast), na.rm = TRUE)
+    mean_distance_shade_cover_scenario_aoi <- mean(values(scenario_shade_dist_rast), na.rm = TRUE)
+    mean_distance_shade_cover_change_aoi <- mean_distance_shade_cover_scenario_aoi - mean_distance_shade_cover_baseline_aoi
+    
     # UTCI pedestrian
     mean_utci_baseline_pedestrian <- mean(values(mask(baseline_utci_rast, ped_area_rast_crop, maskvalues = 0) |> 
                                                    subst(0, NA)), na.rm = TRUE)
@@ -967,6 +1057,11 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     shade_cover_baseline_pedestrian <- mean(values(mask(baseline_shade_rast, ped_area_rast_crop, maskvalues = 0), na.rm = TRUE)) 
     shade_cover_scenario_pedestrian <- mean(values(mask(scenario_shade_rast, ped_area_rast_crop, maskvalues = 0), na.rm = TRUE)) 
     shade_diff_pedestrian <- shade_cover_scenario_pedestrian - shade_cover_baseline_pedestrian
+    
+    # shade distance pedestrian
+    mean_distance_shade_cover_baseline_pedestrian <- mean(values(mask(baseline_shade_dist_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE))
+    mean_distance_shade_cover_scenario_pedestrian <- mean(values(mask(scenario_shade_dist_rast, ped_area_rast, maskvalues = 0), na.rm = TRUE))
+    mean_distance_shade_cover_change_pedestrian <- mean_distance_shade_cover_scenario_pedestrian - mean_distance_shade_cover_baseline_pedestrian
     
     # UTCI nonbuild
     mean_utci_baseline_nonbuild <- mean(values(mask(baseline_utci_rast, nonbuild_area_rast, maskvalues = 0) |> 
@@ -980,32 +1075,52 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     shade_cover_scenario_nonbuild <- mean(values(mask(scenario_shade_rast, nonbuild_area_rast, maskvalues = 0), na.rm = TRUE)) 
     shade_diff_nonbuild <- shade_cover_scenario_nonbuild - shade_cover_baseline_nonbuild
     
+    # shade distance nonbuild
+    mean_distance_shade_cover_baseline_nonbuild <- mean(values(mask(baseline_shade_dist_rast, nonbuild_area_rast, maskvalues = 0), 
+                                                               na.rm = TRUE))
+    mean_distance_shade_cover_scenario_nonbuild <- mean(values(mask(scenario_shade_dist_rast, nonbuild_area_rast, maskvalues = 0), 
+                                                               na.rm = TRUE))
+    mean_distance_shade_cover_change_nonbuild <- mean_distance_shade_cover_scenario_nonbuild - mean_distance_shade_cover_baseline_nonbuild
+    
+    
     # Store results
     metrics <- tibble(
       
-      mean_utci_baseline_aoi = mean_utci_baseline_aoi,
-      mean_utci_scenario_aoi = mean_utci_scenario_aoi,
-      mean_utci_change_aoi = utci_diff_aoi,
+      "mean_utci_baseline_aoi" = mean_utci_baseline_aoi,
+      "mean_utci_scenario_aoi" = mean_utci_scenario_aoi,
+      "mean_utci_change_aoi" = utci_diff_aoi,
       
-      shade_cover_baseline_aoi = shade_cover_baseline_aoi * 100,
-      shade_cover_scenario_aoi = shade_cover_scenario_aoi * 100,
-      shade_cover_change_aoi = shade_diff_aoi,
+      "shade_cover_baseline_aoi" = shade_cover_baseline_aoi * 100,
+      "shade_cover_scenario_aoi" = shade_cover_scenario_aoi * 100,
+      "shade_cover_change_aoi" = shade_diff_aoi,
       
-      mean_utci_baseline_pedestrian = mean_utci_baseline_pedestrian,
-      mean_utci_scenario_pedestrian = mean_utci_scenario_pedestrian,
-      mean_utci_change_pedestrian = utci_diff_pedestrian,
+      "mean_distance_shade_cover_baseline_aoi" = mean_distance_shade_cover_baseline_aoi,
+      "mean_distance_shade_cover_scenario_aoi" = mean_distance_shade_cover_scenario_aoi,
+      "mean_distance_shade_cover_change_aoi" = mean_distance_shade_cover_change_aoi,
       
-      shade_cover_baseline_pedestrian = shade_cover_baseline_pedestrian * 100,
-      shade_cover_scenario_pedestrian = shade_cover_scenario_pedestrian * 100,
-      shade_cover_change_pedestrian = shade_diff_pedestrian,
+      "mean_utci_baseline_pedestrian" = mean_utci_baseline_pedestrian,
+      "mean_utci_scenario_pedestrian" = mean_utci_scenario_pedestrian,
+      "mean_utci_change_pedestrian" = utci_diff_pedestrian,
       
-      mean_utci_baseline_nonbuilding_areas = mean_utci_baseline_nonbuild,
-      mean_utci_scenario_nonbuilding_areas = mean_utci_scenario_nonbuild,
-      mean_utci_change_nonbuilding_areas = utci_diff_nonbuild,
+      "shade_cover_baseline_pedestrian" = shade_cover_baseline_pedestrian * 100,
+      "shade_cover_scenario_pedestrian" = shade_cover_scenario_pedestrian * 100,
+      "shade_cover_change_pedestrian" = shade_diff_pedestrian,
       
-      shade_cover_baseline_nonbuilding_areas = shade_cover_baseline_nonbuild * 100,
-      shade_cover_scenario_nonbuilding_areas = shade_cover_scenario_nonbuild * 100,
-      shade_cover_change_nonbuilding_areas = shade_diff_nonbuild
+      "mean_distance_shade_cover_baseline_pedestrian" = mean_distance_shade_cover_baseline_pedestrian,
+      "mean_distance_shade_cover_scenario_pedestrian" = mean_distance_shade_cover_scenario_pedestrian,
+      "mean_distance_shade_cover_change_pedestrian" = mean_distance_shade_cover_change_pedestrian,
+      
+      "mean_utci_baseline_nonbuilding_areas" = mean_utci_baseline_nonbuild,
+      "mean_utci_scenario_nonbuilding_areas" = mean_utci_scenario_nonbuild,
+      "mean_utci_change_nonbuilding_areas" = utci_diff_nonbuild,
+      
+      "shade_cover_baseline_nonbuilding_areas" = shade_cover_baseline_nonbuild * 100,
+      "shade_cover_scenario_nonbuilding_areas" = shade_cover_scenario_nonbuild * 100,
+      "shade_cover_change_nonbuilding_areas" = shade_diff_nonbuild,
+      
+      "mean_distance_shade_cover_baseline_nonbuilding_areas" = mean_distance_shade_cover_baseline_nonbuild,
+      "mean_distance_shade_cover_scenario_nonbuilding_areas" = mean_distance_shade_cover_scenario_nonbuild,
+      "mean_distance_shade_cover_change_nonbuilding_areas" = mean_distance_shade_cover_change_nonbuild,
       
     ) |>
       pivot_longer(

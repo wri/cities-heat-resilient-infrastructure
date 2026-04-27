@@ -60,8 +60,13 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
       }
       
       shade <- rast_retry(glue("{aws_http}/{scenario_folder}/{t}/ccl_layers/shade-{h}__{infra}__{scenario}.tif")) > 0
-      # shade_dist <- distance(shade %>% subst(0, NA))
-      # write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__{infra}__{scenario}.tif"))
+      
+      shade_dist <- distance(shade %>% subst(0, NA))
+      base_shade_dist <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/shade-distance-{h}__baseline__baseline.tif")) 
+      shade_dist_diff <- shade_dist - base_shade_dist
+      
+      write_s3(shade_dist, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__{infra}__{scenario}.tif"))
+      write_s3(shade_dist_diff, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{h}__{infra}__{scenario}__vs-baseline.tif"))
     }
     
   }
@@ -149,6 +154,8 @@ shade_structure_post_processing <- function(baseline_folder,
       
       # Shade distance
       shade_dist <- distance(shade %>% subst(0, NA))
+      base_shade_dist <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/shade-distance-{time}__baseline__baseline.tif")) 
+      shade_dist_diff <- shade_dist - base_shade_dist
       
       # utci diff
       utci_diff <- utci_composite - base_utci
@@ -170,6 +177,8 @@ shade_structure_post_processing <- function(baseline_folder,
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-{time}__{infra}__{scenario}__vs-baseline.tif"))
       write_s3(shade_dist, 
                glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{time}__{infra}__{scenario}.tif"))
+      write_s3(shade_dist_diff, 
+               glue("{bucket}/{scenario_folder}/{t}/ccl_layers/shade-distance-{time}__{infra}__{scenario}__vs-baseline.tif"))
       
       message("Composite rasters written for time: ", time)
     }

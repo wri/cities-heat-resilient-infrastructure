@@ -465,7 +465,7 @@ for (g in groups) {
       if (steps$process) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
-        calc_street_tree_metrics(city, aoi_name, tiles_aoi, scenario)
+        calc_street_tree_metrics(city, aoi_name, tiles_aoi, infra, scenario)
       }
       
       next
@@ -509,7 +509,7 @@ for (g in groups) {
       if (steps$process) {
         upload_tcm_layers(city, infra, scenario, aoi_name)
         process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
-        calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, scenario)
+        calc_cool_roofs_metrics(city, aoi_name, tiles_aoi, infra, scenario)
       }
       
       next
@@ -568,7 +568,7 @@ for (g in groups) {
                                         infra,
                                         scenario)
         
-        calc_shade_structures_metrics(city, aoi_name, tiles_aoi, scenario)
+        calc_shade_structures_metrics(city, aoi_name, tiles_aoi, infra, scenario)
       }
       
       next

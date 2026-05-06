@@ -59,7 +59,7 @@ save_baseline_layers <- function(city = city,
     print(t)
     
     # Albedo
-    alb <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_albedo_cloud_masked.tif"))
+    alb <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_albedo_cloud_masked.tif")) * 100
     write_s3(alb, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/albedo__baseline__baseline.tif"))
 
     # Building areas

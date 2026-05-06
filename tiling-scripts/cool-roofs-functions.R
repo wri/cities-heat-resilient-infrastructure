@@ -117,6 +117,8 @@ update_albedo <- function(city = city,
       error = function(e) NULL
     )
     
+    reflectivity <- albedo * 100
+    
     if (is.null(albedo)) {
       print(glue("{t} is missing albedo data"))
       next
@@ -130,11 +132,11 @@ update_albedo <- function(city = city,
         ensure_s3_prefix(bucket, glue("{scenario_folder}/{t}/ccl_layers"))
 
         # Write raster
-        write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}.tif"))
+        write_s3(reflectivity, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}.tif"))
 
-        diff_albedo <- albedo
-        values(diff_albedo) <- 0
-        write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}__vs-baseline.tif"))
+        diff_reflectivity <- reflectivity
+        values(diff_reflectivity) <- 0
+        write_s3(diff_reflectivity, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{s}__vs-baseline.tif"))
       }
 
 
@@ -197,11 +199,11 @@ update_albedo <- function(city = city,
       
       if (nrow(tile_buildings_s) == 0) {
         # Write raster
-        write_s3(albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
+        write_s3(reflectivity, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
 
-        diff_albedo <- albedo
-        values(diff_albedo) <- 0
-        write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
+        diff_reflectivity <- reflectivity
+        values(diff_reflectivity) <- 0
+        write_s3(diff_reflectivity, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
 
         print(glue("{t} albedo rasters saved for {scenario}"))
         next
@@ -217,13 +219,15 @@ update_albedo <- function(city = city,
         albedo,
         build_rast
       )
+      
+      updated_reflectivity <- updated_albedo * 100
 
       # Albedo difference
-      diff_albedo <- updated_albedo - albedo
+      diff_reflectivity <- updated_reflectivity - reflectivity
 
       # Write raster
-      write_s3(updated_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
-      write_s3(diff_albedo, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
+      write_s3(updated_reflectivity, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}.tif"))
+      write_s3(diff_reflectivity, glue("{bucket}/{scenario_folder}/{t}/ccl_layers/albedo__cool-roofs__{scenario}__vs-baseline.tif"))
 
       print(glue("{t} albedo rasters saved for {scenario}"))
 

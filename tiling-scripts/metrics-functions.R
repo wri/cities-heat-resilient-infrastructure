@@ -240,6 +240,9 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
     )
   )
   
+  # Save results
+  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  
   bind_rows(results, tree_metrics) |>
     mutate(
       application_id       = "ccl",
@@ -250,7 +253,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
       date                 = date,
       value                = round(value, 2)
     ) |>
-    write_csv(here("misc", "metrics-testing", glue("{city}-{aoi_name}-metrics__baseline__baseline.csv")))
+    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__baseline__baseline.csv"))
 }
 
 
@@ -495,6 +498,9 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario)
     )
   )
   
+  # Save results
+  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  
   bind_rows(results, tree_metrics) |>
     mutate(
       application_id       = "ccl",
@@ -505,7 +511,7 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario)
       date                 = date,
       value                = round(value, 2)
     ) |>
-    write_csv(here("misc", "metrics-testing", glue("{city}-{aoi_name}-metrics__{infra}__{scenario}.csv")))
+    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }
 
 
@@ -708,6 +714,9 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) 
     utci_metrics <- bind_rows(utci_metrics, metrics)
   }
   
+  # Save results
+  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  
   bind_rows(scalar_metrics, utci_metrics) |>
     mutate(
       date                 = date,
@@ -718,7 +727,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) 
       scenarios_id         = paste("cool_roofs", str_replace(scenario, "-", "_"), sep = "_"),
       value                = round(value, 2)
     ) |>
-    write_csv(here("misc", "metrics-testing", glue("{city}-{aoi_name}-metrics__{infra}__{scenario}.csv")))
+    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }
 
 
@@ -853,6 +862,9 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     results <- bind_rows(results, metrics)
   }
   
+  # Save results
+  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  
   bind_rows(
     results,
     tibble(
@@ -869,7 +881,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       scenarios_id         = scenario,
       value                = round(value, 2)
     ) |>
-    write_csv(here("misc", "metrics-testing", glue("{city}-{aoi_name}-metrics__{infra}__{scenario}.csv")))
+    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }
 
 
@@ -1207,6 +1219,9 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
     )
   )
   
+  # Save results
+  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  
   bind_rows(results, scalar_metrics) |>
     mutate(
       date                 = date,
@@ -1217,5 +1232,5 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       scenarios_id         = glue("{infra}__{scenario}"),
       value                = round(value, 2)
     ) |>
-    write_csv(here("misc", "metrics-testing", glue("{city}-{aoi_name}-metrics__{infra}__{scenario}.csv")))
+    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }

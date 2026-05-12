@@ -3,6 +3,8 @@ library(tidyverse)
 library(sf)
 library(here)
 library(glue)
+library(geoarrow)
+library(sfarrow)
 
 source(here("tiling-scripts", "utils.R"))
 
@@ -174,17 +176,17 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
         glue("mean_utci_{time}_baseline_aoi"),
         glue("shade_cover_{time}_baseline_aoi"),
         glue("mean_distance_shade_cover_{time}_baseline_aoi"),
-        glue("high_risk_utci_pct__{time}_baseline_aoi"),
+        glue("high_risk_utci_pct_{time}_baseline_aoi"),
         
         glue("mean_utci_{time}_baseline_pedestrian"),
         glue("shade_cover_{time}_baseline_pedestrian"),
         glue("mean_distance_shade_cover_{time}_baseline_pedestrian"),
-        glue("high_risk_utci_pct__{time}_baseline_pedestrian"),
+        glue("high_risk_utci_pct_{time}_baseline_pedestrian"),
         
         glue("mean_utci_{time}_baseline_nonbuilding_areas"),
         glue("shade_cover_{time}_baseline_nonbuilding_areas"),
         glue("mean_distance_shade_cover_{time}_baseline_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_baseline_nonbuilding_areas")
+        glue("high_risk_utci_pct_{time}_baseline_nonbuilding_areas")
       ),
       value = c(
         mean_utci_masked(baseline_utci_rast),
@@ -370,9 +372,9 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario)
         glue("mean_distance_shade_cover_{time}_baseline_pedestrian"),
         glue("mean_distance_shade_cover_{time}_scenario_pedestrian"),
         glue("mean_distance_shade_cover_{time}_change_pedestrian"),
-        glue("high_risk_utci_pct__{time}_baseline_pedestrian"),
-        glue("high_risk_utci_pct__{time}_scenario_pedestrian"),
-        glue("high_risk_utci_pct__{time}_change_pedestrian"),
+        glue("high_risk_utci_pct_{time}_baseline_pedestrian"),
+        glue("high_risk_utci_pct_{time}_scenario_pedestrian"),
+        glue("high_risk_utci_pct_{time}_change_pedestrian"),
         
         glue("mean_utci_{time}_baseline_nonbuilding_areas"),
         glue("mean_utci_{time}_scenario_nonbuilding_areas"),
@@ -691,9 +693,9 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) 
         glue("mean_utci_{time}_baseline_nonbuilding_areas"),
         glue("mean_utci_{time}_scenario_nonbuilding_areas"),
         glue("mean_utci_{time}_change_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_baseline_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_scenario_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_change_nonbuilding_areas"),
+        glue("high_risk_utci_pct_{time}_baseline_nonbuilding_areas"),
+        glue("high_risk_utci_pct_{time}_scenario_nonbuilding_areas"),
+        glue("high_risk_utci_pct_{time}_change_nonbuilding_areas"),
         glue("max_utci_{time}_change_impact_areas"),
         glue("mean_utci_{time}_change_impact_areas"),
         glue("utci_reduction_{time}_impact_area")
@@ -831,9 +833,9 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
         glue("mean_distance_shade_cover_{time}_change_parks"),
         glue("mean_distance_shade_cover_{time}_achievable_parks"),
         glue("mean_distance_shade_cover_{time}_progress_parks"),
-        glue("high_risk_utci_pct__{time}_baseline_parks"),
-        glue("high_risk_utci_pct__{time}_scenario_parks"),
-        glue("high_risk_utci_pct__{time}_change_parks"),
+        glue("high_risk_utci_pct_{time}_baseline_parks"),
+        glue("high_risk_utci_pct_{time}_scenario_parks"),
+        glue("high_risk_utci_pct_{time}_change_parks"),
         glue("max_utci_{time}_change_impact_areas"),
         glue("mean_utci_{time}_change_impact_areas"),
         glue("utci_reduction_{time}_impact_area")
@@ -1003,9 +1005,9 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
         glue("mean_distance_shade_cover_{time}_baseline_nonbuilding_areas"),
         glue("mean_distance_shade_cover_{time}_scenario_nonbuilding_areas"),
         glue("mean_distance_shade_cover_{time}_change_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_baseline_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_scenario_nonbuilding_areas"),
-        glue("high_risk_utci_pct__{time}_change_nonbuilding_areas"),
+        glue("high_risk_utci_pct_{time}_baseline_nonbuilding_areas"),
+        glue("high_risk_utci_pct_{time}_scenario_nonbuilding_areas"),
+        glue("high_risk_utci_pct_{time}_change_nonbuilding_areas"),
         
         glue("max_utci_{time}_change_impact_areas"),
         glue("mean_utci_{time}_change_impact_areas"),

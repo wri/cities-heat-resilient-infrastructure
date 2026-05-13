@@ -14,7 +14,7 @@ aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
 
 # Categories 8, 9, 10 = high risk UTCI. Area-weighted percentage.
 calc_binary_hot_area_pct <- function(cat_rast, area_mask_rast = NULL, area_mask_vect = NULL) {
-  hot_rast <- ifel(cat_rast %in% c(8, 9, 10), 1, 0)
+  hot_rast <- ifel(is.na(cat_rast), NA, ifel(cat_rast %in% c(8, 9, 10), 1, 0))
   px_area  <- cellSize(hot_rast)
   
   if (!is.null(area_mask_vect)) {
@@ -192,7 +192,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
         mean_utci_masked(baseline_utci_rast),
         shade_pct_masked(baseline_shade_rast),
         shade_dist_masked(baseline_shade_dist_rast),
-        calc_binary_hot_area_pct(baseline_utci_cat_rast),
+        calc_binary_hot_area_pct(baseline_utci_cat_rast, area_mask_vect = aoi),
         
         mean_utci_masked(baseline_utci_rast, ped_crop),
         shade_pct_masked(baseline_shade_rast, ped_crop),

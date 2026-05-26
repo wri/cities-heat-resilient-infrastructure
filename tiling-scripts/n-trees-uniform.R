@@ -295,7 +295,7 @@ plant_in_gridcell_n <- function(grid_index,
 # 2) Plant TOTAL N trees uniformly over pedestrian area (AOI-wide)
 #     with leftover redistribution until all trees are planted.
 # ----------------------------
-plant_trees_uniform_over_ped_area <- function(
+plant_trees_uniform_over_plantable_area <- function(
     n_total,
     aoi_grid,
     min_dist,
@@ -321,16 +321,16 @@ plant_trees_uniform_over_ped_area <- function(
     unbuffered_tile_names <- unique(as.character(unbuffered_tile_names))
     if (length(unbuffered_tile_names) == 0) return(0)
     
-    ped_area_paths <- glue::glue(
-      "{aws_http}/{baseline_folder}/{unbuffered_tile_names}/ccl_layers/pedestrian-areas__baseline__baseline.tif"
+    plantable_area_paths <- glue::glue(
+      "{aws_http}/{scenario_folder}/{unbuffered_tile_names}/ccl_layers/plantable-areas__baseline__baseline.tif"
     )
-    ped_area <- load_and_merge(ped_area_paths) |>
+    plantable_area <- load_and_merge(plantable_area_paths) |>
       terra::crop(terra::vect(gridcell)) |>
       terra::subst(from = 0, to = NA)
     
     # Total area = sum(cellSize for non-NA ped cells)
-    cell_area <- terra::cellSize(ped_area)
-    sz <- terra::global(cell_area * ped_area, "sum", na.rm = TRUE)[1, 1]
+    cell_area <- terra::cellSize(plantable_area)
+    sz <- terra::global(cell_area * plantable_area, "sum", na.rm = TRUE)[1, 1]
     ifelse(is.na(sz), 0, sz)
   }, numeric(1))
   

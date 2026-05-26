@@ -15,7 +15,7 @@ project_name <- "corridors_of_excellence"
 infra <- "trees"
 scenario <- "custom-n_trees_uniform"
 scenario_folder <- glue("city_projects/{city}/{project_name}/scenarios/{infra}/{scenario}")
-baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
+baseline_folder <- glue("city_projects/{city}/{project_name}/scenarios/baseline/baseline")
 
 bucket   <- "wri-cities-tcm"
 aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
@@ -50,7 +50,7 @@ tile_grid <- st_read(
 ) |>
   st_filter(roads_buff)
 
-tiles <- buffered_tile_grid$tile_name
+tiles <- tile_grid$tile_name
 
 # Copy existing tree canopy tiles into scenario folder to be updated
 tree_canopy_paths <- glue("{baseline_folder}/{tiles}/raster_files/cif_tree_canopy.tif")
@@ -115,7 +115,7 @@ for (c in roads$name){
     select(geometry) %>% 
     mutate(ID = row_number())
   
-  new_trees <- plant_trees_uniform_over_ped_area(
+  new_trees <- plant_trees_uniform_over_plantable_area(
     n_total         = n_trees,   
     aoi_grid        = aoi_grid,
     min_dist        = 5,

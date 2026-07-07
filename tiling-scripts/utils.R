@@ -286,6 +286,21 @@ find_shadow_stamp <- function(bucket, baseline_folder, tile_id, profile = "citie
   stamps[[1]]
 }
 
+# Try tiles in order until one yields a usable Shadow stamp.
+# Avoids hard-depending on tiles_s3[[1]] specifically being complete.
+find_shadow_stamp_any <- function(bucket, baseline_folder, tile_ids, profile = "cities-data-dev") {
+  for (tile_id in tile_ids) {
+    stamp <- tryCatch(
+      find_shadow_stamp(bucket, baseline_folder, tile_id, profile = profile),
+      error = function(e) NA_character_
+    )
+    if (!is.na(stamp)) return(stamp)
+  }
+
+  stop("No Shadow_*_1200D.tif files found in any of ", length(tile_ids), " checked tile(s) under: ",
+       sprintf("s3://%s/%s/", bucket, baseline_folder))
+}
+
 list_s3_keys <- function(bucket, prefix) {
   keys <- character(0)
   token <- NULL

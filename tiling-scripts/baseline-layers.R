@@ -1,4 +1,4 @@
-# Create baseline data layers: 
+# Create baseline data layers:
 ##############################
 
 # aoi__baseline__baseline.geojson
@@ -31,7 +31,7 @@ save_baseline_layers <- function(city = city,
                                  aoi_path = aoi_path,
                                  tiles_s3 = tiles_s3,
                                  utm = utm){
-  
+
   # AOI
   aoi <- st_read(aoi_path) %>%
     st_transform(utm)
@@ -50,146 +50,173 @@ save_baseline_layers <- function(city = city,
   s3_copy_vec(from_build, to_build,
               from_bucket = "wri-cities-tcm", to_bucket = "wri-cities-tcm",
               overwrite = TRUE)
-  
-  # Get date stamp
-  stamp <- find_shadow_stamp(bucket, baseline_folder, tiles_s3[[1]])
-  
+
+  # Get date stamp (tries tiles in order; doesn't hard-depend on tiles_s3[[1]])
+  stamp <- find_shadow_stamp_any(bucket, baseline_folder, tiles_s3)
+
   # per tile
+  completed_tiles <- character(0)
+
   for (t in tiles_s3){
     print(t)
-    
-    # Albedo
-    alb <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_albedo_cloud_masked.tif")) * 100
-    write_s3(alb, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/albedo__baseline__baseline.tif"))
 
-    # Building areas
-    lulc <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
+    # Skip tiles that are already fully processed
+    sentinel_utci_cat   <- glue("{baseline_folder}/{t}/ccl_layers/utci-cat-1800__baseline__baseline.tif")
+    sentinel_tree_cover <- glue("{baseline_folder}/{t}/ccl_layers/tree-cover__baseline__baseline.tif")
 
-    build_areas <- terra::ifel(lulc >= 600 & lulc < 700, 1, 0)
-    write_s3(build_areas, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/building-areas__baseline__baseline.tif"))
+    if (s3_exists(bucket, sentinel_utci_cat) && s3_exists(bucket, sentinel_tree_cover)) {
+      message("  [tile] already complete, skipping: ", t)
+      completed_tiles <- c(completed_tiles, t)
+      next
+    }
 
-    non_build_areas <- abs(build_areas - 1)
-    write_s3(non_build_areas, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/non-building-areas__baseline__baseline.tif"))
+    tile_ok <- tryCatch({
 
-    # Pedestrian areas
-    roads_distance <- distance(subst(lulc == 500, 0, NA))
-    ped_area <- (roads_distance > 0) & (roads_distance <= 5) & (lulc != 500) & (lulc != 400)
-    write_s3(ped_area, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
+      # Albedo
+      alb <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_albedo_cloud_masked.tif")) * 100
+      write_s3(alb, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/albedo__baseline__baseline.tif"))
 
-    # Parks
-    parks <- lulc == 200
-    write_s3(parks, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/parks__baseline__baseline.tif"))
-    
-    # Shade 
-    shade_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1200D.tif"))
-    shade_1200 <- ifel(
-      is.na(shade_1200), NA,
-      ifel(shade_1200 == 0, 1,
-           ifel(shade_1200 == 1, 0, 2))
-    )
-    write_s3(shade_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1200__baseline__baseline.tif"))
-    
-    shade_1200 <- shade_1200 > 0
-    shade_1200_dist <- distance(shade_1200 %>% subst(0, NA))
-    write_s3(shade_1200_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1200__baseline__baseline.tif"))
-    
-    shade_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1500D.tif"))
-    shade_1500 <- ifel(
-      is.na(shade_1500), NA,
-      ifel(shade_1500 == 0, 1,
-           ifel(shade_1500 == 1, 0, 2))
-    )
-    write_s3(shade_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1500__baseline__baseline.tif"))
-    
-    shade_1500 <- shade_1500 > 0
-    shade_1500_dist <- distance(shade_1500 %>% subst(0, NA))
-    write_s3(shade_1500_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1500__baseline__baseline.tif"))
-    
-    shade_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1800D.tif"))
-    shade_1800 <- ifel(
-      is.na(shade_1800), NA,
-      ifel(shade_1800 == 0, 1,
-           ifel(shade_1800 == 1, 0, 2))
-    )
-    
-    write_s3(shade_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1800__baseline__baseline.tif"))
-    
-    shade_1800 <- shade_1800 > 0
-    shade_1800_dist <- distance(shade_1800 %>% subst(0, NA))
-    write_s3(shade_1800_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1800__baseline__baseline.tif"))
+      # Building areas
+      lulc <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_open_urban.tif"))
 
-    # times
-    times <- c("1200", "1500", "1800")
-    
-    # build S3 keys (what s3_exists expects)
-    utci_keys <- glue(
-      "{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{times}D.tif"
-    )
-    cat_keys <- glue(
-      "{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{times}D.tif"
-    )
-    
-    # check existence
-    utci_exists <- vapply(utci_keys, function(k) s3_exists(bucket, k), logical(1))
-    cat_exists  <- vapply(cat_keys,  function(k) s3_exists(bucket, k), logical(1))
-    
-    # build time if either UTCI or UTCIcat is missing
-    need_time <- !(utci_exists & cat_exists)
-    
-    if (any(need_time)) {
-      
-      met <- readr::read_csv(
-        glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv"),
-        skip = 2
+      build_areas <- terra::ifel(lulc >= 600 & lulc < 700, 1, 0)
+      write_s3(build_areas, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/building-areas__baseline__baseline.tif"))
+
+      non_build_areas <- abs(build_areas - 1)
+      write_s3(non_build_areas, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/non-building-areas__baseline__baseline.tif"))
+
+      # Pedestrian areas
+      roads_distance <- distance(subst(lulc == 500, 0, NA))
+      ped_area <- (roads_distance > 0) & (roads_distance <= 5) & (lulc != 500) & (lulc != 400)
+      write_s3(ped_area, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/pedestrian-areas__baseline__baseline.tif"))
+
+      # Parks
+      parks <- lulc == 200
+      write_s3(parks, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/parks__baseline__baseline.tif"))
+
+      # Shade
+      shade_1200 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1200D.tif"))
+      shade_1200 <- ifel(
+        is.na(shade_1200), NA,
+        ifel(shade_1200 == 0, 1,
+             ifel(shade_1200 == 1, 0, 2))
       )
-      
-      for (i in which(need_time)) {
-        time <- times[i]
-        
-        if (!utci_exists[i]) {
-          
-          mrt <- terra::rast(
-            glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Tmrt_{stamp}_{time}D.tif")
-          )
-          
-          utci <- create_utci(mrt, time, met)
-          write_s3(utci, glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif"))
-        }
-        
-        if (!cat_exists[i]) {
-          utci <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif"))
-          utci_class <- utci_risk_cat(utci)
-          
-          out_cat <- glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{time}D.tif")
-          write_s3(utci_class, out_cat)
+      write_s3(shade_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1200__baseline__baseline.tif"))
+
+      shade_1200 <- shade_1200 > 0
+      shade_1200_dist <- distance(shade_1200 %>% subst(0, NA))
+      write_s3(shade_1200_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1200__baseline__baseline.tif"))
+
+      shade_1500 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1500D.tif"))
+      shade_1500 <- ifel(
+        is.na(shade_1500), NA,
+        ifel(shade_1500 == 0, 1,
+             ifel(shade_1500 == 1, 0, 2))
+      )
+      write_s3(shade_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1500__baseline__baseline.tif"))
+
+      shade_1500 <- shade_1500 > 0
+      shade_1500_dist <- distance(shade_1500 %>% subst(0, NA))
+      write_s3(shade_1500_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1500__baseline__baseline.tif"))
+
+      shade_1800 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Shadow_{stamp}_1800D.tif"))
+      shade_1800 <- ifel(
+        is.na(shade_1800), NA,
+        ifel(shade_1800 == 0, 1,
+             ifel(shade_1800 == 1, 0, 2))
+      )
+
+      write_s3(shade_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-1800__baseline__baseline.tif"))
+
+      shade_1800 <- shade_1800 > 0
+      shade_1800_dist <- distance(shade_1800 %>% subst(0, NA))
+      write_s3(shade_1800_dist, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/shade-distance-1800__baseline__baseline.tif"))
+
+      # times
+      times <- c("1200", "1500", "1800")
+
+      # build S3 keys (what s3_exists expects)
+      utci_keys <- glue(
+        "{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{times}D.tif"
+      )
+      cat_keys <- glue(
+        "{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{times}D.tif"
+      )
+
+      # check existence
+      utci_exists <- vapply(utci_keys, function(k) s3_exists(bucket, k), logical(1))
+      cat_exists  <- vapply(cat_keys,  function(k) s3_exists(bucket, k), logical(1))
+
+      # build time if either UTCI or UTCIcat is missing
+      need_time <- !(utci_exists & cat_exists)
+
+      if (any(need_time)) {
+
+        met <- readr::read_csv(
+          glue("https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv"),
+          skip = 2
+        )
+
+        for (i in which(need_time)) {
+          time <- times[i]
+
+          if (!utci_exists[i]) {
+
+            mrt <- rast_retry(
+              glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/Tmrt_{stamp}_{time}D.tif")
+            )
+
+            utci <- create_utci(mrt, time, met)
+            write_s3(utci, glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif"))
+          }
+
+          if (!cat_exists[i]) {
+            utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_{time}D.tif"))
+            utci_class <- utci_risk_cat(utci)
+
+            out_cat <- glue("wri-cities-tcm/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_{time}D.tif")
+            write_s3(utci_class, out_cat)
+          }
         }
       }
+
+      # UTCI
+      utci_1200 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1200D.tif"))
+      write_s3(utci_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-1200__baseline__baseline.tif"))
+
+      utci_1500 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1500D.tif"))
+      write_s3(utci_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-1500__baseline__baseline.tif"))
+
+      utci_1800 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1800D.tif"))
+      write_s3(utci_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-1800__baseline__baseline.tif"))
+
+      # UTCI cat
+      cat_1200 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1200D.tif"))
+      write_s3(cat_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-cat-1200__baseline__baseline.tif"))
+
+      cat_1500 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1500D.tif"))
+      write_s3(cat_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-cat-1500__baseline__baseline.tif"))
+
+      cat_1800 <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1800D.tif"))
+      write_s3(cat_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-cat-1800__baseline__baseline.tif"))
+
+
+      # Trees
+      tree_canopy <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))
+      city_folder <- glue("city_projects/{city}/{aoi_name}")
+      process_trees(tree_canopy, city_folder, baseline_folder, t_id = t)
+
+      TRUE
+
+    }, error = function(e) {
+      warning("  [tile] failed, will retry on a later run: ", t, " — ", conditionMessage(e), call. = FALSE)
+      FALSE
+    })
+
+    if (isTRUE(tile_ok)) {
+      completed_tiles <- c(completed_tiles, t)
     }
-    
-    # UTCI
-    utci_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1200D.tif")) 
-    write_s3(utci_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-1200__baseline__baseline.tif"))
-
-    utci_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1500D.tif")) 
-    write_s3(utci_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-1500__baseline__baseline.tif"))
-
-    utci_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCI_{stamp}_1800D.tif")) 
-    write_s3(utci_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-1800__baseline__baseline.tif"))
-
-    # UTCI cat
-    cat_1200 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1200D.tif")) 
-    write_s3(cat_1200, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-cat-1200__baseline__baseline.tif"))
-
-    cat_1500 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1500D.tif")) 
-    write_s3(cat_1500, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-cat-1500__baseline__baseline.tif"))
-
-    cat_1800 <- rast(glue("{aws_http}/{baseline_folder}/{t}/tcm_results/met_era5_hottest_days/UTCIcat_{stamp}_1800D.tif")) 
-    write_s3(cat_1800, glue("{bucket}/{baseline_folder}/{t}/ccl_layers/utci-cat-1800__baseline__baseline.tif"))
-      
-
-    # Trees
-    tree_canopy <- rast(glue("{aws_http}/{baseline_folder}/{t}/raster_files/cif_tree_canopy.tif"))
-    city_folder <- glue("city_projects/{city}/{aoi_name}")
-    process_trees(tree_canopy, city_folder, baseline_folder, t_id = t)
   }
+
+  completed_tiles
 }

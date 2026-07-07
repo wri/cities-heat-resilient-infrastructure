@@ -412,7 +412,7 @@ for (g in groups) {
     if (infra == "baseline" && scenario == "baseline") {
       if (steps$generate) {
         source(here("tiling-scripts", "baseline-layers.R"))
-        save_baseline_layers(city = city,
+        completed_tiles <- save_baseline_layers(city = city,
                              aoi_name = aoi_name,
                              bucket = bucket,
                              aws_http = aws_http,
@@ -420,9 +420,18 @@ for (g in groups) {
                              aoi_path = aoi_path,
                              tiles_s3 = tiles_s3,
                              utm = utm)
-        calc_baseline_metrics(city = city, 
-                              aoi_name = aoi_name, 
-                              tiles_aoi = tiles_aoi)
+
+        missing_tiles <- setdiff(tiles_aoi, completed_tiles)
+        if (length(missing_tiles) > 0) {
+          warning(length(missing_tiles), " of ", length(tiles_aoi),
+                  " AOI tiles still incomplete (e.g. ",
+                  paste(utils::head(missing_tiles, 5), collapse = ", "),
+                  "); skipping calc_baseline_metrics for now.")
+        } else {
+          calc_baseline_metrics(city = city,
+                                aoi_name = aoi_name,
+                                tiles_aoi = tiles_aoi)
+        }
       }
       next
     }

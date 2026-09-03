@@ -60,6 +60,11 @@ Also ensure your account has Earth Engine access.
 
 ## 🚀 Running Scenarios
 
+Make sure the conda environment is active:
+```bash
+conda activate chri
+```
+
 Main CLI entrypoint:
 - `run-scenarios.R`
 

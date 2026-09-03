@@ -37,19 +37,36 @@ save_baseline_layers <- function(city = city,
     st_transform(utm)
   write_s3(aoi, glue("{bucket}/{baseline_folder}/aoi__baseline__baseline.geojson"))
 
+  # OpenUrban vector inputs (parks + building polygons).
+  # These may not exist for every city. Attempt the copies, but don't let a
+  # missing source abort the run - record what's missing and warn at the end.
+  openurban_vectors_missing <- character(0)
+
+  try_copy_vec <- function(from, to) {
+    ok <- tryCatch(
+      all(s3_copy_vec(from, to,
+                      from_bucket = "wri-cities-tcm", to_bucket = "wri-cities-tcm",
+                      overwrite = TRUE)),
+      error = function(e) {
+        message("s3_copy_vec failed for ", from, ": ", conditionMessage(e))
+        FALSE
+      }
+    )
+    if (!isTRUE(ok)) {
+      openurban_vectors_missing <<- c(openurban_vectors_missing, from)
+    }
+    invisible(ok)
+  }
+
   # Parks
   from_park <- glue("OpenUrban/{city}/open_space/open_space_all.parquet")
   to_park <- glue("{baseline_folder}/parks-polygons__baseline__baseline.parquet")
-  s3_copy_vec(from_park, to_park,
-              from_bucket = "wri-cities-tcm", to_bucket = "wri-cities-tcm",
-              overwrite = TRUE)
+  try_copy_vec(from_park, to_park)
 
   # Building polygons
   from_build <- glue("OpenUrban/{city}/buildings/buildings_all.parquet")
   to_build <- glue("{baseline_folder}/building-polygons__baseline__baseline.parquet")
-  s3_copy_vec(from_build, to_build,
-              from_bucket = "wri-cities-tcm", to_bucket = "wri-cities-tcm",
-              overwrite = TRUE)
+  try_copy_vec(from_build, to_build)
   
   # Get date stamp
   stamp <- find_shadow_stamp(bucket, baseline_folder, tiles_s3[[1]])
@@ -192,4 +209,8 @@ save_baseline_layers <- function(city = city,
     city_folder <- glue("city_projects/{city}/{aoi_name}")
     process_trees(tree_canopy, city_folder, baseline_folder, t_id = t)
   }
+
+  # Return the OpenUrban vector sources that could not be copied so the caller
+  # can surface a single warning at the very end of the run.
+  invisible(openurban_vectors_missing)
 }

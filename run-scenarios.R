@@ -274,6 +274,10 @@ for (g in groups) message("  ", g$block_id[[1]], ": ", g$city[[1]], " @ ", g$aoi
 # -----------------------------
 # Main loop: (city,aoi) -> tasks
 # -----------------------------
+
+# Collect (city @ aoi) -> missing OpenUrban vector sources, warned about at the end.
+missing_openurban_vectors <- list()
+
 for (g in groups) {
   
   city     <- g$city[[1]]
@@ -412,7 +416,7 @@ for (g in groups) {
     if (infra == "baseline" && scenario == "baseline") {
       if (steps$generate) {
         source(here("tiling-scripts", "baseline-layers.R"))
-        save_baseline_layers(city = city,
+        ou_missing <- save_baseline_layers(city = city,
                              aoi_name = aoi_name,
                              bucket = bucket,
                              aws_http = aws_http,
@@ -420,6 +424,9 @@ for (g in groups) {
                              aoi_path = aoi_path,
                              tiles_s3 = tiles_s3,
                              utm = utm)
+        if (length(ou_missing) > 0) {
+          missing_openurban_vectors[[paste0(city, " @ ", aoi_name)]] <- ou_missing
+        }
         calc_baseline_metrics(city = city, 
                               aoi_name = aoi_name, 
                               tiles_aoi = tiles_aoi)
@@ -624,6 +631,23 @@ for (g in groups) {
 }
 
 message("\nAll groups complete.")
+
+# -----------------------------
+# Final warning: missing OpenUrban vector inputs
+# -----------------------------
+if (length(missing_openurban_vectors) > 0) {
+  lines <- unlist(lapply(names(missing_openurban_vectors), function(k) {
+    c(paste0("  ", k, ":"),
+      paste0("    - s3://wri-cities-tcm/", missing_openurban_vectors[[k]]))
+  }))
+  warning(
+    "OpenUrban vector files do not exist for the following city/AOI and could not be copied:\n",
+    paste(lines, collapse = "\n"),
+    "\nBaseline layers were still processed, but generating scenarios is NOT possible ",
+    "without these files (parks polygons and/or building polygons).",
+    call. = FALSE, immediate. = TRUE
+  )
+}
 
 # Optional: terminate instance when finished
 if (Sys.getenv("EC2_TERMINATE_ON_COMPLETE") == "true") {

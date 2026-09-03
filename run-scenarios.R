@@ -7,13 +7,17 @@
 #     infra:scenario[flags],
 #     infra:scenario[flags];
 #   CITY2@AOI2|aoi_path="https://.../aoi.geojson"|copy_baseline=false:
+#     infra:scenario[flags];
+#   CITY3@AOI3:
 #     infra:scenario[flags]
 #
 # Notes:
-# - Each CITY@AOI block has exactly ONE AOI path spec (aoi_path=...).
+# - aoi_path is OPTIONAL. If omitted (or given as aoi_path="" / aoi_path=DEFAULT)
+#   the block uses --default_aoi_path_template, i.e.
+#   city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson
+#   in the wri-cities-tcm bucket.
 # - Each block can optionally set copy_baseline=... (false/true/AOI_NAME).
 # - If copy_baseline is omitted in a block, --copy_baseline is used as fallback.
-# - aoi_path=DEFAULT uses --default_aoi_path_template (required).
 # - aoi_path can be quoted with "..." or '...' to make it shell-friendly.
 # - {CITY} and {AOI} placeholders are supported in BOTH DEFAULT template and custom aoi URLs.
 #
@@ -50,7 +54,7 @@ option_list <- list(
               help = "Block-style plan (required). See header in script."),
   make_option("--default_aoi_path_template", type = "character",
               default = "https://wri-cities-tcm.s3.us-east-1.amazonaws.com/city_projects/{CITY}/{AOI}/scenarios/baseline/baseline/aoi__baseline__baseline.geojson",
-              help = "Template used when a block specifies aoi_path=DEFAULT. Supports {CITY} and {AOI}. (required)"),
+              help = "Template used when a block omits aoi_path or sets aoi_path=DEFAULT. Supports {CITY} and {AOI}."),
   make_option("--copy_baseline", type = "character",
               default = "false",
               help = "Global fallback when a block omits copy_baseline. Accepts false/true or AOI name; true maps to urban_extent. (default: false)")
@@ -183,8 +187,8 @@ parse_plan_blocks <- function(plan_str) {
     
     header_parts <- strsplit(header, "|", fixed = TRUE)[[1]] %>% trimws()
     header_parts <- header_parts[nzchar(header_parts)]
-    if (length(header_parts) < 2) {
-      stop("Bad block header. Expected CITY@AOI|aoi_path=... [|copy_baseline=...]. Got:\n", b)
+    if (length(header_parts) < 1) {
+      stop("Bad block header. Expected CITY@AOI[|aoi_path=...][|copy_baseline=...]. Got:\n", b)
     }
     
     city_aoi <- header_parts[[1]]
@@ -206,10 +210,13 @@ parse_plan_blocks <- function(plan_str) {
       params[[key]] <- strip_outer_quotes(val)
     }
     
-    if (!"aoi_path" %in% names(params) || !nzchar(params[["aoi_path"]])) {
-      stop("Missing required aoi_path=... in block header:\n", b)
+    # aoi_path is optional. When omitted (or given as an empty string) fall back
+    # to --default_aoi_path_template, i.e. the same behaviour as aoi_path=DEFAULT.
+    aoi_spec <- if ("aoi_path" %in% names(params) && nzchar(params[["aoi_path"]])) {
+      params[["aoi_path"]]
+    } else {
+      "DEFAULT"
     }
-    aoi_spec <- params[["aoi_path"]]
     copy_baseline_spec <- if ("copy_baseline" %in% names(params)) params[["copy_baseline"]] else NA_character_
     
     # Remove newlines to simplify comma splitting

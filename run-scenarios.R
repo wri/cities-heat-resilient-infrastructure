@@ -347,12 +347,27 @@ for (g in groups) {
       "--only-show-errors"
     ))
     
-    # 2) Copy only the tiles we want
+    # 2) Copy only the tiles that (a) intersect the AOI AND (b) actually have a
+    #    baseline folder in the source AOI. The AOI can intersect more tiles than
+    #    were ever processed for the source AOI (e.g. urban_extent); creating
+    #    folders for the rest leaves empty tile dirs that break save_baseline_layers.
     tile_ids <- unique(as.character(tile_ids))
+    source_tiles <- list_tiles(src_base)
+    missing_in_source <- setdiff(tile_ids, source_tiles)
+    if (length(missing_in_source) > 0) {
+      message("copy_baseline: skipping ", length(missing_in_source),
+              " AOI tile(s) with no baseline data in '", baseline_aoi_name, "': ",
+              paste(missing_in_source, collapse = ", "))
+    }
+    tile_ids <- intersect(tile_ids, source_tiles)
+    if (length(tile_ids) == 0) {
+      warning("copy_baseline: none of the AOI-intersecting tiles exist in source AOI '",
+              baseline_aoi_name, "' — no tiles copied.", call. = FALSE)
+    }
     for (t in tile_ids) {
       from_prefix <- file.path(from_base, t)
       to_prefix   <- file.path(to_base,   t)
-      
+
       ensure_s3_prefix(bucket, to_prefix)
       
       src <- sprintf("s3://%s/%s/", bucket, sub("^/+", "", from_prefix))

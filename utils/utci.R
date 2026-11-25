@@ -317,7 +317,7 @@ create_utci <- function(mrt_rast, timestamp, met_data){
   tk <- Ta + 273.15 # air temp in K
   es <- 2.7150305 * log(tk)
   for (i in 1:length(g)) {
-    es <- es + (g[i] * (tk^(i - 2)))
+    es <- es + (g[i] * (tk^(i - 3)))
   }
   es <- exp(es) * 0.01  # Convert from Pa to hPa
   vpd <- es * (rh / 100.0)  # Actual vapor pressure in hPa

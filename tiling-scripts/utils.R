@@ -242,10 +242,19 @@ norm_prefix <- function(x) sub("/+$", "/", paste0(sub("^/+", "", x), "/"))
 list_tiles <- function(folder_s3_url, profile = "cities-data-dev") {
   # Normalize: ensure trailing slash so `aws s3 ls` treats it as a "folder"
   folder_s3_url <- sub("/?$", "/", folder_s3_url)
-  
+
+  # profile = NA means "use whatever default/instance-role credentials are
+  # already active" (e.g. on an EC2 instance with no named profile) -- omit
+  # --profile entirely rather than passing an empty/invalid value.
+  args <- if (is.na(profile)) {
+    c("s3", "ls", folder_s3_url)
+  } else {
+    c("s3", "ls", folder_s3_url, "--profile", profile)
+  }
+
   lines <- system2(
     "aws",
-    c("s3", "ls", folder_s3_url, "--profile", profile),
+    args,
     stdout = TRUE,
     stderr = TRUE
   )
@@ -259,10 +268,15 @@ find_shadow_stamp <- function(bucket, baseline_folder, tile_id, profile = "citie
   # Folder containing the Shadow rasters for a tile
   s3_dir <- sprintf("s3://%s/%s/%s/tcm_results/met_era5_hottest_days/", bucket, baseline_folder, tile_id)
   
-  # List files in the folder
+  # List files in the folder (profile = NA omits --profile; see list_tiles())
+  args <- if (is.na(profile)) {
+    c("s3", "ls", s3_dir)
+  } else {
+    c("s3", "ls", s3_dir, "--profile", profile)
+  }
   lines <- system2(
     "aws",
-    c("s3", "ls", s3_dir, "--profile", profile),
+    args,
     stdout = TRUE,
     stderr = TRUE
   )

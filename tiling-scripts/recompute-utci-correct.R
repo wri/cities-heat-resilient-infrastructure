@@ -27,29 +27,41 @@ bucket        <- "wri-cities-tcm"          # bucket NAME, required by post-proce
                                             # lexically-scoped global `bucket` reference
 bucket_prefix <- "city_projects_CORRECT"   # single source of truth for the target prefix
 aws_http      <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
-s3            <- paws::s3()                # required by utils.R's write_s3()/list_s3_keys() (lexically-scoped global)
+s3            <- paws::s3()                # required by utils.R's write_s3()/list_s3_keys() (lexically-scoped global);
+                                            # uses the default credential chain (instance role on EC2), no profile needed
 
 stopifnot(bucket_prefix == "city_projects_CORRECT")  # fail loudly on any accidental edit
 
-# Login once (browser auth), then refresh on an interval during the run.
-system("aws sso login --profile cities-data-dev")
+# Set this to a named AWS CLI profile string (e.g. "cities-data-dev") if the
+# machine running this script needs one; NA means "use whatever default/
+# instance-role credentials are already active" (e.g. an EC2 instance with no
+# named profile configured) and skips SSO login / credential refresh entirely.
+aws_profile <- NA
 
-refresh_credentials <- function() {
-  creds <- system2("aws",
-                   args = c("configure", "export-credentials", "--profile", "cities-data-dev", "--format", "env-no-export"),
-                   stdout = TRUE)
-  for (line in creds) {
-    eq_pos <- regexpr("=", line, fixed = TRUE)
-    if (eq_pos > 0) {
-      key <- substr(line, 1, eq_pos - 1)
-      value <- substr(line, eq_pos + 1, nchar(line))
-      do.call(Sys.setenv, setNames(list(value), key))
+if (!is.na(aws_profile)) {
+  # Login once (browser auth), then refresh on an interval during the run --
+  # only relevant when running against a named SSO profile (e.g. locally).
+  system(glue::glue("aws sso login --profile {aws_profile}"))
+
+  refresh_credentials <- function() {
+    creds <- system2("aws",
+                     args = c("configure", "export-credentials", "--profile", aws_profile, "--format", "env-no-export"),
+                     stdout = TRUE)
+    for (line in creds) {
+      eq_pos <- regexpr("=", line, fixed = TRUE)
+      if (eq_pos > 0) {
+        key <- substr(line, 1, eq_pos - 1)
+        value <- substr(line, eq_pos + 1, nchar(line))
+        do.call(Sys.setenv, setNames(list(value), key))
+      }
     }
+    Sys.setenv(AWS_DEFAULT_REGION = "us-east-1", AWS_SDK_LOAD_CONFIG = "1")
+    message("Credentials refreshed at: ", Sys.time())
   }
-  Sys.setenv(AWS_DEFAULT_REGION = "us-east-1", AWS_SDK_LOAD_CONFIG = "1")
-  message("Credentials refreshed at: ", Sys.time())
+  refresh_credentials()
+} else {
+  refresh_credentials <- function() invisible(NULL)  # no-op: nothing to refresh
 }
-refresh_credentials()
 
 # ---------------------------------------------------------------------------
 # The 38 AOIs needing recompute (the 42 copied to city_projects_CORRECT minus
@@ -138,9 +150,10 @@ already_done <- function(city, aoi_name, infra, scenario) {
 # uniformly to every AOI.
 # ---------------------------------------------------------------------------
 
-list_s3_subfolders <- function(s3_url, profile = "cities-data-dev") {
+list_s3_subfolders <- function(s3_url, profile = aws_profile) {
   s3_url <- sub("/?$", "/", s3_url)
-  lines <- system2("aws", c("s3", "ls", s3_url, "--profile", profile), stdout = TRUE, stderr = TRUE)
+  args <- if (is.na(profile)) c("s3", "ls", s3_url) else c("s3", "ls", s3_url, "--profile", profile)
+  lines <- system2("aws", args, stdout = TRUE, stderr = TRUE)
   m <- regmatches(lines, regexec("^[[:space:]]*PRE[[:space:]]+([^/]+)/$", lines))
   names <- vapply(m, function(x) if (length(x) >= 2) x[2] else NA_character_, character(1))
   unique(stats::na.omit(names))
@@ -186,7 +199,7 @@ discover_combos <- function(city, aoi_name, bucket_prefix) {
 
     for (scenario in scenario_names) {
       scenario_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
-      tiles <- list_tiles(glue("s3://{bucket}/{scenario_folder}"))
+      tiles <- list_tiles(glue("s3://{bucket}/{scenario_folder}"), profile = aws_profile)
       if (length(tiles) == 0) {
         message("  [skip] ", infra, "/", scenario, " has zero tiles -- skipping")
         next

@@ -113,9 +113,9 @@ achievable_albedo_rast <- function(city, baseline_albedo, buildings, baseline_fo
 
 # ── baseline ──────────────────────────────────────────────────────────────────
 
-calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
+calc_baseline_metrics <- function(city, aoi_name, tiles_aoi, bucket_prefix = "city_projects") {
   
-  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
+  baseline_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
   
   met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"), skip = 2)
   date <- met_data |> slice(1) |> mutate(date = glue("{Year}_{Month}_{Day}")) |> pull(date)
@@ -138,7 +138,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
   
   park_area <- tryCatch({
     parks <- st_read(
-      glue("{aws_http}/city_projects/{city}/{aoi_name}/scenarios/shade-structures/all-parks/parks__shade-structures__all-parks.geojson"),
+      glue("{aws_http}/{bucket_prefix}/{city}/{aoi_name}/scenarios/shade-structures/all-parks/parks__shade-structures__all-parks.geojson"),
       quiet = TRUE
     )
     sum(parks$area_sqm, na.rm = TRUE)
@@ -243,7 +243,7 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
   )
   
   # Save results
-  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  ensure_s3_prefix("wri-cities-tcm", glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics"))
   
   bind_rows(results, tree_metrics) |>
     mutate(
@@ -255,16 +255,16 @@ calc_baseline_metrics <- function(city, aoi_name, tiles_aoi) {
       date                 = date,
       value                = round(value, 2)
     ) |>
-    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__baseline__baseline.csv"))
+    write_s3(glue("wri-cities-tcm/{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics/metrics__baseline__baseline.csv"))
 }
 
 
 # ── street trees ──────────────────────────────────────────────────────────────
 
-calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) {
+calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario, bucket_prefix = "city_projects") {
   
-  baseline_folder     <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  scenario_folder     <- glue("city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
+  baseline_folder     <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
+  scenario_folder     <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
   open_urban_aws_http <- glue("{aws_http}/OpenUrban/{city}")
   
   met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"), skip = 2)
@@ -501,7 +501,7 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario)
   )
   
   # Save results
-  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  ensure_s3_prefix("wri-cities-tcm", glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics"))
   
   bind_rows(results, tree_metrics) |>
     mutate(
@@ -513,16 +513,16 @@ calc_street_tree_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario)
       date                 = date,
       value                = round(value, 2)
     ) |>
-    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
+    write_s3(glue("wri-cities-tcm/{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }
 
 
 # ── cool roofs ────────────────────────────────────────────────────────────────
 
-calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) {
+calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario, bucket_prefix = "city_projects") {
   
-  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  scenario_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
+  baseline_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
+  scenario_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
   
   baseline_met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"), skip = 2)
   scenario_met_data <- read_csv(glue("{aws_http}/{scenario_folder}/metadata/met_files/reduced_temps.csv"), skip = 2)
@@ -717,7 +717,7 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) 
   }
   
   # Save results
-  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  ensure_s3_prefix("wri-cities-tcm", glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics"))
   
   bind_rows(scalar_metrics, utci_metrics) |>
     mutate(
@@ -729,19 +729,19 @@ calc_cool_roofs_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) 
       scenarios_id         = paste("cool_roofs", str_replace(scenario, "-", "_"), sep = "_"),
       value                = round(value, 2)
     ) |>
-    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
+    write_s3(glue("wri-cities-tcm/{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }
 
 
 # ── shade structures ──────────────────────────────────────────────────────────
 
-calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) {
+calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario, bucket_prefix = "city_projects") {
   
   library(geoarrow)
   library(sfarrow)
   
-  baseline_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  scenario_folder <- glue("city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
+  baseline_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
+  scenario_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
   
   aoi <- st_read(glue("{aws_http}/{baseline_folder}/aoi__baseline__baseline.geojson"))
   
@@ -750,7 +750,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   park_area       <- sum(parks$area_sqm)
   shade_structures <- st_read(glue("{aws_http}/{scenario_folder}/structures__{infra}__{scenario}.geojson"))
   
-  scenario_tiles <- list_tiles(glue("s3://wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}/"))
+  scenario_tiles <- list_tiles(glue("s3://wri-cities-tcm/{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}/"))
   
   met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"), skip = 2)
   date <- met_data |> slice(1) |> mutate(date = glue("{Year}_{Month}_{Day}")) |> pull(date)
@@ -865,7 +865,7 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   }
   
   # Save results
-  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  ensure_s3_prefix("wri-cities-tcm", glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics"))
   
   bind_rows(
     results,
@@ -883,16 +883,16 @@ calc_shade_structures_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       scenarios_id         = scenario,
       value                = round(value, 2)
     ) |>
-    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
+    write_s3(glue("wri-cities-tcm/{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }
 
 
 # ── cool roofs + trees (combo) ────────────────────────────────────────────────
 
-calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario) {
+calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scenario, bucket_prefix = "city_projects") {
   
-  baseline_folder     <- glue("city_projects/{city}/{aoi_name}/scenarios/baseline/baseline")
-  scenario_folder     <- glue("city_projects/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
+  baseline_folder     <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
+  scenario_folder     <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
   open_urban_aws_http <- glue("{aws_http}/OpenUrban/{city}")
   
   baseline_met_data <- read_csv(glue("{aws_http}/{baseline_folder}/metadata/met_files/met_era5_hottest_days.csv"), skip = 2)
@@ -1222,7 +1222,7 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
   )
   
   # Save results
-  ensure_s3_prefix("wri-cities-tcm", glue("city_projects/{city}/{aoi_name}/scenarios/metrics"))
+  ensure_s3_prefix("wri-cities-tcm", glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics"))
   
   bind_rows(results, scalar_metrics) |>
     mutate(
@@ -1234,5 +1234,5 @@ calc_cool_roofs_trees_metrics <- function(city, aoi_name, tiles_aoi, infra, scen
       scenarios_id         = glue("{infra}__{scenario}"),
       value                = round(value, 2)
     ) |>
-    write_s3(glue("wri-cities-tcm/city_projects/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
+    write_s3(glue("wri-cities-tcm/{bucket_prefix}/{city}/{aoi_name}/scenarios/metrics/metrics__{infra}__{scenario}.csv"))
 }

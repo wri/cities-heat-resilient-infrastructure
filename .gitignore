@@ -9,3 +9,6 @@ __pycache__
 
 # Ignore everything in data folder...
 /data/**
+
+# Run-time logs from the UTCI recompute script (not source)
+/recompute_logs/**

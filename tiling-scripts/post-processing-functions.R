@@ -9,17 +9,40 @@ process_tcm_layers <- function(baseline_folder, infra, scenario, scenario_folder
   
   aws_http <- "https://wri-cities-tcm.s3.us-east-1.amazonaws.com"
   
-  if (infra %in% c("cool-roofs_trees", "trees_cool-roofs", "cool-roofs")) {
-    results_dir <- "reduced_temps"
+  # The "expected" results_dir follows the infra's own met-file convention,
+  # but a handful of older-processed AOIs have their raw tcm_results sitting
+  # under the OTHER convention's folder name (confirmed for
+  # BRA-Fortaleza/accelerator_area's cool-roofs scenario -- a historical
+  # pipeline-naming quirk, not a data problem; see utci-recompute-functions.R's
+  # recompute_utci_for_infra_scenario() for the fuller explanation). Try both,
+  # per tile, rather than assume one folder name applies scenario-wide.
+  results_dirs <- if (infra %in% c("cool-roofs_trees", "trees_cool-roofs", "cool-roofs")) {
+    c("reduced_temps", "met_era5_hottest_days")
   } else {
-    results_dir <- "met_era5_hottest_days"
+    c("met_era5_hottest_days", "reduced_temps")
   }
-  
+
   tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
-  
+  baseline_tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
+
   for (t in tiles){
-    
-    files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/{results_dir}"))
+
+    if (!(t %in% baseline_tiles)) {
+      message("  [skip] ", t, " has no baseline counterpart under ", baseline_folder,
+              " -- skipping (stray tile outside the true AOI footprint)")
+      next
+    }
+
+    files <- character(0)
+    for (candidate_dir in results_dirs) {
+      files <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{t}/tcm_results/{candidate_dir}"))
+      if (length(files) > 0) break
+    }
+    if (length(files) == 0) {
+      message("  [skip] ", t, " has no tcm_results under any known subpath (tried: ",
+              paste(results_dirs, collapse = ", "), ") -- skipping this tile")
+      next
+    }
     
     for (h in c("1200", "1500", "1800")){
       base_utci <- rast_retry(glue("{aws_http}/{baseline_folder}/{t}/ccl_layers/utci-{h}__baseline__baseline.tif"))
@@ -92,9 +115,16 @@ shade_structure_post_processing <- function(baseline_folder,
   #                             glue("{city}_{infra}_{scenario}_t0_{scenario}_{infra}"))
   
   tiles <- list_tiles(glue("s3://wri-cities-tcm/{scenario_folder}"))
-  
+  baseline_tiles <- list_tiles(glue("s3://wri-cities-tcm/{baseline_folder}"))
+
   for (t in tiles){
-    
+
+    if (!(t %in% baseline_tiles)) {
+      message("  [skip] ", t, " has no baseline counterpart under ", baseline_folder,
+              " -- skipping (stray tile outside the true AOI footprint)")
+      next
+    }
+
     # tile_results_dir_t3 <- file.path(results_dir_t3, t, "tcm_results")
     tile_results_dir_t3 <- glue("{scenario_folder}/{t}/tcm_results/met_era5_hottest_days/t3")
     tile_results_dir_t0 <- glue("{scenario_folder}/{t}/tcm_results/met_era5_hottest_days/t0")

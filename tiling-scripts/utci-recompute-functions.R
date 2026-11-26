@@ -72,14 +72,35 @@ load_met_for_scenario <- function(bucket_prefix, city, aoi_name, infra, scenario
                                    aws_http = "https://wri-cities-tcm.s3.us-east-1.amazonaws.com") {
 
   is_reduced_temps <- infra %in% c("cool-roofs", "cool-roofs_trees", "trees_cool-roofs")
-
-  met_url <- if (is_reduced_temps) {
-    glue("{aws_http}/{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}/metadata/met_files/reduced_temps.csv")
+  filename <- if (is_reduced_temps) "reduced_temps.csv" else "met_era5_hottest_days.csv"
+  folder <- if (is_reduced_temps) {
+    glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}/metadata")
   } else {
-    glue("{aws_http}/{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline/metadata/met_files/met_era5_hottest_days.csv")
+    glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline/metadata")
   }
 
-  met_data <- readr::read_csv(met_url, skip = 2, show_col_types = FALSE)
+  # Most AOIs keep met files under metadata/met_files/; a few (confirmed for
+  # ARG-Buenos_Aires/urban_extent) have the file directly under metadata/
+  # instead, with no met_files/ subfolder at all. Try the standard path first,
+  # fall back to the flat layout rather than hard-failing.
+  candidate_urls <- c(
+    glue("{aws_http}/{folder}/met_files/{filename}"),
+    glue("{aws_http}/{folder}/{filename}")
+  )
+
+  met_data <- NULL
+  met_url <- NULL
+  last_err <- NULL
+  for (url in candidate_urls) {
+    met_data <- tryCatch(readr::read_csv(url, skip = 2, show_col_types = FALSE),
+                          error = function(e) { last_err <<- e; NULL })
+    if (!is.null(met_data)) { met_url <- url; break }
+  }
+  if (is.null(met_data)) {
+    stop("Could not find met file at any known path. Tried:\n",
+         paste(candidate_urls, collapse = "\n"), "\n", conditionMessage(last_err), call. = FALSE)
+  }
+
   met_date <- derive_date_from_met(met_data)
 
   list(met_data = met_data, met_date = met_date, met_file_path = met_url)
@@ -195,42 +216,77 @@ recompute_utci_for_infra_scenario <- function(bucket_prefix, city, aoi_name, inf
   is_shade <- infra == "shade-structures"
   is_reduced_temps <- infra %in% c("cool-roofs", "cool-roofs_trees", "trees_cool-roofs")
 
-  if (is_shade) {
-    subpaths <- c("tcm_results/met_era5_hottest_days/t0", "tcm_results/met_era5_hottest_days/t3")
-  } else if (is_reduced_temps) {
-    subpaths <- "tcm_results/reduced_temps"
-  } else {
-    subpaths <- "tcm_results/met_era5_hottest_days"
-  }
-
   write_ccl <- infra == "baseline"
   scenario_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
 
-  for (subpath in subpaths) {
-    # Shade-structures may legitimately have only one of t0/t3 actually run.
-    # Check at the scenario level (across all tiles) before looping tiles, so
-    # a genuinely absent subpath is skipped gracefully rather than hard-failing
-    # on the first tile. A subpath that exists but is missing data for one
-    # specific tile is still a real, stop()-worthy anomaly (handled inside
-    # recompute_utci_for_tile()).
-    scenario_keys <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/"))
-    any_tmrt <- length(grep(glue("{subpath}/Tmrt_"), scenario_keys, fixed = FALSE)) > 0
+  if (is_shade) {
+    # t0/t3 are genuinely distinct transmissivity scenarios (not a naming
+    # fallback), both always under met_era5_hottest_days/ -- checked once at
+    # the scenario level, same as before: shade-structures may legitimately
+    # have only one of t0/t3 actually run.
+    for (subpath in c("tcm_results/met_era5_hottest_days/t0", "tcm_results/met_era5_hottest_days/t3")) {
+      scenario_keys <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/"))
+      any_tmrt <- length(grep(glue("{subpath}/Tmrt_"), scenario_keys, fixed = FALSE)) > 0
 
-    if (!any_tmrt) {
-      message("  [skip] no Tmrt files anywhere under ", subpath, " for ", city, "/", aoi_name,
-              " ", infra, "/", scenario, " -- skipping this subpath entirely")
+      if (!any_tmrt) {
+        message("  [skip] no Tmrt files anywhere under ", subpath, " for ", city, "/", aoi_name,
+                " ", infra, "/", scenario, " -- skipping this subpath entirely")
+        next
+      }
+
+      for (tile in tiles) {
+        recompute_utci_for_tile(
+          bucket_prefix, city, aoi_name, infra, scenario, tile,
+          tcm_results_subpath = subpath,
+          met = met,
+          date_audit_log_path = date_audit_log_path,
+          write_baseline_ccl_layers = write_ccl
+        )
+      }
+    }
+    return(invisible(TRUE))
+  }
+
+  # Non-shade: the "expected" subpath follows the infra's own met-file
+  # convention, but a handful of older-processed AOIs have their raw
+  # Tmrt/Shadow data sitting under the OTHER convention's folder name
+  # (confirmed for BRA-Fortaleza/accelerator_area's cool-roofs scenario:
+  # reduced_temps.csv's date matches the Tmrt files sitting under
+  # met_era5_hottest_days/ exactly) -- a historical pipeline-naming quirk, not
+  # a data problem. The mandatory date-match check inside
+  # recompute_utci_for_tile() remains the real safety net regardless of which
+  # folder name is actually used, so this looks in whichever folder EACH tile
+  # actually has data in, rather than assuming one folder name applies
+  # scenario-wide.
+  subpaths <- if (is_reduced_temps) {
+    c("tcm_results/reduced_temps", "tcm_results/met_era5_hottest_days")
+  } else {
+    c("tcm_results/met_era5_hottest_days", "tcm_results/reduced_temps")
+  }
+
+  for (tile in tiles) {
+    tile_keys <- list_s3_keys("wri-cities-tcm", glue("{scenario_folder}/{tile}/"))
+    chosen_subpath <- NULL
+    for (subpath in subpaths) {
+      if (length(grep(glue("{subpath}/Tmrt_"), tile_keys, fixed = FALSE)) > 0) {
+        chosen_subpath <- subpath
+        break
+      }
+    }
+
+    if (is.null(chosen_subpath)) {
+      message("  [skip] ", tile, " has no Tmrt files under any known subpath (tried: ",
+              paste(subpaths, collapse = ", "), ") -- skipping this tile")
       next
     }
 
-    for (tile in tiles) {
-      recompute_utci_for_tile(
-        bucket_prefix, city, aoi_name, infra, scenario, tile,
-        tcm_results_subpath = subpath,
-        met = met,
-        date_audit_log_path = date_audit_log_path,
-        write_baseline_ccl_layers = write_ccl
-      )
-    }
+    recompute_utci_for_tile(
+      bucket_prefix, city, aoi_name, infra, scenario, tile,
+      tcm_results_subpath = chosen_subpath,
+      met = met,
+      date_audit_log_path = date_audit_log_path,
+      write_baseline_ccl_layers = write_ccl
+    )
   }
 
   invisible(TRUE)

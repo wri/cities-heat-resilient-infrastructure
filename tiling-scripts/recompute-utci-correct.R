@@ -137,11 +137,20 @@ log_progress <- function(city, aoi_name, infra, scenario, status, error_msg = NA
   readr::write_csv(row, progress_log_path, append = !write_header, col_names = write_header)
 }
 
-already_done <- function(city, aoi_name, infra, scenario) {
+# Statuses that mean "the expensive raster recompute + post-processing step
+# already succeeded for this combo" -- used to skip that step on resume.
+# Deliberately does NOT include "DONE" vs "FAILED_METRICS" distinctions that
+# matter for the (cheap) metrics step, which is always re-attempted below
+# regardless of resume state, so a tiles_aoi fix (or any metrics-only bugfix)
+# can be picked up on a re-run without redoing raster work.
+RASTERS_OK_STATUSES <- c("DONE", "DONE_RASTERS_ONLY_NO_AOI_GEOJSON", "FAILED_METRICS")
+
+rasters_already_done <- function(city, aoi_name, infra, scenario) {
   if (!file.exists(progress_log_path)) return(FALSE)
   prog <- readr::read_csv(progress_log_path, show_col_types = FALSE)
   any(prog$city == city & prog$aoi_name == aoi_name &
-        prog$infra == infra & prog$scenario == scenario & prog$status == "DONE")
+        prog$infra == infra & prog$scenario == scenario &
+        prog$status %in% RASTERS_OK_STATUSES)
 }
 
 # ---------------------------------------------------------------------------
@@ -224,6 +233,49 @@ discover_combos <- function(city, aoi_name, bucket_prefix) {
 }
 
 # ---------------------------------------------------------------------------
+# tiles_aoi for the metrics functions: the TRUE AOI footprint, not the raw
+# baseline S3 folder listing. Production (see testing.R's commented reference
+# code: tile_grid |> filter(tile_name %in% tiles_s3) |> st_filter(aoi)) spatially
+# filters the baseline tile grid against the AOI boundary polygon, because
+# baseline's S3 folder commonly contains "buffer" tiles outside the true AOI
+# that are never part of any scenario's own footprint. Using the raw list here
+# was the original bug: it fed metrics/post-processing functions an oversized
+# tile set, causing crashes (non-baseline infra, whose own ccl_layers only
+# exist for the true AOI footprint) or silently-too-large spatial extents
+# (baseline metrics, whose ccl_layers exist for every raw tile and so don't
+# crash on the extra tiles).
+#
+# A handful of AOIs (large, uncurated "catch-all" extents) have never had
+# aoi__baseline__baseline.geojson written at all, and have never had metrics
+# computed in production either (confirmed empty scenarios/metrics/ against
+# the original, untouched city_projects bucket) -- this is a pre-existing data
+# gap, not something this recompute introduces. For those, rasters are still
+# recomputed for every real baseline tile, but metrics are skipped with a
+# clear status rather than crashing.
+get_tiles_aoi <- function(bucket_prefix, city, aoi_name, baseline_tiles) {
+  if (length(baseline_tiles) == 0) {
+    return(list(tiles = character(0), has_aoi_geojson = FALSE))
+  }
+
+  baseline_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
+  aoi_geojson_url <- glue("{aws_http}/{baseline_folder}/aoi__baseline__baseline.geojson")
+  tile_grid_url   <- glue("{aws_http}/{baseline_folder}/metadata/.qgis_data/unbuffered_tile_grid.geojson")
+
+  tryCatch({
+    tile_grid <- sf::st_read(tile_grid_url, quiet = TRUE) %>%
+      dplyr::filter(tile_name %in% baseline_tiles)
+    aoi <- sf::st_read(aoi_geojson_url, quiet = TRUE) %>%
+      sf::st_transform(sf::st_crs(tile_grid))
+    tiles_aoi <- (tile_grid %>% sf::st_filter(aoi))$tile_name
+    list(tiles = tiles_aoi, has_aoi_geojson = TRUE)
+  }, error = function(e) {
+    message("  [note] no AOI boundary / tile grid available (", conditionMessage(e),
+            ") -- metrics will be skipped for this AOI; rasters still recomputed for all baseline tiles")
+    list(tiles = baseline_tiles, has_aoi_geojson = FALSE)
+  })
+}
+
+# ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
 
@@ -246,37 +298,58 @@ for (idx in seq_along(aois)) {
   # baseline's ccl_layers/utci-* as its reference.
   combos <- combos %>% arrange(infra != "baseline")
 
-  # tiles_aoi for the metrics functions = the baseline AOI's own tile list.
+  # tiles_aoi for the metrics functions = the TRUE AOI-filtered tile list
+  # (see get_tiles_aoi() above) -- NOT the raw baseline S3 folder listing.
   baseline_row <- combos %>% filter(infra == "baseline")
-  tiles_aoi <- if (nrow(baseline_row) > 0) baseline_row$tiles[[1]] else character(0)
+  raw_baseline_tiles <- if (nrow(baseline_row) > 0) baseline_row$tiles[[1]] else character(0)
+  tiles_aoi_result <- get_tiles_aoi(bucket_prefix, city, aoi_name, raw_baseline_tiles)
+  tiles_aoi <- tiles_aoi_result$tiles
+  has_aoi_geojson <- tiles_aoi_result$has_aoi_geojson
 
   for (i in seq_len(nrow(combos))) {
     infra <- combos$infra[[i]]
     scenario <- combos$scenario[[i]]
     tiles <- combos$tiles[[i]]
 
-    if (already_done(city, aoi_name, infra, scenario)) {
-      message("  [resume] already DONE: ", infra, "/", scenario, " -- skipping")
+    skip_rasters <- rasters_already_done(city, aoi_name, infra, scenario)
+
+    message("  Processing: ", infra, "/", scenario, " (", length(tiles), " tiles)",
+            if (skip_rasters) " [rasters already done -- metrics only]" else "")
+
+    rasters_ok <- TRUE
+    if (!skip_rasters) {
+      rasters_ok <- tryCatch({
+        met <- load_met_for_scenario(bucket_prefix, city, aoi_name, infra, scenario, aws_http)
+
+        recompute_utci_for_infra_scenario(bucket_prefix, city, aoi_name, infra, scenario,
+                                           tiles, met, date_audit_log_path)
+
+        baseline_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
+        scenario_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
+
+        if (infra == "shade-structures") {
+          shade_structure_post_processing(baseline_folder, scenario_folder, infra, scenario)
+        } else if (infra != "baseline") {
+          process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
+        }
+
+        TRUE
+      }, error = function(e) {
+        log_progress(city, aoi_name, infra, scenario, "FAILED", conditionMessage(e))
+        message("  FAILED (rasters): ", city, "/", aoi_name, " ", infra, "/", scenario, " -- ", conditionMessage(e))
+        FALSE
+      })
+    }
+
+    if (!rasters_ok) next
+
+    if (!has_aoi_geojson) {
+      log_progress(city, aoi_name, infra, scenario, "DONE_RASTERS_ONLY_NO_AOI_GEOJSON")
+      message("  DONE (rasters only -- no AOI boundary file, metrics skipped): ", infra, "/", scenario)
       next
     }
 
-    message("  Processing: ", infra, "/", scenario, " (", length(tiles), " tiles)")
-
-    result <- tryCatch({
-      met <- load_met_for_scenario(bucket_prefix, city, aoi_name, infra, scenario, aws_http)
-
-      recompute_utci_for_infra_scenario(bucket_prefix, city, aoi_name, infra, scenario,
-                                         tiles, met, date_audit_log_path)
-
-      baseline_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/baseline/baseline")
-      scenario_folder <- glue("{bucket_prefix}/{city}/{aoi_name}/scenarios/{infra}/{scenario}")
-
-      if (infra == "shade-structures") {
-        shade_structure_post_processing(baseline_folder, scenario_folder, infra, scenario)
-      } else if (infra != "baseline") {
-        process_tcm_layers(baseline_folder, infra, scenario, scenario_folder)
-      }
-
+    metrics_ok <- tryCatch({
       switch(infra,
         "baseline"          = calc_baseline_metrics(city, aoi_name, tiles_aoi, bucket_prefix = bucket_prefix),
         "trees"             = calc_street_tree_metrics(city, aoi_name, tiles_aoi, infra, scenario, bucket_prefix = bucket_prefix),
@@ -286,14 +359,17 @@ for (idx in seq_along(aois)) {
         "trees_cool-roofs"  = calc_cool_roofs_trees_metrics(city, aoi_name, tiles_aoi, infra, scenario, bucket_prefix = bucket_prefix),
         stop("Unknown infra encountered during recompute: ", infra)
       )
-
-      log_progress(city, aoi_name, infra, scenario, "DONE")
       TRUE
     }, error = function(e) {
-      log_progress(city, aoi_name, infra, scenario, "FAILED", conditionMessage(e))
-      message("  FAILED: ", city, "/", aoi_name, " ", infra, "/", scenario, " -- ", conditionMessage(e))
+      log_progress(city, aoi_name, infra, scenario, "FAILED_METRICS", conditionMessage(e))
+      message("  FAILED (metrics; rasters OK): ", city, "/", aoi_name, " ", infra, "/", scenario, " -- ", conditionMessage(e))
       FALSE
     })
+
+    if (metrics_ok) {
+      log_progress(city, aoi_name, infra, scenario, "DONE")
+      message("  DONE: ", infra, "/", scenario)
+    }
   }
 
   if (idx %% 5 == 0) refresh_credentials()

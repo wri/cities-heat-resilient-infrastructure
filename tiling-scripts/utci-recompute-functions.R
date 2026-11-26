@@ -136,11 +136,43 @@ recompute_utci_for_tile <- function(bucket_prefix, city, aoi_name, infra, scenar
     stop("No Tmrt_*.tif files found under s3://", bucket, "/", tile_prefix, call. = FALSE)
   }
 
+  # Only fetched/used when write_baseline_ccl_layers = TRUE, to check whether
+  # the ccl_layers/ copies (written right after UTCI_/UTCIcat_, see below)
+  # already exist too -- an extra S3 call, but only for baseline, and avoids
+  # treating a tile as "done" from the tcm_results listing alone when a prior
+  # interrupted run left the ccl_layers copies missing.
+  ccl_keys <- if (write_baseline_ccl_layers) {
+    list_s3_keys(bucket, glue("{scenario_folder}/{tile}/ccl_layers/"))
+  } else {
+    character(0)
+  }
+
   times_processed <- character(0)
 
   for (key in tmrt_keys) {
     fname <- basename(key)
     time  <- sub(".*_(\\d+)D\\.tif$", "\\1", fname)
+
+    # ---- Skip if already computed: UTCI_/UTCIcat_ for this exact met_date
+    # already sit under this tile's tcm_results subpath (from the SAME keys
+    # listing used to find Tmrt files above -- no extra S3 call needed). This
+    # makes the recompute idempotent/resumable at the tile+time level, not
+    # just the AOI/infra/scenario level, so re-running (e.g. after an
+    # interruption) never redoes tiles that already finished -- important for
+    # AOIs with thousands of tiles (e.g. CHN-Chengdu) where redoing finished
+    # work would be hugely wasteful.
+    utci_out_key    <- glue("{tile_prefix}UTCI_{met$met_date}_{time}D.tif")
+    utcicat_out_key <- glue("{tile_prefix}UTCIcat_{met$met_date}_{time}D.tif")
+    already_done <- utci_out_key %in% keys && utcicat_out_key %in% keys
+    if (already_done && write_baseline_ccl_layers) {
+      ccl_prefix_check <- glue("{scenario_folder}/{tile}/ccl_layers/")
+      already_done <- glue("{ccl_prefix_check}utci-{time}__baseline__baseline.tif") %in% ccl_keys &&
+        glue("{ccl_prefix_check}utci-cat-{time}__baseline__baseline.tif") %in% ccl_keys
+    }
+    if (already_done) {
+      times_processed <- c(times_processed, time)
+      next
+    }
 
     # ---- MANDATORY date-match check: hard-fail on any mismatch -----------
     tmrt_date <- extract_date_from_tmrt_filename(fname)
